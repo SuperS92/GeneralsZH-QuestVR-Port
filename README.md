@@ -10,6 +10,12 @@ Until now it has only ever been tested on my own Quest 3 device. Also the main f
 If you like what I came up with and want to support me feel free to buy me a Coffee [Ko-Fi](https://ko-fi.com/supers92). 
 
 
+## Gameplay
+
+[![Quest VR gameplay by NotAGameAddict](https://img.youtube.com/vi/_IzGGuUn1cY/hqdefault.jpg)](https://www.youtube.com/watch?v=_IzGGuUn1cY)
+
+Gameplay video by [NotAGameAddict](https://www.youtube.com/@NotAGameAddict). Click the thumbnail to watch on YouTube.
+
 ## Tested so far
 
 | Mode | Current experience |
