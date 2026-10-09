@@ -6,6 +6,8 @@ The Quest interaction grew from an earlier offline Quest implementation based on
 
 Thanks to [EA](https://github.com/electronicarts/CnC_Generals_Zero_Hour), [TheSuperHackers](https://github.com/TheSuperHackers/GeneralsGameCode), [fbraz3/GeneralsX](https://github.com/fbraz3/GeneralsX), [Fighter19](https://github.com/Fighter19/CnC_Generals_Zero_Hour), [jmarshall2323](https://github.com/jmarshall2323/CnC_Generals_Zero_Hour), and the [GeneralsOnline development team](https://github.com/GeneralsOnlineDevelopmentTeam) for the engine, platform and multiplayer work behind this port.
 
+Earlier platform work also comes from [ammaarreshi/Generals-Mac-iOS-iPad](https://github.com/ammaarreshi/Generals-Mac-iOS-iPad). The inherited OpenAL and FFmpeg implementations include work by [feliwir](https://github.com/feliwir), also a contributor to [OpenSAGE](https://github.com/OpenSAGE/OpenSAGE).
+
 Terrain batching was informed by [Cesarus85/Generals-Zero-Hour-XR](https://github.com/Cesarus85/Generals-Zero-Hour-XR).
 
 ## Runtime and source dependencies
@@ -29,6 +31,8 @@ Terrain batching was informed by [Cesarus85/Generals-Zero-Hour-XR](https://githu
 | [zlib](https://zlib.net/), [libpng](https://www.libpng.org/pub/png/libpng.html), [Brotli](https://github.com/google/brotli), [bzip2](https://sourceware.org/bzip2/) | Image and compression dependencies | zlib / libpng / MIT / bzip2 licenses |
 | [GLM](https://github.com/g-truc/glm), [GLI](https://github.com/g-truc/gli) | Graphics support | Retained MIT and Happy Bunny license alternatives |
 | [Android NDK LLVM/libc++](https://developer.android.com/ndk), [AndroidX](https://developer.android.com/jetpack/androidx), [Material Components](https://github.com/material-components/material-components-android) | Native runtime and launcher | Apache-2.0; LLVM exception where applicable |
+| [Kotlin](https://github.com/JetBrains/kotlin), [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines), [JetBrains annotations](https://github.com/JetBrains/java-annotations) | Launcher dependencies | Apache-2.0 |
+| [Guava ListenableFuture](https://github.com/google/guava), [Error Prone annotations](https://github.com/google/error-prone) | Launcher dependencies | Apache-2.0 |
 
 Inherited platform sources also include [ANGLE](https://github.com/google/angle) and DirectX/Vulkan/SPIR-V headers. Keep their notices when building those targets; ANGLE is not the Quest rendering backend.
 

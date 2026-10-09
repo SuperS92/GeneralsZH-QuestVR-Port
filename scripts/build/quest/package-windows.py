@@ -67,6 +67,16 @@ def main():
         raise SystemExit('Public signing requires both neutral-path native builds')
     if records[30]['source'] != records[60]['source']:
         raise SystemExit('Both native engines must originate from the same source commit')
+    # GeneralsX @build Codex 09/10/2026 Allow packaging fixes without rebuilding unchanged engines.
+    packaging_source = subprocess.check_output([tools['git'], '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
+    native_source = records[30]['source']
+    if native_source != packaging_source:
+        subprocess.run([tools['git'], '-C', str(ROOT), 'merge-base', '--is-ancestor',
+                        native_source, packaging_source], check=True)
+        changed = subprocess.check_output([tools['git'], '-C', str(ROOT), 'diff', '--name-only',
+                                          native_source, packaging_source], text=True).splitlines()
+        if any(path != 'scripts/build/quest/package-windows.py' and not path.endswith('.md') for path in changed):
+            raise SystemExit('Native reuse requires unchanged engine, launcher and build inputs')
     build = ROOT / 'work/build/quest-60'
     libraries = {}
     for path in build.rglob('*.so'):
@@ -169,7 +179,7 @@ def main():
         signed = apk.with_name('app-quest-private-signed.apk')
         subprocess.run([str(pathlib.Path(tools['jdk']) / 'bin/java.exe'), '-jar', str(sdk_tools / 'lib/apksigner.jar'),
                         'sign', '--ks', signing['keyStore'], '--ks-key-alias', signing['alias'],
-                        '--ks-pass', 'file:' + signing['passwordFile'], '--key-pass', 'file:' + signing['passwordFile'],
+                        '--ks-pass', 'file:' + signing['passwordFile'], '--v2-signing-enabled', 'true',
                         '--out', str(signed), str(apk)], check=True)
         apk = signed
         expected_certificate = signing['certificateSha256']
@@ -188,7 +198,8 @@ def main():
     # GeneralsX @build Codex 09/10/2026 Validate the actual signed artifact before creating its installer evidence.
     sdk_tools = pathlib.Path(tools['sdk']) / 'build-tools/35.0.0'
     signature = subprocess.check_output([str(pathlib.Path(tools['jdk']) / 'bin/java.exe'),
-        '-jar', str(sdk_tools / 'lib/apksigner.jar'), 'verify', '--verbose', '--print-certs', str(apk)], text=True)
+        '-jar', str(sdk_tools / 'lib/apksigner.jar'), 'verify', '--min-sdk-version', '24',
+        '--verbose', '--print-certs', str(apk)], text=True)
     if 'Verified using v2 scheme (APK Signature Scheme v2): true' not in signature or \
         'Signer #1 certificate SHA-256 digest: ' + expected_certificate not in signature:
         raise SystemExit('APK signature differs from the existing Quest application')
@@ -204,7 +215,7 @@ def main():
     record = {'package': 'com.generalsx.questvr', 'versionName': version['versionName'], 'versionCode': version['versionCode'],
               'apkSha256': sha(apk), 'engines': records, 'libraries': closure,
               'fontsArchiveSha256': FONTS_SHA, 'javaCompiler': 'ECJ 3.45.0' if args.ecj else 'Javac',
-              'gitCommit': subprocess.check_output([tools['git'], '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip(),
+              'gitCommit': packaging_source, 'nativeSourceCommit': native_source,
               'runtime': 'NOT_VERIFIED', 'crossplay': 'NOT_VERIFIED', 'signing': signing_label,
               'artifactQA': {'signatureV2': 'PASS', 'certificateSha256': expected_certificate, 'zipIntegrity': 'PASS',
                              'zipAlignment16KiB': 'PASS', 'actualIdentityVersionArm64': 'PASS'}}

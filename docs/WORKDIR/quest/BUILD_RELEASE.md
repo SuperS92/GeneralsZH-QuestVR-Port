@@ -54,6 +54,13 @@ a private Quest signing key. Never commit the key, password or signing JSON.
 Keep an encrypted backup for future updates. Existing test installs need a
 planned data backup/migration when changing from the public debug key.
 
+Use PKCS12 with the same store and key password; the ignored password file's
+first line supplies it. Packaging explicitly enables v2 signing and verifies
+the expected certificate. It may reuse unchanged native engines after a
+packaging or Markdown-only follow-up commit. The manifest records native and
+packaging source commits separately; engine, launcher or build-input changes
+require new native builds.
+
 Packaging checks both source/version/hash manifests, ARM64 dependency closure,
 signature, package identity, ZIP integrity and alignment. DXVK retains symbols
 because upstream stripping caused runtime failures. The optional --ecj adapter
