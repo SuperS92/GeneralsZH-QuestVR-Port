@@ -1,7 +1,6 @@
 # Generals Zero Hour — Quest VR
 
-A standalone Meta Quest 3 port of **Command & Conquer: Generals – Zero Hour**, based on [MYSOREZ's Android port](https://github.com/MYSOREZ/GeneralsZH-Android-Port). 
-The game runs on the headset with OpenXR and Touch controllers.
+A standalone Meta Quest 3 port of **Command & Conquer: Generals – Zero Hour**. The game runs on the headset with OpenXR and Touch controllers.
 
 Play above the battlefield, point to select units and give orders, build your base, and change your scale to get closer to the action. No gaming PC or Quest Link is needed to run it.
 
