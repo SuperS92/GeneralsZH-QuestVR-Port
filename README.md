@@ -6,8 +6,10 @@ The game runs on the headset with OpenXR and Touch controllers.
 Play above the battlefield, point to select units and give orders, build your base, and change your scale to get closer to the action. No gaming PC or Quest Link is needed to run it.
 
 **Early release.** I was working on this for myself for quite some time, quite a few attempts and code optimizations were needed to get it to this playable state where it is now. 
+Until now it has only ever been tested on my own Quest 3 device. Also the main focus for me was skirmish and online play against PC players through [GeneralsOnline](https://www.playgenerals.online/).
+
 If you like what I came up with and want to support me feel free to buy me a Coffee [Ko-Fi](https://ko-fi.com/supers92). 
-Until now it was only ever testet on my own Quest 3 device. Also the main focus for me was skirmish and online play against PC players through [GeneralsOnline](https://www.playgenerals.online/).
+
 
 ## Tested so far
 
