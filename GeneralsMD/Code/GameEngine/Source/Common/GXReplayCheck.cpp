@@ -49,6 +49,7 @@ namespace
 	UnsignedInt s_firstOurs = 0, s_firstRecorded = 0;
 	UnsignedInt s_lastCheckpoint = 0;
 	UnsignedInt s_lastProgress = 0;
+	UnsignedInt s_lastPlaybackFrame = 0;
 	std::chrono::steady_clock::time_point s_start;
 
 	// After the first mismatch, keep going long enough for the per-frame movement trace
@@ -83,7 +84,9 @@ namespace
 		path.concat("gx_replay_check_result.txt");
 		FILE *f = fopen(path.str(), "w");
 		const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - s_start).count();
-		const UnsignedInt frame = TheGameLogic ? TheGameLogic->getFrame() : 0;
+		// exitGame() can reset the live frame before this result is written.
+		const UnsignedInt currentFrame = TheGameLogic ? TheGameLogic->getFrame() : 0;
+		const UnsignedInt frame = currentFrame > s_lastPlaybackFrame ? currentFrame : s_lastPlaybackFrame;
 		if (f != nullptr)
 		{
 			fprintf(f, "replay=%s\n", replayName().str());
@@ -273,7 +276,10 @@ void update()
 		StatsExporterBeginRecording();
 	}
 	if (playbackRunning())
+	{
 		StatsExporterCollectSnapshot();
+		s_lastPlaybackFrame = TheGameLogic->getFrame();
+	}
 
 	if (playbackRunning())
 	{
@@ -314,6 +320,7 @@ void update()
 					break;
 			}
 			const UnsignedInt frame = TheGameLogic->getFrame();
+			s_lastPlaybackFrame = frame;
 			if (frame >= s_lastProgress + 1000)
 			{
 				s_lastProgress = frame - frame % 1000;

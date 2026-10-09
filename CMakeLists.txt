@@ -52,6 +52,9 @@ include(cmake/debug_strip.cmake)
 
 include(FetchContent)
 
+# Quest additions remain opt-in; upstream compiler/logic defaults are unchanged.
+include(cmake/quest-vr.cmake)
+
 # MinGW-w64 specific configuration
 if(MINGW)
     include(cmake/mingw.cmake)
@@ -79,6 +82,7 @@ endif()
 # GeneralsX @feature Android port 10/07/2026 Optional custom Vulkan driver
 # loading (Adreno/Turnip via libadrenotools) -- self-guarded with if(ANDROID).
 include(cmake/adrenotools.cmake)
+
 
 # Define a dummy stlport target when not on VC6.
 if (IS_VS6_BUILD)

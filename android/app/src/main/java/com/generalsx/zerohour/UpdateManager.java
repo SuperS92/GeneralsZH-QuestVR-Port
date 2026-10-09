@@ -251,6 +251,7 @@ final class UpdateManager {
      *        is the engine's place; the multiplayer screen passes false.
      */
     static Result check(Context ctx, boolean withEngine) {
+        if (BuildConfig.QUEST_VR) withEngine = false; // Signed settings remain upstream; phone engines cannot replace VR.
         Result r = new Result();
         try {
             byte[] manifestBytes = download(BASE_URL + "manifest.json", 256 * 1024);

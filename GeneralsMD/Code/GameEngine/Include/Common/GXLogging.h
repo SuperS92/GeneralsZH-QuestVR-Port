@@ -30,6 +30,9 @@
 #if defined(__ANDROID__)
 #include <cstdio>
 #include <unistd.h>
+#ifndef QUEST_ANDROID_PACKAGE
+#define QUEST_ANDROID_PACKAGE "com.generalsx.zerohour"
+#endif
 #endif
 
 inline bool GXLoggingDisabled()
@@ -40,7 +43,7 @@ inline bool GXLoggingDisabled()
 	{
 		char path[256];
 		const int userId = (int)(getuid() / 100000);
-		snprintf(path, sizeof(path), "/data/user/%d/com.generalsx.zerohour/files/logging_off", userId);
+		snprintf(path, sizeof(path), "/data/user/%d/" QUEST_ANDROID_PACKAGE "/files/logging_off", userId);
 		state = (access(path, F_OK) == 0) ? 1 : 0;
 	}
 	return state == 1;

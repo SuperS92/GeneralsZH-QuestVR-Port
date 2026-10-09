@@ -327,6 +327,11 @@
     <string name="online_network_settings">Netzwerkeinstellungen (Server, PC-Kompatibilität): vom %1$s, automatisch vom GitHub des Projekts aktualisiert und signiert.</string>
     <string name="online_network_settings_builtin">Netzwerkeinstellungen (Server, PC-Kompatibilität): in diese Version eingebaut; neuere kommen automatisch vom GitHub des Projekts.</string>
     <string name="online_datapacks_chip_update">Update verfügbar</string>
+    <string name="quest_terrain_far_mips">Bodentexturen in der Ferne (experimentell)</string>
+    <string name="quest_terrain_far_mips_desc">Eine zusätzliche verkleinerte Boden-Texturstufe für die Ferne; die Nahstufen bleiben erhalten. Benötigt Randschutz. Nicht unterstützte Karten bleiben auf Original. Nach Änderung das Spiel neu starten.</string>
+    <string name="quest_terrain_far_filter">Boden-Fernfilter (experimentell)</string>
+    <string name="quest_terrain_far_filter_desc">Glättet sanft nur die zusätzliche fernste Boden-Texturstufe. Benötigt Bodentexturen in der Ferne: Verbessert und Texturfilter: Randschutz. Die Nahstufen bleiben erhalten. Nach Änderung das Spiel neu starten.</string>
+    <string name="quest_terrain_far_filter_gentle">Sanft</string>
     <string name="setup_card_upscale">Hochskalierung (Snapdragon GSR)</string>
     <string name="setup_upscale_off_short">Aus</string>
     <string name="setup_upscale_ultra_short">Ultra</string>
@@ -345,4 +350,13 @@
     <string name="setup_interface_scale_label">%1$d%%</string>
     <string name="setup_button_apply_interface_scale">Oberflächengröße übernehmen</string>
     <string name="setup_interface_scale_help">Vergrößert die Spieloberfläche, ohne die Spieldateien zu ändern: Die Steuerleiste mit dem Radar wächst vom unteren Rand nach oben, die Leiste der Generalsfähigkeiten, der Chat, die Ereignismeldungen, die Spielerliste, das Spielmenü mit Speichern/Laden und Optionen sowie die Schaltflächen des Hauptmenüs wachsen von ihrer Position aus. Nichts wird aus dem Bildschirm geschoben: Jeder Teil wächst nur so weit, wie er passt, daher wird die Steuerleiste auf einem breiten Handy höher statt breiter und das Schlachtfeld darüber kürzer. Funktioniert zusammen mit der Menü-Textgröße. Wird beim nächsten Spielstart wirksam.</string>
+
+    <!-- Quest-only labels; shared Java sources must also compile in the phone flavor. -->
+    <string name="quest_shadows">Schatten</string>
+    <string name="quest_shadows_desc">Zeigt Schatten von Gebäuden und Einheiten. Standardmäßig an; kann FPS kosten. Die automatische Qualitätsregelung kann Schatten bei hoher Last zeitweise abschalten. Gilt ab dem nächsten Spielstart.</string>
+    <string name="quest_automatic_fixes">Randschutz, Boden-Fernfilterung, Straßen-Mipmaps, Audioladen und die Upload-Optimierungen für Fahrzeugspuren und Bäume sind automatisch aktiv.</string>
+    <string name="quest_support_title">MYSOREZs Android-Unterbau unterstützen</string>
+    <string name="quest_support_attribution">Diese Links unterstützen MYSOREZs GeneralsZH-Android-Projekt, auf dem dieser Quest-VR-Port aufbaut. Sie unterstützen weder den Betreiber dieses Quest-VR-Ports noch diesen Quest-VR-Ableger.</string>
+    <string name="quest_terrain_batching">Gelände bündeln (experimentell)</string>
+    <string name="quest_terrain_batching_desc">Bündelt Grafikbefehle für das Gelände. Standardmäßig an. Für Vergleiche kannst du es ausschalten. Gilt nach vollständigem Schließen von Spiel und Launcher und erneutem Start.</string>
 </resources>

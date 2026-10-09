@@ -104,6 +104,12 @@ protected:
 	Int	m_numBlockRowsInLastVB;///<a VB tile may be partially filled, this indicates how many 2x2 vertex blocks are filled.
 
 	DX8VertexBufferClass *getVertexBufferTile(Int x, Int y);
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	// GeneralsX @performance Codex 09/10/2026 Storage grouping preserves original per-patch mirrors.
+	unsigned m_questTerrainGroupSize = 1;
+	unsigned questTerrainVertexOffset(Int originX, Int originY) const;
+	unsigned questTerrainDrawPatches(Int tile) const;
+#endif
 	VERTEX_FORMAT *getVertexBufferBackup(Int x, Int y);
 	UnsignedInt doTheDynamicLight(VERTEX_FORMAT *vb, VERTEX_FORMAT *vbMirror, Vector3*light, Vector3*normal, W3DDynamicLight *pLights[], Int numLights);
 	Int getXWithOrigin(Int x);

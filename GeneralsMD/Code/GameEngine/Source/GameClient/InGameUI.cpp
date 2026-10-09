@@ -1998,6 +1998,9 @@ void InGameUI::handleBuildPlacements()
 	{
 		ICoord2D loc;
 		Coord3D world;
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+		const Bool questWorld = getPlacementWorldOverride(world);
+#endif
 		Real angle = m_placeIcon[ 0 ]->getOrientation();
 
 		// update the angle of the icon to match any placement angle and pick the
@@ -2050,7 +2053,11 @@ void InGameUI::handleBuildPlacements()
 			// object. Use the aim point the touch layer reports, and draw nothing until a
 			// finger has actually pointed somewhere -- so the ghost appears under the finger,
 			// where the building is going, and nowhere before that.
-			if( !m_touchAimKnown )
+			if( !m_touchAimKnown
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+				&& !questWorld
+#endif
+			)
 				return;
 			loc = m_touchAimPoint;
 #else
@@ -2064,7 +2071,11 @@ void InGameUI::handleBuildPlacements()
 		// set the location and angle of the place icon
 		/**@todo this whole orientation vector thing is LAME! Must replace, all I want to
 		to do is set a simple angle and have it automatically change, ug! */
-		if( TheTacticalView->screenToTerrain( &loc, &world ) )
+		if(
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+			questWorld ||
+#endif
+			TheTacticalView->screenToTerrain( &loc, &world ) )
 		{
 			m_placeIcon[ 0 ]->setPosition( &world );
 			m_placeIcon[ 0 ]->setOrientation( angle );
@@ -3749,6 +3760,9 @@ void InGameUI::placeBuildAvailable( const ThingTemplate *build, Drawable *buildD
 	// keep a record of what we are trying to place, if we are already trying to
 	// place something, it is overwritten
 	//
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	setPlacementWorldOverride(nullptr, 0.0f);
+#endif
 	m_pendingPlaceType = build;
 
 	//Keep the prev pending place for left click deselection prevention in alternate mouse mode.
@@ -7034,3 +7048,21 @@ void InGameUI::drawPlayerInfoList()
 		drawY += lineH;
 	}
 }
+
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+void InGameUI::setPlacementWorldOverride(const Coord3D *position, Real angle)
+{
+    m_hasPlacementWorldOverride = position != nullptr;
+    if (position != nullptr) {
+        m_placementWorldOverride = *position;
+        if (m_placeIcon != nullptr && m_placeIcon[0] != nullptr)
+            m_placeIcon[0]->setOrientation(angle);
+    }
+}
+Bool InGameUI::getPlacementWorldOverride(Coord3D &position) const
+{
+    if (!m_hasPlacementWorldOverride) return FALSE;
+    position = m_placementWorldOverride;
+    return TRUE;
+}
+#endif

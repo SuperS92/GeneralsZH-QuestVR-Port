@@ -1253,7 +1253,11 @@ void RTS3DScene::Customized_Render( RenderInfoClass &rinfo )
 		RenderObjClass * robj = it.Peek_Obj();
 		if (robj->Class_ID() == RenderObjClass::CLASSID_TILEMAP)
 			terrainObject=robj;	//found terrain object, store for later.
-		if (!ShaderClass::Is_Backface_Culling_Inverted()) {
+		if (!ShaderClass::Is_Backface_Culling_Inverted()
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+			&& m_questFrameUpdateEnabled
+#endif
+		) {
 			// If we are doing water mirror, we draw with backface culling inverted.  In this case,
 			// we only want to call On_Frame_Update if we aren't drawing water, as otherwise
 			// we get 2 frame updates per frame, and it screws up the particle emitters.

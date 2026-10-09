@@ -1,3 +1,6 @@
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestCampaign.h"
+#endif
 /*
 **	Command & Conquer Generals Zero Hour(tm)
 **	Copyright 2025 Electronic Arts Inc.
@@ -522,6 +525,10 @@ void SinglePlayerLoadScreen::init( GameInfo *game )
 		return;
 	}
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	// GeneralsX @bugfix Codex 09/10/2026 Service XR inside this campaign-only movie loop.
+	QuestCampaign::BlockingMovieScope questMovie;
+#endif
 	// format the progress bar: USA to blue, GLA to green, China to red
 	// and set the background image
 	AsciiString campaignName = TheCampaignManager->getCurrentCampaign()->m_name;
@@ -571,7 +578,11 @@ void SinglePlayerLoadScreen::init( GameInfo *game )
 		Int shiftedPercent = -FRAME_FUDGE_ADD + 1;
 		while (m_videoStream->frameIndex() < m_videoStream->frameCount() - 1 )
 		{
-			if (GameClient::isMovieAbortRequested())
+			if (GameClient::isMovieAbortRequested()
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+                || QuestCampaign::PollMovieAbort()
+#endif
+            )
 			{
 				break;
 			}
@@ -671,7 +682,11 @@ void SinglePlayerLoadScreen::init( GameInfo *game )
 			fudgeFactor = 30 * ((currTime - begin)/ INT_TO_REAL(delay ));
 			GadgetProgressBarSetProgress(m_progressBar, fudgeFactor);
 
-			if (GameClient::isMovieAbortRequested())
+			if (GameClient::isMovieAbortRequested()
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+                || QuestCampaign::PollMovieAbort()
+#endif
+            )
 			{
 				break;
 			}

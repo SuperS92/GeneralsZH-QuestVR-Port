@@ -478,6 +478,10 @@ public:  // ********************************************************************
 	// whether the armed command accepts it. See m_touchAimKnown.
 	void setTouchAimPoint( Int x, Int y, Bool valid );
 	void clearTouchAimPoint() { m_touchAimKnown = FALSE; m_touchAimValid = FALSE; }
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	void setPlacementWorldOverride(const Coord3D *position, Real angle);
+	Bool getPlacementWorldOverride(Coord3D &position) const;
+#endif
 
 	virtual void setInputEnabled( Bool enable );										///< Set the input enabled or disabled
 	virtual Bool getInputEnabled() { return m_inputEnabled; }	///< Get the current input status
@@ -800,6 +804,10 @@ protected:
 	ObjectID										m_pendingPlaceSourceObjectID;						///< source object of the thing constructing the item
 	Bool										m_preventLeftClickDeselectionInAlternateMouseModeForOneClick;
 	Drawable **									m_placeIcon;														///< array for drawables to appear at the cursor when building in the world
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	Bool m_hasPlacementWorldOverride = FALSE;
+	Coord3D m_placementWorldOverride;
+#endif
 	Bool												m_placeAnchorInProgress;								///< is place angle interface for placement active
 	ICoord2D										m_placeAnchorStart;											///< place angle anchor start
 	ICoord2D										m_placeAnchorEnd;												///< place angle anchor end

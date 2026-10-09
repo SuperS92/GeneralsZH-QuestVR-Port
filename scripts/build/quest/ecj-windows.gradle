@@ -1,0 +1,28 @@
+// Opt-in host compiler adapter. Native engine flags and Java source stay upstream.
+gradle.beforeProject { p ->
+    def shortBuild = gradle.startParameter.projectProperties['questAndroidBuildDir']
+    if (p.name == 'app' && shortBuild) p.buildDir = new File(shortBuild)
+    p.pluginManager.withPlugin('com.android.application') {
+        p.androidComponents.finalizeDsl { dsl -> dsl.buildToolsVersion = '35.0.0' }
+    }
+}
+gradle.allprojects {
+    tasks.withType(JavaCompile).configureEach { task ->
+        task.setActions([])
+        task.doLast {
+            def sdk = System.getenv('ANDROID_HOME')
+            def boot = [new File(sdk, 'platforms/android-35/android.jar'), new File(sdk, 'build-tools/35.0.0/core-lambda-stubs.jar')]
+            def quote = { s -> '"' + s.toString().replace('\\', '/') + '"' }
+            def argsFile = new File(rootProject.projectDir, '../work/ecj-' + task.name + '.args')
+            def arguments = ['-1.8', '-proc:none', '-encoding', 'UTF-8', '-d', task.destinationDirectory.get().asFile,
+                '-bootclasspath', boot.join(File.pathSeparator), '-classpath', task.classpath.asPath]
+            arguments.addAll(task.source.files.collect { it.absolutePath })
+            argsFile.text = arguments.collect(quote).join('\n')
+            exec {
+                executable new File(System.getenv('JAVA_HOME'), 'bin/java.exe')
+                def dependencyRoot = rootProject.findProperty('questDependencyRoot') ?: new File(rootProject.projectDir, '..').absolutePath
+                args '-jar', new File(dependencyRoot, 'work/dependencies/ecj/ecj-3.45.0.jar'), '@' + argsFile
+            }
+        }
+    }
+}

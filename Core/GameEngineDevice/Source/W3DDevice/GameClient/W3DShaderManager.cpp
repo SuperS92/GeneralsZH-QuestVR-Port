@@ -1,3 +1,6 @@
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestCampaign.h"
+#endif
 /*
 **	Command & Conquer Generals Zero Hour(tm)
 **	Copyright 2025 Electronic Arts Inc.
@@ -2940,6 +2943,25 @@ void W3DShaderManager::drawViewport(Int color)
 //=============================================================================
 void W3DShaderManager::startRenderToTexture()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @bugfix Codex 09/10/2026 Filters must return to the campaign
+    // quad, not the startup Android backbuffer cached by init().
+    if (!m_renderingToTexture && m_newRenderSurface && QuestCampaign::IsFlatSequence()) {
+        IDirect3DDevice8 *device = DX8Wrapper::_Get_D3D_Device8();
+        IDirect3DSurface8 *color = nullptr, *depth = nullptr;
+        if (device->GetRenderTarget(&color) == S_OK && color
+            && device->GetDepthStencilSurface(&depth) == S_OK && depth) {
+            D3DSURFACE_DESC wanted{}, cached{};
+            color->GetDesc(&wanted); m_newRenderSurface->GetDesc(&cached);
+            if (wanted.Width == cached.Width && wanted.Height == cached.Height) {
+                SAFE_RELEASE(m_oldRenderSurface); SAFE_RELEASE(m_oldDepthSurface);
+                m_oldRenderSurface = color; m_oldDepthSurface = depth;
+                color = nullptr; depth = nullptr;
+            }
+        }
+        SAFE_RELEASE(color); SAFE_RELEASE(depth);
+    }
+#endif
 	DEBUG_ASSERTCRASH(!m_renderingToTexture, ("Already rendering to texture - cannot nest calls."));
 
 	if (m_renderingToTexture || m_newRenderSurface==nullptr || m_oldDepthSurface==nullptr) return;

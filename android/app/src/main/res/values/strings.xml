@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Quest-only UI; IDs must also exist when compiling the ordinary variant. -->
+    <string name="quest_spatial_aa">Edge smoothing (experimental)</string>
+    <string name="quest_spatial_aa_desc">Gentle AA preserves more original detail. SMAA 1x smooths detected edges in three passes. Menu and wrist HUD stay sharp. Default off; takes effect on the next game start.</string>
+    <string name="quest_aa_off">Off</string>
+    <string name="quest_aa_gentle">Gentle</string>
     <string name="app_name">GeneralsZH</string>
     <string name="common_cancel">Cancel</string>
 
@@ -334,6 +339,56 @@
     <string name="online_network_settings">Network settings (servers, PC compatibility): from %1$s, updated automatically from the project\'s GitHub and signed.</string>
     <string name="online_network_settings_builtin">Network settings (servers, PC compatibility): built into this version; newer ones come automatically from the project\'s GitHub.</string>
     <string name="online_datapacks_chip_update">Update available</string>
+    <string name="quest_terrain_detail_test">Terrain pattern test</string>
+    <string name="quest_terrain_original">Original</string>
+    <string name="quest_terrain_neutral">Without patterns</string>
+    <string name="quest_terrain_detail_desc">Removes fine ground and mountain patterns for comparison. Takes effect on the next full game start.</string>
+    <string name="quest_terrain_filter">Terrain textures (experimental)</string>
+    <string name="quest_terrain_filter_gentle">Gentle</string>
+    <string name="quest_terrain_filter_stronger">Stronger</string>
+    <string name="quest_terrain_filter_desc">Filters ground and mountain patterns for a steadier distant view; terrain may look softer. Menus and objects remain unchanged. Set Terrain pattern test to Original; applies on the next full game start.</string>
+    <string name="quest_texture_filter">Texture filtering (experimental)</string>
+    <string name="quest_texture_edge_guard">Edge guard</string>
+    <string name="quest_texture_filter_desc">Trilinear smooths texture-level transitions. Edge guard also reduces oblique texture sampling; may calm ground seams but soften angled surfaces. Applies on the next full game start.</string>
+    <string name="quest_render_scale">Render resolution</string>
+    <string name="quest_render_scale_desc">Higher per-eye resolution for finer detail and edges. 1.5× draws about 2.25 times as many pixels and may reduce FPS. Device limits apply. Takes effect on the next full game start.</string>
+    <string name="quest_mips_improved">Improved</string>
+    <string name="quest_road_mips">Road mipmaps (experimental)</string>
+    <string name="quest_road_mips_desc">Uses all available reduced road texture levels for distant sampling. Original near texture and terrain atlas stay intact. Full restart required.</string>
+    <string name="quest_cutout_mips">Vegetation / fences (experimental)</string>
+    <string name="quest_cutout_mips_desc">Rebuilds reduced alpha coverage in selected vegetation and railing textures. Fine details may look denser; not every tree texture is covered. Full restart required.</string>
+    <string name="quest_soft_cutouts">Soft tree / fence edges (experimental)</string>
+    <string name="quest_soft_cutouts_on">Soft edges</string>
+    <string name="quest_soft_cutouts_desc">Blends transparent contours of the tree atlas and selected foliage/railings. Overlaps can look different and GPU cost can rise. Keeps roads, terrain and HUD intact. Full restart required.</string>
+    <string name="quest_perf_off">Off</string>
+    <string name="quest_perf_on">On</string>
+    <string name="quest_perf_audio">Performance: audio buffers (experimental)</string>
+    <string name="quest_perf_audio_desc">Reduces allocations while decoding sounds. Same audio output; mainly tests first-use hitches. Full restart required.</string>
+    <string name="quest_perf_tracks">Performance: track uploads (experimental)</string>
+    <string name="quest_perf_tracks_desc">Skips an identical second-eye track upload after comparing actual vertices. Keeps both eye draws. Full restart required.</string>
+    <string name="quest_perf_terrain">Performance: terrain lighting (experimental)</string>
+    <string name="quest_perf_terrain_desc">Reuses identical terrain-transition lighting within one stereo pair. Scene lights use the original path. Full restart required.</string>
+    <string name="quest_perf_trees">Performance: tree uploads (experimental)</string>
+    <string name="quest_perf_trees_desc">Updates only the changed visible vertex interval of pushed/toppled trees. Animation timing stays unchanged. Full restart required.</string>
+    <string name="quest_perf_shadows">Performance: shadow buffers (experimental)</string>
+    <string name="quest_perf_shadows_desc">Appends the second eye to available shadow-buffer space; overflow retains the original discard path. Full restart required.</string>
+    <string name="quest_perf_smaa">Performance: SMAA scratch (experimental)</string>
+    <string name="quest_perf_smaa_desc">Shares one edge buffer between sequential eyes of the same frame slot. Same SMAA quality; lower intermediate memory, FPS gain unknown. Only effective with SMAA. Full restart required.</string>
+    <string name="quest_perf_metrics">Performance measurements</string>
+    <string name="quest_perf_metrics_desc">Logs frame-interval percentiles and stage times every 120 stereo frames. Keep enabled in both comparison runs. Full restart required.</string>
+    <string name="quest_tree_wind_pair">Stereo tree wind (experimental)</string>
+    <string name="quest_tree_wind_pair_desc">Uses the same wind movement in both eyes. Trees still sway. Full restart required.</string>
+    <string name="quest_tree_contours">Tree contours (experimental)</string>
+    <string name="quest_tree_contours_on">Gentle</string>
+    <string name="quest_tree_contours_desc">Softens tree texture patterns and transparent contours. Trees may look softer or thinner. Keeps terrain and roads intact. Full restart required.</string>
+    <string name="quest_terrain_far_mips">Distant ground textures (experimental)</string>
+    <string name="quest_terrain_far_mips_desc">Adds one smaller ground texture level for distance; nearby texture levels stay intact. Requires Edge guard. Unsupported maps keep Original. Restart the game after changing.</string>
+    <string name="quest_terrain_far_filter">Distant ground filter (experimental)</string>
+    <string name="quest_terrain_far_filter_desc">Gently softens only the added farthest ground texture level. Requires Distant ground textures: Improved and Texture filter: Edge guard. Nearby levels stay intact. Restart the game after changing.</string>
+    <string name="quest_terrain_far_filter_gentle">Gentle</string>
+    <string name="quest_fence_contours">Fence contours (experimental)</string>
+    <string name="quest_fence_contours_on">On</string>
+    <string name="quest_fence_contours_desc">Softens supported railing patterns and transparent edges. Fences may look softer or thinner. Full restart required.</string>
     <string name="setup_card_upscale">Upscaling (Snapdragon GSR)</string>
     <string name="setup_upscale_off_short">Off</string>
     <string name="setup_upscale_ultra_short">Ultra</string>
@@ -352,4 +407,13 @@
     <string name="setup_interface_scale_label">%1$d%%</string>
     <string name="setup_button_apply_interface_scale">Apply Interface Size</string>
     <string name="setup_interface_scale_help">Makes the in-game interface bigger, without touching the game\'s files: the control bar with the radar grows up from the bottom, and the generals\' powers bar, chat, event messages, player list, in-game menu with Save/Load and Options, and the main menu\'s buttons grow from where they sit. Nothing is pushed off the screen: each part grows only as far as it fits, so the control bar gets taller rather than wider on a wide phone, and the battlefield above it gets shorter. Works together with Menu Text Size. Takes effect the next time you launch the game.</string>
+
+    <!-- Quest-only labels; shared Java sources must also compile in the phone flavor. -->
+    <string name="quest_shadows">Shadows</string>
+    <string name="quest_shadows_desc">Draws building and unit shadows. Enabled by default; may reduce FPS. Automatic quality reduction can temporarily suppress shadows under load. Applies on the next game start.</string>
+    <string name="quest_automatic_fixes">Edge guard, distant ground filtering, road mipmaps, audio loading and vehicle/tree upload optimizations are applied automatically.</string>
+    <string name="quest_support_title">Support MYSOREZ’s Android base</string>
+    <string name="quest_support_attribution">These links support MYSOREZ’s GeneralsZH Android project, which this Quest VR port is based on. They do not support the Quest VR maintainer or this Quest VR derivative.</string>
+    <string name="quest_terrain_batching">Terrain batching (experimental)</string>
+    <string name="quest_terrain_batching_desc">Groups terrain rendering commands. Enabled by default. You can turn it off for comparisons. Applies after fully closing the game and launcher and starting again.</string>
 </resources>

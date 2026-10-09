@@ -644,6 +644,29 @@ elseif(ANDROID)
     endif()
   endforeach()
 
+  # Quest graphics patches are layered after all current MYSOREZ patches.
+  if(SAGE_USE_OPENXR)
+    foreach(QUEST_DXVK_PATCH quest-v044-dxvk-interop.patch quest-dxvk-d3d8-bridge-exposure.patch)
+      execute_process(COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply --reverse --check
+        "${CMAKE_SOURCE_DIR}/Patches/${QUEST_DXVK_PATCH}"
+        RESULT_VARIABLE QUEST_BRIDGE_PRESENT ERROR_QUIET)
+      if(NOT QUEST_BRIDGE_PRESENT EQUAL 0)
+        execute_process(COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply
+          "${CMAKE_SOURCE_DIR}/Patches/${QUEST_DXVK_PATCH}"
+          COMMAND_ERROR_IS_FATAL ANY)
+      endif()
+    endforeach()
+  endif()
+  set(QUEST_DXVK_CXX_DEFINE "")
+  if(SAGE_USE_OPENXR)
+    set(QUEST_DXVK_CXX_DEFINE ", '-DSAGE_USE_OPENXR=1'")
+  endif()
+  set(DXVK_CLANG_SUFFIX "")
+  set(DXVK_TOOL_SUFFIX "")
+  if(CMAKE_HOST_WIN32)
+    set(DXVK_CLANG_SUFFIX ".cmd")
+    set(DXVK_TOOL_SUFFIX ".exe")
+  endif()
   set(DXVK_BUILD_DIR "${CMAKE_BINARY_DIR}/_deps/dxvk-build-android")
   set(DXVK_D3D8_LIB  "${DXVK_BUILD_DIR}/src/d3d8/libdxvk_d3d8.so")
   set(DXVK_D3D9_LIB  "${DXVK_BUILD_DIR}/src/d3d9/libdxvk_d3d9.so")

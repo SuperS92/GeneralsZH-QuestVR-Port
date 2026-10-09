@@ -330,6 +330,9 @@ private:
 	void updateTerrain();
 
 	// (gth) C&C3 animation controlled camera feature
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	Bool m_questExplicitHeightAdjustment = FALSE;
+#endif
 	Bool				m_isCameraSlaved;
 	Bool				m_useRealZoomCam;
 	AsciiString		m_cameraSlaveObjectName;

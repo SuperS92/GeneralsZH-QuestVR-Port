@@ -1,0 +1,23 @@
+{
+  "repository": "https://github.com/MYSOREZ/GeneralsZH-Android-Port.git",
+  "commit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+  "selectedAt": "2026-10-09",
+  "offlineDonor": "176a7ce77b615fb8681f8c250625fd3fb5acb4b9",
+  "vcpkgBaseline": "533a5fda5c0646d1771345fb572e759283444d5f",
+  "vcpkgTools": "42e4e33e1505c9f47b58c21e0f557c1571b751ee",
+  "submodules": {
+    "GeneralsReplays": "113cabc289426459a5fa5da810131cac498c8e5a",
+    "references/fbraz3-dxvk": "46a3bc018bcae408d49d3c500e4e536a11f6789a",
+    "references/fighter19-dxvk-port": "3a1e115f8829ee393bd3fa4c9963f165f92a1301",
+    "references/generals-online-client": "6266009ab30e3a7335f64844032d34faa5bd32a9",
+    "references/jmarshall-win64-modern": "63348500931063415d7251392335848b8b69bd5a",
+    "references/thesuperhackers-main": "88bdb7c2aef138c45f4e531b3e1f8b1034165db7"
+  },
+  "dxvkNestedSubmodules": {
+    "include/native/directx": "9df86f2341616ef1888ae59919feaa6d4fad693d",
+    "include/spirv": "8b246ff75c6615ba4532fe4fde20f1be090c3764",
+    "include/vulkan": "234c4b7370a8ea3239a214c9e871e4b17c89f4ab",
+    "subprojects/libdisplay-info": "275e6459c7ab1ddd4b125f28d0440716e4888078"
+  },
+  "release": "v1.4.0"
+}

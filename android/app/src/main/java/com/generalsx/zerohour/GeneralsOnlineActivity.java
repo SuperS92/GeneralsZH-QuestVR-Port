@@ -563,6 +563,10 @@ public class GeneralsOnlineActivity extends Activity {
             } else {
                 marker.delete();
             }
+            if (BuildConfig.QUEST_VR) {
+                getSharedPreferences(SetupActivity.PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(SetupActivity.PREF_QUEST_PC_COMPAT, checked).apply();
+            }
         });
 
         // The tick rate is the other half of cross-play, so show where it stands here
@@ -584,6 +588,7 @@ public class GeneralsOnlineActivity extends Activity {
 
     private File crossPlayMarkerFile() {
         String gamePath = SetupActivity.getSavedGamePath(this);
+        SetupActivity.prepareQuestPcCompatibility(this, gamePath);
         return gamePath != null ? new File(gamePath, "gx_pc_compat.txt") : null;
     }
 

@@ -1425,7 +1425,11 @@ void GameEngine::update()
 			}
 		}
 
+		// GeneralsX @tweak Codex 09/10/2026 Preserve one regular logic update
+		// per Quest loop. The upstream offline speed catch-up remains on phones.
+#if !defined(SAGE_USE_OPENXR)
 		gxCatchUpSpedUpLogic();
+#endif
 
 		// GeneralsX @feature Android port 23/09/2026 Replay check: fast-forward extra
 		// logic frames and quit with a result file when asked to (GXReplayCheck.h).

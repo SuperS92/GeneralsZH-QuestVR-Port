@@ -179,10 +179,22 @@ GameMessageDisposition PlaceEventTranslator::translateGameMessage(const GameMess
 				TheInGameUI->getPlacementPoints( &anchorStart, &anchorEnd );
 
 				// translate the screen position of start to world target location
-				if( !TheTacticalView->screenToTerrain( &anchorStart, &worldStart ) )
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+				const Bool questWorld = TheInGameUI->getPlacementWorldOverride(worldStart);
+				if (questWorld) worldEnd = worldStart;
+#endif
+				if(
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+					!questWorld &&
+#endif
+					!TheTacticalView->screenToTerrain( &anchorStart, &worldStart ) )
 					break;
 
-				if( isLineBuild && !TheTacticalView->screenToTerrain( &anchorEnd, &worldEnd ) )
+				if( isLineBuild
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+					&& !questWorld
+#endif
+					&& !TheTacticalView->screenToTerrain( &anchorEnd, &worldEnd ) )
 					break;
 
 				Object *builderObj = TheGameLogic->findObjectByID( TheInGameUI->getPendingPlaceSourceObjectID() );

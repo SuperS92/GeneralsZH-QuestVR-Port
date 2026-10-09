@@ -1,0 +1,173 @@
+diff --git a/src/dxvk/dxvk_openxr.cpp b/src/dxvk/dxvk_openxr.cpp
+--- a/src/dxvk/dxvk_openxr.cpp
++++ b/src/dxvk/dxvk_openxr.cpp
+@@ -43,6 +43,20 @@
+   void DxvkXrProvider::initInstanceExtensions() {
+     std::lock_guard<dxvk::mutex> lock(m_mutex);
+ 
++#ifdef __ANDROID__
++    if (m_initializedInsExt)
++      return;
++
++    const std::string extensionList = env::getEnvVar("DXVK_OPENXR_INSTANCE_EXTENSIONS");
++    if (!extensionList.empty()) {
++      m_insExtensions = this->parseExtensionList(extensionList);
++      Logger::info(str::format("OpenXR: Imported Android Vulkan instance extensions: ", extensionList));
++    } else {
++      Logger::warn("OpenXR: Android runtime did not publish Vulkan instance extensions");
++    }
++    m_initializedInsExt = true;
++    return;
++#else
+     if (!m_wineOxr)
+       m_wineOxr = this->loadLibrary();
+ 
+@@ -56,6 +70,7 @@
+ 
+     m_insExtensions = this->queryInstanceExtensions();
+     m_initializedInsExt = true;
++#endif
+   }
+ 
+ 
+@@ -72,6 +87,20 @@
+   void DxvkXrProvider::initDeviceExtensions(const DxvkInstance* instance) {
+     std::lock_guard<dxvk::mutex> lock(m_mutex);
+ 
++#ifdef __ANDROID__
++    if (m_initializedDevExt)
++      return;
++
++    const std::string extensionList = env::getEnvVar("DXVK_OPENXR_DEVICE_EXTENSIONS");
++    if (!extensionList.empty()) {
++      m_devExtensions = this->parseExtensionList(extensionList);
++      Logger::info(str::format("OpenXR: Imported Android Vulkan device extensions: ", extensionList));
++    } else {
++      Logger::warn("OpenXR: Android runtime did not publish Vulkan device extensions");
++    }
++    m_initializedDevExt = true;
++    return;
++#else
+     if (!m_wineOxr || m_initializedDevExt)
+       return;
+     
+@@ -79,6 +108,7 @@
+     m_initializedDevExt = true;
+ 
+     this->shutdown();
++#endif
+   }
+ 
+ 
+@@ -130,8 +160,10 @@
+     std::stringstream strstream(str);
+     std::string       section;
+     
+-    while (std::getline(strstream, section, ' '))
+-      result.add(section.c_str());
++    while (std::getline(strstream, section, ' ')) {
++      if (!section.empty())
++        result.add(section.c_str());
++    }
+     
+     return result;
+   }
+@@ -147,20 +179,30 @@
+ 
+ 
+   HMODULE DxvkXrProvider::loadLibrary() {
++#ifdef __ANDROID__
++    return nullptr;
++#else
+     HMODULE handle = ::LoadLibrary("wineopenxr.dll");
+ 
+     m_loadedOxrApi = handle != nullptr;
+     return handle;
++#endif
+   }
+ 
+ 
+   void DxvkXrProvider::freeLibrary() {
++#ifndef __ANDROID__
+     ::FreeLibrary(m_wineOxr);
++#endif
+   }
+ 
+   
+   void* DxvkXrProvider::getSym(const char* sym) {
++#ifdef __ANDROID__
++    return nullptr;
++#else
+     return reinterpret_cast<void*>(
+       ::GetProcAddress(m_wineOxr, sym));
++#endif
+   }
+ }
+diff --git a/src/dxvk/dxvk_instance.cpp b/src/dxvk/dxvk_instance.cpp
+--- a/src/dxvk/dxvk_instance.cpp
++++ b/src/dxvk/dxvk_instance.cpp
+@@ -41,6 +41,8 @@
+     m_extProviders.push_back(&DxvkPlatformExts::s_instance);
+ #ifdef _WIN32
+     m_extProviders.push_back(&VrInstance::s_instance);
++#endif
++#if defined(_WIN32) || (defined(__ANDROID__) && defined(SAGE_USE_OPENXR))
+     m_extProviders.push_back(&DxvkXrProvider::s_instance);
+ #endif
+ 
+diff --git a/src/dxvk/meson.build b/src/dxvk/meson.build
+--- a/src/dxvk/meson.build
++++ b/src/dxvk/meson.build
+@@ -127,6 +127,8 @@
+     'dxvk_openvr.cpp',
+     'dxvk_openxr.cpp',
+   ]
++elif platform == 'android'
++  dxvk_src += ['dxvk_openxr.cpp']
+ endif
+ 
+ dxvk_extra_deps = [ dependency('threads') ]
+diff --git a/src/d3d8/d3d8_resource.h b/src/d3d8/d3d8_resource.h
+--- a/src/d3d8/d3d8_resource.h
++++ b/src/d3d8/d3d8_resource.h
+@@ -12,6 +12,17 @@
+ #include "../util/com/com_private_data.h"
+ 
+ namespace dxvk {
++
++  // DXVK's public D3D9 Vulkan texture-interop interface. D3D8 owns the
++  // corresponding D3D9 resource, so forwarding this one explicit COM query is
++  // a stable bridge for native consumers such as an OpenXR compositor. Keep
++  // the GUID in sync with ID3D9VkInteropTexture in d3d9_interfaces.h without
++  // including that header here (D3D9 types live in a namespace in D3D8).
++#ifdef SAGE_USE_OPENXR
++  constexpr GUID D3D9VkInteropTextureGuid = {
++    0xd56344f5, 0x8d35, 0x46fd,
++    { 0x80, 0x6d, 0x94, 0xc3, 0x51, 0xb4, 0x72, 0xc1 } };
++#endif
+ 
+   template <typename D3D9, typename D3D8>
+   class D3D8Resource : public D3D8DeviceChild<D3D9, D3D8> {
+@@ -95,6 +106,22 @@
+     }
+ 
+     virtual IUnknown* GetInterface(REFIID riid) override try {
++#ifdef SAGE_USE_OPENXR
++      if (riid == D3D9VkInteropTextureGuid) {
++        IUnknown* interop = nullptr;
++        HRESULT hr = this->GetD3D9()->QueryInterface(riid,
++          reinterpret_cast<void**>(&interop));
++
++        if (FAILED(hr) || interop == nullptr)
++          throw DxvkError("D3D8Resource::QueryInterface: D3D9 Vulkan texture interop unavailable");
++
++        // D3D8WrappedObject::QueryInterface adds the reference returned to its
++        // caller. Balance the underlying QI here before returning the pointer.
++        interop->Release();
++        return interop;
++      }
++
++#endif
+       return D3D8DeviceChild<D3D9, D3D8>::GetInterface(riid);
+     } catch (const DxvkError& e) {
+       if (riid == __uuidof(IDirect3DResource8))

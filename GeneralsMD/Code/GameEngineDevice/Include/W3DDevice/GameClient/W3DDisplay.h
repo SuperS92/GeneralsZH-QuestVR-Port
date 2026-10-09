@@ -83,6 +83,10 @@ public:
 
 	virtual void step() override; ///< Do one fixed time step
 	virtual void draw() override;  ///< redraw the entire display
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	void drawQuestXRStereo(class W3DView *view);
+	void drawQuestXRMenu();
+#endif
 
 	/// @todo Replace these light management routines with a LightManager singleton
 	virtual void createLightPulse( const Coord3D *pos, const RGBColor *color, Real innerRadius,Real outerRadius,
@@ -180,6 +184,9 @@ protected:
 	DrawImageMode m_batchMode;
 	Bool m_batchGrayscale;
 	Bool m_batchNeedsInit;
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	CameraClass *m_questXRCamera;
+#endif
 
 #if defined(RTS_DEBUG)
 	Int64 m_timerAtCumuFPSStart;

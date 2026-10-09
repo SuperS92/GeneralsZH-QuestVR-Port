@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// GeneralsX @feature Codex 01/10/2026 Compute wrappers for the original SMAA 1x.
+// Reference: https://github.com/iryoku/smaa (see SMAA/PROVENANCE.json).
+#version 450
+#extension GL_GOOGLE_include_directive : require
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(binding = 0) uniform sampler2D sourceEye;
+layout(binding = 1) uniform sampler2D edges;
+layout(binding = 2) uniform sampler2D weights;
+layout(binding = 3) uniform sampler2D area;
+layout(binding = 4) uniform sampler2D search;
+layout(binding = 5, rgba8) writeonly uniform image2D outputImage;
+layout(push_constant) uniform Metrics { vec4 metrics; } pc;
+#define SMAA_RT_METRICS pc.metrics
+#define SMAA_CUSTOM_SL
+#define SMAA_PRESET_HIGH
+#define SMAATexture2D(tex) sampler2D tex
+#define SMAATexturePass2D(tex) tex
+#define SMAASampleLevelZero(tex, coord) textureLod(tex, coord, 0.0)
+#define SMAASampleLevelZeroPoint(tex, coord) textureLod(tex, coord, 0.0)
+#define SMAASampleLevelZeroOffset(tex, coord, offset) textureLodOffset(tex, coord, 0.0, offset)
+#define SMAASample(tex, coord) textureLod(tex, coord, 0.0)
+#define SMAASamplePoint(tex, coord) textureLod(tex, coord, 0.0)
+#define SMAASampleOffset(tex, coord, offset) textureLodOffset(tex, coord, 0.0, offset)
+#define SMAA_FLATTEN
+#define SMAA_BRANCH
+#define lerp(a, b, t) mix(a, b, t)
+#define saturate(a) clamp(a, 0.0, 1.0)
+#define mad(a, b, c) ((a) * (b) + (c))
+#define float2 vec2
+#define float3 vec3
+#define float4 vec4
+#define int2 ivec2
+#define int3 ivec3
+#define int4 ivec4
+#define bool2 bvec2
+#define bool3 bvec3
+#define bool4 bvec4
+// Fragment discard into a cleared edge target becomes an explicit zero store.
+// Only the three vec2 edge-detection functions contain discard.
+#define discard return vec2(0.0)
+#include "SMAA/SMAA.hlsl"
+#undef discard
+void main() {
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(pixel, imageSize(outputImage)))) return;
+    vec2 uv = (vec2(pixel) + 0.5) * pc.metrics.xy;
+#if SMAA_PASS == 0
+    vec4 offset[3];
+    SMAAEdgeDetectionVS(uv, offset);
+    imageStore(outputImage, pixel, vec4(SMAAColorEdgeDetectionPS(uv, offset, sourceEye), 0.0, 0.0));
+#elif SMAA_PASS == 1
+    vec2 pixelCoord;
+    vec4 offset[3];
+    SMAABlendingWeightCalculationVS(uv, pixelCoord, offset);
+    imageStore(outputImage, pixel, SMAABlendingWeightCalculationPS(uv, pixelCoord, offset,
+        edges, area, search, vec4(0.0)));
+#elif SMAA_PASS == 2
+    vec4 offset;
+    SMAANeighborhoodBlendingVS(uv, offset);
+    vec4 color = SMAANeighborhoodBlendingPS(uv, offset, sourceEye, weights);
+    color.a = texelFetch(sourceEye, pixel, 0).a;
+    imageStore(outputImage, pixel, color);
+#endif
+}

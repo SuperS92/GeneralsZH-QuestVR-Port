@@ -35,6 +35,9 @@
 #include <string>
 #if defined(__ANDROID__)
 #include <unistd.h>
+#ifndef QUEST_ANDROID_PACKAGE
+#define QUEST_ANDROID_PACKAGE "com.generalsx.zerohour"
+#endif
 #endif
 
 namespace GXRemoteConfig
@@ -44,7 +47,7 @@ namespace GXRemoteConfig
 #if defined(__ANDROID__)
 		char path[256];
 		const int userId = (int)(getuid() / 100000);
-		snprintf(path, sizeof(path), "/data/user/%d/com.generalsx.zerohour/files/update", userId);
+		snprintf(path, sizeof(path), "/data/user/%d/" QUEST_ANDROID_PACKAGE "/files/update", userId);
 		return path;
 #else
 		return std::string();

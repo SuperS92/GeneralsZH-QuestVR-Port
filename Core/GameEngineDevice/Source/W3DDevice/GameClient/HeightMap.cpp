@@ -46,6 +46,14 @@
 //         Includes
 //-----------------------------------------------------------------------------
 #include "W3DDevice/GameClient/HeightMap.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestPerformance.h"
+#include "VRDevice/QuestTerrainBatching.h"
+#include <optional>
+#include <android/log.h>
+#include <algorithm>
+#endif
+
 
 #ifndef USE_FLAT_HEIGHT_MAP // Flat height map uses flattened textures. jba. [3/20/2003]
 
@@ -104,6 +112,61 @@ extern "C" int d3d8gles_SetDrawCategory(int category);
 
 #define no_OPTIMIZED_HEIGHTMAP_LIGHTING	01
 // Doesn't work well.  jba.
+
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+// GeneralsX @performance Codex 09/10/2026 Use ordinary synchronized range locks, never DISCARD/NOOVERWRITE.
+// Off constructs the original W3D lock directly. Grouped updates still calculate
+// exactly one patch, with the same CPU mirror and static/dynamic-light math.
+namespace {
+class QuestTerrainPatchLock {
+    DX8VertexBufferClass *buffer = nullptr;
+    VERTEX_FORMAT *vertices = nullptr;
+    bool locked = false;
+    std::optional<DX8VertexBufferClass::WriteLockClass> original;
+public:
+    QuestTerrainPatchLock(DX8VertexBufferClass *vb, unsigned group, unsigned offset) {
+        if (group == 1) {
+            original.emplace(vb);
+            vertices = static_cast<VERTEX_FORMAT *>(original->Get_Vertex_Array());
+            return;
+        }
+        DX8_THREAD_ASSERT();
+        WWASSERT(vb && !vb->Engine_Refs());
+        static_assert(HEIGHTMAP_VERTEX_NUM == QuestXR::TerrainPatchVertices);
+        static_assert(HEIGHTMAP_POLYGON_NUM * 3 == QuestXR::TerrainPatchIndices);
+        if (!vb || vb->FVF_Info().Get_FVF_Size() != sizeof(VERTEX_FORMAT)
+            || offset + HEIGHTMAP_VERTEX_NUM > vb->Get_Vertex_Count()) return;
+        vb->Add_Ref(); buffer = vb;
+        unsigned char *raw = nullptr;
+        const HRESULT result = vb->Get_DX8_Vertex_Buffer()->Lock(
+            offset * sizeof(VERTEX_FORMAT), HEIGHTMAP_VERTEX_NUM * sizeof(VERTEX_FORMAT), &raw, 0);
+        DX8_ErrorCode(result);
+        locked = SUCCEEDED(result);
+        if (locked) vertices = reinterpret_cast<VERTEX_FORMAT *>(raw);
+    }
+    ~QuestTerrainPatchLock() {
+        if (buffer) {
+            if (locked) DX8_ErrorCode(buffer->Get_DX8_Vertex_Buffer()->Unlock());
+            buffer->Release_Ref();
+        }
+    }
+    VERTEX_FORMAT *Get_Vertex_Array() { return vertices; }
+    QuestTerrainPatchLock(const QuestTerrainPatchLock &) = delete;
+    QuestTerrainPatchLock &operator=(const QuestTerrainPatchLock &) = delete;
+};
+}
+unsigned HeightMapRenderObjClass::questTerrainVertexOffset(Int originX, Int originY) const {
+    QuestXR::TerrainPatchSpan span;
+    const unsigned patch = originY / VERTEX_BUFFER_TILE_LENGTH * m_numVBTilesX + originX / VERTEX_BUFFER_TILE_LENGTH;
+    return QuestXR::TerrainSpan(patch, m_numVertexBufferTiles, m_questTerrainGroupSize, span) ? span.vertexOffset : 0;
+}
+unsigned HeightMapRenderObjClass::questTerrainDrawPatches(Int tile) const {
+    QuestXR::TerrainPatchSpan span;
+    if (!QuestXR::TerrainSpan(tile, m_numVertexBufferTiles, m_questTerrainGroupSize, span)
+        || span.firstPatch != unsigned(tile)) return 0;
+    return span.patches;
+}
+#endif
 
 HeightMapRenderObjClass *TheHeightMap = nullptr;
 //-----------------------------------------------------------------------------
@@ -330,7 +393,12 @@ Int HeightMapRenderObjClass::updateVB(DX8VertexBufferClass	*pVB, VERTEX_FORMAT *
 		assert(x0 >= originX && y0 >= originY && x1>x0 && y1>y0 && x1<=originX+VERTEX_BUFFER_TILE_LENGTH && y1<=originY+VERTEX_BUFFER_TILE_LENGTH);
 #endif
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        QuestTerrainPatchLock lockVtxBuffer(pVB, m_questTerrainGroupSize, questTerrainVertexOffset(originX, originY));
+        if (!lockVtxBuffer.Get_Vertex_Array()) return -1;
+#else
 		DX8VertexBufferClass::WriteLockClass lockVtxBuffer(pVB);
+#endif
 		VERTEX_FORMAT *vbHardware = (VERTEX_FORMAT*)lockVtxBuffer.Get_Vertex_Array();
 		VERTEX_FORMAT *vBase = data;
 		// Note that we are building the vertex buffer data in the memory buffer, data.
@@ -575,7 +643,12 @@ Int HeightMapRenderObjClass::updateVBForLight(DX8VertexBufferClass	*pVB, VERTEX_
 		assert(x0 >= originX && y0 >= originY && x1>x0 && y1>y0 && x1<=originX+VERTEX_BUFFER_TILE_LENGTH && y1<=originY+VERTEX_BUFFER_TILE_LENGTH);
 #endif
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        QuestTerrainPatchLock lockVtxBuffer(pVB, m_questTerrainGroupSize, questTerrainVertexOffset(originX, originY));
+        if (!lockVtxBuffer.Get_Vertex_Array()) return -1;
+#else
 		DX8VertexBufferClass::WriteLockClass lockVtxBuffer(pVB);
+#endif
 		VERTEX_FORMAT *vBase = (VERTEX_FORMAT*)lockVtxBuffer.Get_Vertex_Array();
 		VERTEX_FORMAT *vb;
 
@@ -715,7 +788,12 @@ Int HeightMapRenderObjClass::updateVBForLightOptimized(DX8VertexBufferClass	*pVB
 		assert(x0 >= originX && y0 >= originY && x1>x0 && y1>y0 && x1<=originX+VERTEX_BUFFER_TILE_LENGTH && y1<=originY+VERTEX_BUFFER_TILE_LENGTH);
 #endif
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        QuestTerrainPatchLock lockVtxBuffer(pVB, m_questTerrainGroupSize, questTerrainVertexOffset(originX, originY));
+        if (!lockVtxBuffer.Get_Vertex_Array()) return -1;
+#else
 		DX8VertexBufferClass::WriteLockClass lockVtxBuffer(pVB);
+#endif
 		VERTEX_FORMAT *vBase = (VERTEX_FORMAT*)lockVtxBuffer.Get_Vertex_Array();
 		VERTEX_FORMAT *vb;
 
@@ -1315,12 +1393,30 @@ Int HeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *pMap, 
 	{	//requested heightmap different from old one.
 		freeIndexVertexBuffers();
 		//Create static index buffers.  These will index the vertex buffers holding the map.
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        // Grouping is chosen only while recreating all buffers; a process restart changes the choice.
+        m_questTerrainGroupSize = QuestXR::PerformanceRequested(QuestXR::PerfOption::TerrainBatching)
+            ? QuestXR::TerrainMaxGroup : 1;
+#ifdef PRE_TRANSFORM_VERTEX
+        m_questTerrainGroupSize = 1; // Software-transformed legacy buffers remain ungrouped.
+#endif
+        __android_log_print(ANDROID_LOG_INFO, "GeneralsXR", "Quest terrain storage: patches_per_buffer=%u", m_questTerrainGroupSize);
+        m_indexBuffer=NEW_REF(DX8IndexBufferClass,(HEIGHTMAP_POLYGON_NUM * 3 * m_questTerrainGroupSize));
+#else
 		m_indexBuffer=NEW_REF(DX8IndexBufferClass,(VERTEX_BUFFER_TILE_LENGTH*VERTEX_BUFFER_TILE_LENGTH*2*3));
+#endif
 
 		// Fill up the IB
 		DX8IndexBufferClass::WriteLockClass lockIdxBuffer(m_indexBuffer);
 		UnsignedShort *ib=lockIdxBuffer.Get_Index_Array();
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        if (m_questTerrainGroupSize > 1) {
+            const bool filled = QuestXR::FillTerrainGroupIndices(ib,
+                HEIGHTMAP_POLYGON_NUM * 3 * m_questTerrainGroupSize, m_questTerrainGroupSize);
+            WWASSERT(filled);
+        } else
+#endif
 		for (j=0; j<(VERTEX_BUFFER_TILE_LENGTH*VERTEX_BUFFER_TILE_LENGTH*4); j+=VERTEX_BUFFER_TILE_LENGTH*4)
 		{
 			for (i=j; i<(j+VERTEX_BUFFER_TILE_LENGTH*4); i+=4)	//4 vertices per 2x2 block
@@ -1361,10 +1457,22 @@ Int HeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *pMap, 
 		m_vertexBufferBackup = NEW VERTEX_FORMAT [m_numVertexBufferTiles * HEIGHTMAP_VERTEX_NUM];
 
 		for (i=0; i<m_numVertexBufferTiles; i++) {
+            unsigned vertices = HEIGHTMAP_VERTEX_NUM;
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+            QuestXR::TerrainPatchSpan span;
+            const bool valid = QuestXR::TerrainSpan(i, m_numVertexBufferTiles, m_questTerrainGroupSize, span);
+            WWASSERT(valid);
+            if (span.firstPatch != unsigned(i)) {
+                m_vertexBufferTiles[i] = m_vertexBufferTiles[span.firstPatch];
+                m_vertexBufferTiles[i]->Add_Ref(); // Existing per-patch cleanup releases each alias exactly once.
+                continue;
+            }
+            vertices *= span.patches; // Final partial group never draws unallocated patches.
+#endif
 #ifdef USE_NORMALS
-			m_vertexBufferTiles[i] = NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZNUV2,HEIGHTMAP_VERTEX_NUM,DX8VertexBufferClass::USAGE_DEFAULT));
+			m_vertexBufferTiles[i] = NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZNUV2,vertices,DX8VertexBufferClass::USAGE_DEFAULT));
 #else
-			m_vertexBufferTiles[i] = NEW_REF(DX8VertexBufferClass,(DX8_VERTEX_FORMAT,HEIGHTMAP_VERTEX_NUM,DX8VertexBufferClass::USAGE_DEFAULT));
+			m_vertexBufferTiles[i] = NEW_REF(DX8VertexBufferClass,(DX8_VERTEX_FORMAT,vertices,DX8VertexBufferClass::USAGE_DEFAULT));
 #endif
 		}
 
@@ -2049,6 +2157,10 @@ void HeightMapRenderObjClass::Render(RenderInfoClass & rinfo)
 	}
 
 	Int pass;
+    {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::PerformanceStageScope submissionTime(QuestXR::PerfStage::TerrainSubmit);
+#endif
  	for (pass=0; pass<devicePasses; pass++) {
 #ifdef TIMING_TESTS
 #endif
@@ -2065,7 +2177,12 @@ void HeightMapRenderObjClass::Render(RenderInfoClass & rinfo)
 		for (j=0; j<m_numVBTilesY; j++)
 			for (i=0; i<m_numVBTilesX; i++)
 			{
-				DX8Wrapper::Set_Vertex_Buffer(getVertexBufferTile(i, j));
+				unsigned drawPatches = 1;
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+                drawPatches = questTerrainDrawPatches(j * m_numVBTilesX + i);
+                if (!drawPatches) continue;
+#endif
+                DX8Wrapper::Set_Vertex_Buffer(getVertexBufferTile(i, j));
 #ifdef PRE_TRANSFORM_VERTEX
 				if (m_xformedVertexBuffer && pass==0) {
 					// Note - m_xformedVertexBuffer should only be used for non T&L hardware.  jba.
@@ -2084,12 +2201,16 @@ void HeightMapRenderObjClass::Render(RenderInfoClass & rinfo)
 				}
 #endif
 				if (Is_Hidden() == 0) {
-					DX8Wrapper::Draw_Triangles(0, HEIGHTMAP_POLYGON_NUM, 0, HEIGHTMAP_VERTEX_NUM);
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+                    QuestXR::RecordTerrainSubmission(drawPatches, false);
+#endif
+                    DX8Wrapper::Draw_Triangles(0, HEIGHTMAP_POLYGON_NUM * drawPatches, 0, HEIGHTMAP_VERTEX_NUM * drawPatches);
 				}
 
 			}
 	}
 
+    } // terrain submission timer
 	if (!doMultiPassWireFrame)
 	{
 		if (pass)	//shader was applied at least once?
@@ -2186,6 +2307,9 @@ void HeightMapRenderObjClass::Render(RenderInfoClass & rinfo)
 ///Performs additional terrain rendering pass, blending in the black shroud texture.
 void HeightMapRenderObjClass::renderTerrainPass(CameraClass *pCamera)
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::PerformanceStageScope submissionTime(QuestXR::PerfStage::TerrainSubmit);
+#endif
 	DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix3D(true));
 
 	//Apply the shader and material
@@ -2195,7 +2319,12 @@ void HeightMapRenderObjClass::renderTerrainPass(CameraClass *pCamera)
 	for (Int j=0; j<m_numVBTilesY; j++)
 		for (Int i=0; i<m_numVBTilesX; i++)
 		{
-			DX8Wrapper::Set_Vertex_Buffer(getVertexBufferTile(i, j));
+			unsigned drawPatches = 1;
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+                drawPatches = questTerrainDrawPatches(j * m_numVBTilesX + i);
+                if (!drawPatches) continue;
+#endif
+                DX8Wrapper::Set_Vertex_Buffer(getVertexBufferTile(i, j));
 #ifdef PRE_TRANSFORM_VERTEX
 			if (m_xformedVertexBuffer && pass==0) {
 				// Note - m_xformedVertexBuffer should only be used for non T&L hardware.  jba.
@@ -2214,7 +2343,10 @@ void HeightMapRenderObjClass::renderTerrainPass(CameraClass *pCamera)
 			}
 #endif
 			if (Is_Hidden() == 0) {
-				DX8Wrapper::Draw_Triangles(0, HEIGHTMAP_POLYGON_NUM, 0, HEIGHTMAP_VERTEX_NUM);
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+                    QuestXR::RecordTerrainSubmission(drawPatches, true);
+#endif
+                    DX8Wrapper::Draw_Triangles(0, HEIGHTMAP_POLYGON_NUM * drawPatches, 0, HEIGHTMAP_VERTEX_NUM * drawPatches);
 			}
 		}
 }
@@ -2226,6 +2358,9 @@ void HeightMapRenderObjClass::renderTerrainPass(CameraClass *pCamera)
 blended together.  Used primarily for corner cases where 3 different textures meet.*/
 void HeightMapRenderObjClass::renderExtraBlendTiles()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::PerformanceStageScope perfBlend(QuestXR::PerfStage::TerrainBlend);
+#endif
 	Int vertexCount = 0;
 	Int indexCount = 0;
 	Int xExtent = m_map->getXExtent();
@@ -2240,6 +2375,59 @@ void HeightMapRenderObjClass::renderExtraBlendTiles()
 	if (maxBlendTiles > 10000)	//we can only fit about 10000 tiles into a single VB.
 		maxBlendTiles = 10000;
 
+    // GeneralsX @performance Codex 05/10/2026 Reuse only identical pure diffuse inputs in one stereo pair.
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR) && !defined(USE_NORMALS)
+    bool pureLighting = QuestXR::PerformanceRequested(QuestXR::PerfOption::TerrainLighting)
+        && QuestXR::PerformanceEye() >= 0 && !ShaderClass::Is_Backface_Culling_Inverted();
+    std::vector<uint8_t> lightingInputs, vertexInputs;
+    if (pureLighting) {
+        // Test scene lights once per blend call; never skip their calculations/iterator state.
+        RTS3DScene *scene = (RTS3DScene*)Scene;
+        if (scene) {
+            RefRenderObjListIterator *it = scene->createLightsIterator();
+            if (it) { it->First(); pureLighting = it->Is_Done(); scene->destroyLightsIterator(it); }
+            else pureLighting = false;
+        }
+        const Int width = m_map->getXExtent(), height = m_map->getYExtent();
+        QuestXR::AppendPerfInput(lightingInputs, width); QuestXR::AppendPerfInput(lightingInputs, height);
+        QuestXR::AppendPerfInput(lightingInputs, m_map->getBorderSizeInline());
+        QuestXR::AppendPerfInput(lightingInputs, TheGlobalData->m_numGlobalLights);
+        const RGBColor &ambient = TheGlobalData->m_terrainAmbient[0];
+        QuestXR::AppendPerfInput(lightingInputs, ambient.red); QuestXR::AppendPerfInput(lightingInputs, ambient.green);
+        QuestXR::AppendPerfInput(lightingInputs, ambient.blue);
+        for (Int i=0; i<TheGlobalData->m_numGlobalLights; ++i) {
+            const Coord3D &p = TheGlobalData->m_terrainLightPos[i];
+            const RGBColor &d = TheGlobalData->m_terrainDiffuse[i];
+            QuestXR::AppendPerfInput(lightingInputs, p.x); QuestXR::AppendPerfInput(lightingInputs, p.y); QuestXR::AppendPerfInput(lightingInputs, p.z);
+            QuestXR::AppendPerfInput(lightingInputs, d.red); QuestXR::AppendPerfInput(lightingInputs, d.green); QuestXR::AppendPerfInput(lightingInputs, d.blue);
+        }
+        QuestXR::AppendPerfInput(lightingInputs, m_useDepthFade);
+        QuestXR::AppendPerfInput(lightingInputs, m_depthFade.X); QuestXR::AppendPerfInput(lightingInputs, m_depthFade.Y);
+        QuestXR::AppendPerfInput(lightingInputs, m_depthFade.Z); QuestXR::AppendPerfInput(lightingInputs, TheGlobalData->m_waterPositionZ);
+        vertexInputs.reserve(lightingInputs.size()+5*sizeof(m_map->getHeight(0,0)));
+    }
+#endif
+    auto diffuseForBlend = [&](Int x, Int y) -> Int {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR) && !defined(USE_NORMALS)
+        if (pureLighting) {
+            const Int width = m_map->getXExtent(), height = m_map->getYExtent();
+            const Int px = std::max(0, std::min(x, width-1)), py = std::max(0, std::min(y, height-1));
+            // All normal/height inputs are checked, even if terrain deforms between draws.
+            vertexInputs.assign(lightingInputs.begin(), lightingInputs.end());
+            QuestXR::AppendPerfInput(vertexInputs, m_map->getHeight(px, py));
+            QuestXR::AppendPerfInput(vertexInputs, m_map->getHeight(std::min(px+1,width-1), py));
+            QuestXR::AppendPerfInput(vertexInputs, m_map->getHeight(std::max(px-1,0), py));
+            QuestXR::AppendPerfInput(vertexInputs, m_map->getHeight(px, std::min(py+1,height-1)));
+            QuestXR::AppendPerfInput(vertexInputs, m_map->getHeight(px, std::max(py-1,0)));
+            Int diffuse;
+            if (QuestXR::TerrainLightLookup(this, m_map, px, py, vertexInputs, diffuse)) return diffuse;
+            diffuse = getStaticDiffuse(x, y);
+            QuestXR::RememberTerrainLight(this, m_map, px, py, vertexInputs, diffuse);
+            return diffuse;
+        }
+#endif
+        return getStaticDiffuse(x, y);
+    };
 	DynamicVBAccessClass vb_access(BUFFER_TYPE_DYNAMIC_DX8,DX8_FVF_XYZNDUV2,maxBlendTiles*4);
 	DynamicIBAccessClass ib_access(BUFFER_TYPE_DYNAMIC_DX8,maxBlendTiles*6);
 	{
@@ -2294,7 +2482,7 @@ void HeightMapRenderObjClass::renderExtraBlendTiles()
 				vb->nx=0;
 				vb->ny=0;
 				vb->nz=0;
-				vb->diffuse=(alpha[0]<<24)|(getStaticDiffuse(x,y) & 0x00ffffff);
+				vb->diffuse=(alpha[0]<<24)|(diffuseForBlend(x,y) & 0x00ffffff);
 				vb->u1=U[0];
 				vb->v1=V[0];
 				vb->u2=0;
@@ -2307,7 +2495,7 @@ void HeightMapRenderObjClass::renderExtraBlendTiles()
 				vb->nx=0;
 				vb->ny=0;
 				vb->nz=0;
-				vb->diffuse=(alpha[1]<<24)|(getStaticDiffuse(x+1,y) & 0x00ffffff);
+				vb->diffuse=(alpha[1]<<24)|(diffuseForBlend(x+1,y) & 0x00ffffff);
 				vb->u1=U[1];
 				vb->v1=V[1];
 				vb->u2=0;
@@ -2320,7 +2508,7 @@ void HeightMapRenderObjClass::renderExtraBlendTiles()
 				vb->nx=0;
 				vb->ny=0;
 				vb->nz=0;
-				vb->diffuse=(alpha[2]<<24)|(getStaticDiffuse(x+1,y+1) & 0x00ffffff);
+				vb->diffuse=(alpha[2]<<24)|(diffuseForBlend(x+1,y+1) & 0x00ffffff);
 				vb->u1=U[2];
 				vb->v1=V[2];
 				vb->u2=0;
@@ -2333,7 +2521,7 @@ void HeightMapRenderObjClass::renderExtraBlendTiles()
 				vb->nx=0;
 				vb->ny=0;
 				vb->nz=0;
-				vb->diffuse=(alpha[3]<<24)|(getStaticDiffuse(x,y+1) & 0x00ffffff);
+				vb->diffuse=(alpha[3]<<24)|(diffuseForBlend(x,y+1) & 0x00ffffff);
 				vb->u1=U[3];
 				vb->v1=V[3];
 				vb->u2=0;

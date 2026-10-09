@@ -343,3 +343,12 @@ if(GENERALSX_SHADOW_VOLUME_DEBUG)
         TARGET_DIRECTORY z_gameenginedevice
         PROPERTIES COMPILE_DEFINITIONS SV_DEBUG)
 endif()
+
+if(SAGE_USE_OPENXR)
+    target_sources(z_gameenginedevice PRIVATE
+        Source/QuestVR/QuestVRInput.cpp
+        Source/QuestVR/QuestVRPresentation.cpp
+        Source/QuestVR/QuestVRPlacement.cpp
+        Source/QuestVR/QuestVRKeyboard.cpp
+        Source/QuestVR/QuestCampaign.cpp)
+endif()

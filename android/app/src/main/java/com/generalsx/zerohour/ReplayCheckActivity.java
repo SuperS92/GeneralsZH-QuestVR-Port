@@ -61,6 +61,7 @@ public class ReplayCheckActivity extends Activity {
     private static final String CRC_EVERY_FRAME_MARKER = "gx_crc_every_frame.txt";
     private static final String PREFS = "replay_check";
     private static final String PREF_CRC_EVERY_FRAME = "crc_every_frame";
+    private static final String STATE_PENDING_LAUNCH = "pending_replay_launch";
 
     private static final int MODE_RUN_THROUGH = 0;
     private static final int MODE_WATCH_FROM = 1;
@@ -81,6 +82,9 @@ public class ReplayCheckActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (savedInstanceState != null) {
+            pendingLaunch = savedInstanceState.getParcelable(STATE_PENDING_LAUNCH);
+        }
         setTitle(R.string.replaycheck_title);
 
         LinearLayout root = new LinearLayout(this);
@@ -143,10 +147,26 @@ public class ReplayCheckActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (pendingLaunch == null) {
+        if (pendingLaunch != null) {
+            if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                Intent intent = pendingLaunch;
+                pendingLaunch = null;
+                startActivity(intent);
+            } else {
+                setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+            }
+        } else {
             setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         }
         refresh();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        if (pendingLaunch != null) {
+            state.putParcelable(STATE_PENDING_LAUNCH, pendingLaunch);
+        }
+        super.onSaveInstanceState(state);
     }
 
     private void updateModeUi() {

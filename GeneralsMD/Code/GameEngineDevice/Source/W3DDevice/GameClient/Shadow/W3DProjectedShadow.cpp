@@ -56,6 +56,10 @@
 #include "GameClient/Drawable.h"
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestPerformance.h"
+#endif
+
 #if defined(__ANDROID__)
 // GeneralsX @perf Android port 09/05/2026 - draw-category hook. Forward-declared
 // rather than including d3d8gles.h: that header is not on the gameenginedevice
@@ -263,6 +267,9 @@ Bool W3DProjectedShadowManager::init()
 
 Bool W3DProjectedShadowManager::ReAcquireResources()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::InvalidateShadowBuffer();
+#endif
 	//grab assets which don't survive a device reset and need
 	//to be present for duration of game.
 
@@ -314,6 +321,9 @@ Bool W3DProjectedShadowManager::ReAcquireResources()
 
 void W3DProjectedShadowManager::ReleaseResources()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::InvalidateShadowBuffer();
+#endif
 	invalidateCachedLightPositions();	//textures need to be updated
 	REF_PTR_RELEASE(m_dynamicRenderTarget);	//need to create a new render target
 	if (shadowDecalIndexBufferD3D)
@@ -1326,6 +1336,9 @@ void W3DProjectedShadowManager::prepareShadows()
 
 Int W3DProjectedShadowManager::renderShadows(RenderInfoClass & rinfo)
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::PerformanceStageScope perfShadows(QuestXR::PerfStage::Shadows);
+#endif
 #if defined(__ANDROID__)
 	const int gxPrevCat = d3d8gles_SetDrawCategory(D3D8GLES_DRAWCAT_SHADOWS);
 	struct GxCatRestore { int prev; ~GxCatRestore() { d3d8gles_SetDrawCategory(prev); } } gxCatRestore{gxPrevCat};
@@ -1345,8 +1358,17 @@ Int W3DProjectedShadowManager::renderShadows(RenderInfoClass & rinfo)
 
 	//According to Nvidia there's a D3D bug that happens if you don't start with a
 	//new dynamic VB each frame - so we force a DISCARD by overflowing the counter.
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @performance Codex 05/10/2026 Append the second eye only; retain all overflow DISCARD fallbacks.
+    const bool append = QuestXR::PerformanceRequested(QuestXR::PerfOption::ShadowAppend)
+        && !ShaderClass::Is_Backface_Culling_Inverted()
+        && QuestXR::ContinueShadowBuffer(this, shadowDecalVertexBufferD3D, shadowDecalIndexBufferD3D);
+    if (!append)
+#endif
+    {
 	nShadowDecalVertsInBuf = 0xffff;
 	nShadowDecalIndicesInBuf = 0xffff;
+    }
 
 	if (TheGlobalData->m_useShadowDecals)
 	{

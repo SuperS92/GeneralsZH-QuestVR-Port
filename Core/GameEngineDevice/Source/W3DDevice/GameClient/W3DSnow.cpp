@@ -322,6 +322,9 @@ flush_particles:
 
 void W3DSnowManager::render(RenderInfoClass &rinfo)
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	return; // Cosmetic snow only. Keep update() and weather RNG intact.
+#endif
 	if (!TheWeatherSetting->m_snowEnabled || !m_isVisible)
 		return;
 

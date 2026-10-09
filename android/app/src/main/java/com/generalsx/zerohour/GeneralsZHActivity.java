@@ -55,10 +55,16 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 public class GeneralsZHActivity extends SDLActivity {
 
     private static final String TAG = "GeneralsZH";
+    // GeneralsX @feature Codex 02/10/2026 Preserve external DXVK config across local choice changes.
+    private static boolean questDxvkCaptured;
+    private static String questDxvkOriginal;
+
 
     // GeneralsX @feature Android port 23/09/2026 Launch options from the Replay check
     // screen (ReplayCheckActivity): play one replay, optionally fast-forwarded to a frame
@@ -288,6 +294,8 @@ public class GeneralsZHActivity extends SDLActivity {
                 && new java.io.File(getApplicationInfo().nativeLibraryDir, "libmain60.so").isFile()) {
             engine = "main60";
         }
+        if (BuildConfig.QUEST_VR && SetupActivity.getSimHz(this) == SetupActivity.SIM_HZ_CROSSPLAY
+                && !"main60".equals(engine)) throw new IllegalStateException("Quest 60 Hz engine is missing");
         Log.i(TAG, "Loading engine library: lib" + engine + ".so");
         return new String[] {
             "SDL3",
@@ -310,7 +318,7 @@ public class GeneralsZHActivity extends SDLActivity {
     public void loadLibraries() {
         for (String lib : getLibraries()) {
             if ("main".equals(lib) || "main60".equals(lib)) {
-                int seq = UpdateManager.activeEngineSeq(this);
+                int seq = BuildConfig.QUEST_VR ? 0 : UpdateManager.activeEngineSeq(this);
                 if (seq > 0 && UpdateManager.noteEngineBoot(this, seq)) {
                     String path = UpdateManager.activeEngineLibrary(this, "lib" + lib + ".so");
                     if (path != null) {
@@ -363,6 +371,7 @@ public class GeneralsZHActivity extends SDLActivity {
         extractBundledRuntime();
 
         String gamePath = getSavedGamePath();
+        SetupActivity.prepareQuestPcCompatibility(this, gamePath);
         boolean haveCustomPath = gamePath != null && SetupActivity.isValidGameFolder(new File(gamePath));
         boolean haveLegacyPath = !haveCustomPath && isValidGameFolder(legacyGameDataDir());
 
@@ -401,6 +410,73 @@ public class GeneralsZHActivity extends SDLActivity {
             }
         }
 
+        // GeneralsX @feature Codex 30/09/2026 Set the local rendering choice
+        // before SDL starts native code. Ordinary Android launches are unchanged.
+        if (BuildConfig.QUEST_VR) {
+            try {
+                android.system.Os.setenv("GX_QUEST_SPATIAL_AA",
+                    Integer.toString(SetupActivity.getQuestAAMode(this)), true);
+            } catch (android.system.ErrnoException failure) {
+                Log.w(TAG, "Could not apply Quest spatial AA choice", failure);
+            }
+        }
+        // GeneralsX @feature Codex 02/10/2026 Set diagnostic before native startup.
+        if (BuildConfig.QUEST_VR) {
+            try {
+                android.system.Os.setenv("GX_QUEST_TERRAIN_DETAIL_TEST",
+                    SetupActivity.getQuestTerrainDetailTest(this) ? "1" : "0", true);
+            } catch (android.system.ErrnoException failure) {
+                Log.w(TAG, "Could not apply Quest terrain detail test choice", failure);
+            }
+        }
+        // GeneralsX @feature Codex 02/10/2026 Reduced-terrain filtering before native startup.
+        if (BuildConfig.QUEST_VR) {
+            try {
+                android.system.Os.setenv("GX_QUEST_TERRAIN_MIP_FILTER",
+                    Integer.toString(SetupActivity.getQuestTerrainMipFilter(this)), true);
+            } catch (android.system.ErrnoException failure) {
+                Log.w(TAG, "Could not apply Quest terrain filtering choice", failure);
+            }
+        }
+        // GeneralsX @feature Codex 02/10/2026 Independent presentation choices before DXVK/SDL startup.
+        if (BuildConfig.QUEST_VR) {
+            try {
+                android.system.Os.setenv("GX_QUEST_ROAD_MIPS", SetupActivity.getQuestRoadMips(this) ? "1" : "0", true);
+                android.system.Os.setenv("GX_QUEST_CUTOUT_MIPS", SetupActivity.getQuestCutoutMips(this) ? "1" : "0", true);
+                android.system.Os.setenv("GX_QUEST_SOFT_CUTOUTS", SetupActivity.getQuestSoftCutouts(this) ? "1" : "0", true);
+                // GeneralsX @feature Codex 07/10/2026 Apply stereo wind comparison before native loading.
+                android.system.Os.setenv("GX_QUEST_TREE_WIND_PAIR", SetupActivity.getQuestTreeWindPair(this) ? "1" : "0", true);
+                android.system.Os.setenv("GX_QUEST_TREE_CONTOURS", SetupActivity.getQuestTreeContours(this) ? "1" : "0", true);
+                android.system.Os.setenv("GX_QUEST_SHADOWS", SetupActivity.getQuestShadows(this) ? "1" : "0", true);
+                android.system.Os.setenv("GX_QUEST_FENCE_CONTOURS", SetupActivity.getQuestFenceContours(this) ? "1" : "0", true);
+                // GeneralsX @performance Codex 05/10/2026 Apply each independent A/B switch before native loading.
+                for (int i=0; i<SetupActivity.QUEST_PERF_ENV.length; ++i)
+                    android.system.Os.setenv(SetupActivity.QUEST_PERF_ENV[i], SetupActivity.getQuestPerformanceChoice(this, i) ? "1" : "0", true);
+                android.system.Os.setenv("GX_QUEST_TERRAIN_FAR_MIPS", SetupActivity.getQuestTerrainFarMips(this) ? "1" : "0", true);
+                android.system.Os.setenv("GX_QUEST_TERRAIN_FAR_FILTER", SetupActivity.getQuestTerrainFarFilter(this) ? "1" : "0", true);
+                int filter = SetupActivity.getQuestTextureFilter(this);
+                android.system.Os.setenv("GX_QUEST_TEXTURE_FILTER", Integer.toString(filter), true);
+                android.system.Os.setenv("GX_QUEST_RENDER_SCALE",
+                    Integer.toString(SetupActivity.getQuestRenderScale(this)), true);
+                if (!questDxvkCaptured) {
+                    questDxvkOriginal = android.system.Os.getenv("DXVK_CONFIG");
+                    questDxvkCaptured = true;
+                }
+                if (filter == 2) {
+                    // Preserve SDL3Main's Android default when this override creates DXVK_CONFIG first.
+                    String baseline = questDxvkOriginal == null
+                        ? "dxvk.enableMemoryDefrag = False" : questDxvkOriginal;
+                    android.system.Os.setenv("DXVK_CONFIG", baseline
+                        + (baseline.isEmpty() ? "" : ";") + "d3d9.samplerAnisotropy = 1", true);
+                } else if (questDxvkOriginal == null) {
+                    android.system.Os.unsetenv("DXVK_CONFIG");
+                } else {
+                    android.system.Os.setenv("DXVK_CONFIG", questDxvkOriginal, true);
+                }
+            } catch (android.system.ErrnoException failure) {
+                Log.w(TAG, "Could not apply Quest texture/resolution choices", failure);
+            }
+        }
         super.onCreate(savedInstanceState);
     }
 
@@ -502,7 +578,8 @@ public class GeneralsZHActivity extends SDLActivity {
      * gamedata/Window/ -- see copyAssetTree's comment on ALWAYS_OVERWRITE_PREFIX.
      */
     private void extractBundledRuntime() {
-        File root = getExternalFilesDir(null);
+        String imported = BuildConfig.QUEST_VR ? getSavedGamePath() : null;
+        File root = BuildConfig.QUEST_VR ? (imported != null ? new File(imported) : null) : getExternalFilesDir(null);
         if (root == null) {
             Log.e(TAG, "external files dir unavailable; asset extraction skipped");
             return;
@@ -520,6 +597,20 @@ public class GeneralsZHActivity extends SDLActivity {
     // normal "leave it alone if it already exists" behavior.
     private static final String ALWAYS_OVERWRITE_PREFIX = "Window/";
 
+    // The first Quest APK shipped without the offline-v0.44 anisotropic
+    // filtering baseline. Upgrade only that exact generated file; preserve
+    // every user-edited dxvk.conf byte for byte.
+    private static boolean isOldQuestDxvkDefault(File file) {
+        if (!BuildConfig.QUEST_VR || !file.isFile() || file.length() > 128) return false;
+        try {
+            String text = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)
+                .replace("\r\n", "\n");
+            return text.equals("dxvk.enableAsync = false\ndxvk.numCompilerThreads = 4\n");
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     private void copyAssetTree(String assetPath, File destRoot) {
         AssetManager assets = getAssets();
         try {
@@ -530,7 +621,8 @@ public class GeneralsZHActivity extends SDLActivity {
                 if (rel.startsWith("/")) rel = rel.substring(1);
                 if (rel.isEmpty()) return;
                 File dest = new File(destRoot, rel);
-                boolean alwaysOverwrite = rel.startsWith(ALWAYS_OVERWRITE_PREFIX);
+                boolean alwaysOverwrite = rel.startsWith(ALWAYS_OVERWRITE_PREFIX)
+                    || (rel.equals("dxvk.conf") && isOldQuestDxvkDefault(dest));
                 if (dest.exists() && !alwaysOverwrite) return;
                 File parent = dest.getParentFile();
                 if (parent != null && !parent.exists() && !parent.mkdirs()) {

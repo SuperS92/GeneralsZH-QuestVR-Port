@@ -1,0 +1,605 @@
+{
+  "upstreamEdits": [
+    {
+      "path": ".gitignore",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Optional build wiring; ordinary target remains available",
+      "risk": "build/identity",
+      "owningTest": "control and Quest builds",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "AGENTS.md",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Append Quest development evidence while preserving upstream guidance",
+      "risk": "documentation only",
+      "owningTest": "source boundary; no private fixture or machine paths",
+      "removalCondition": "Upstream documentation structure changes"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Optional build wiring; ordinary target remains available",
+      "risk": "build/identity",
+      "owningTest": "control and Quest builds",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "Core/GameEngine/Source/GameClient/MessageStream/PlaceEventTranslator.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Spatial world-coordinate override; current placement validation and messages",
+      "risk": "input/command generation",
+      "owningTest": "native syntax; legal/illegal placements and CRC replay gates",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "Core/GameEngineDevice/Include/W3DDevice/GameClient/W3DView.h",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Eye draws, one scene frame update, explicit height during panning",
+      "risk": "presentation with potential simulation side effects",
+      "owningTest": "native syntax; rendering on/off replay comparison; stereo hardware gate",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "Core/GameEngineDevice/Source/W3DDevice/GameClient/W3DSnow.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Suppress snow renderer only; preserve update/RNG",
+      "risk": "presentation",
+      "owningTest": "native syntax; snow map hardware gate",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "Core/GameEngineDevice/Source/W3DDevice/GameClient/W3DView.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Eye draws, one scene frame update, explicit height during panning",
+      "risk": "presentation with potential simulation side effects",
+      "owningTest": "native syntax; rendering on/off replay comparison; stereo hardware gate",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "Core/Libraries/Source/d3d8gles/src/d3d8gles.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Optional build wiring; ordinary target remains available",
+      "risk": "build/identity",
+      "owningTest": "control and Quest builds",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngine/Include/GameClient/InGameUI.h",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Spatial world-coordinate override; current placement validation and messages",
+      "risk": "input/command generation",
+      "owningTest": "native syntax; legal/illegal placements and CRC replay gates",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Spatial world-coordinate override; current placement validation and messages",
+      "risk": "input/command generation",
+      "owningTest": "native syntax; legal/illegal placements and CRC replay gates",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/CMakeLists.txt",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Optional build wiring; ordinary target remains available",
+      "risk": "build/identity",
+      "owningTest": "control and Quest builds",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/Include/W3DDevice/GameClient/W3DDisplay.h",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Eye draws, one scene frame update, explicit height during panning",
+      "risk": "presentation with potential simulation side effects",
+      "owningTest": "native syntax; rendering on/off replay comparison; stereo hardware gate",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/Include/W3DDevice/GameClient/W3DScene.h",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Eye draws, one scene frame update, explicit height during panning",
+      "risk": "presentation with potential simulation side effects",
+      "owningTest": "native syntax; rendering on/off replay comparison; stereo hardware gate",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/Source/SDL3GameEngine.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Once per engine update XR frame boundary; UI pointer adapter",
+      "risk": "input/lifecycle",
+      "owningTest": "native syntax; input math; sleep/wake hardware gate",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/W3DDisplay.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Eye draws, one scene frame update, explicit height during panning",
+      "risk": "presentation with potential simulation side effects",
+      "owningTest": "native syntax; rendering on/off replay comparison; stereo hardware gate",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/W3DScene.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Eye draws, one scene frame update, explicit height during panning",
+      "risk": "presentation with potential simulation side effects",
+      "owningTest": "native syntax; rendering on/off replay comparison; stereo hardware gate",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "GeneralsMD/Code/Main/AndroidCrashHandler.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Optional build wiring; ordinary target remains available",
+      "risk": "build/identity",
+      "owningTest": "control and Quest builds",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "GeneralsMD/Code/Main/CMakeLists.txt",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Optional Quest build wiring including spatial/SMAA and bounded raw-eye capture modules; ordinary target remains available",
+      "risk": "build/identity",
+      "owningTest": "control and Quest builds; isolated host GPU AA/readback fixtures",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "GeneralsMD/Code/Main/SDL3Main.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Optional build wiring; ordinary target remains available",
+      "risk": "build/identity",
+      "owningTest": "control and Quest builds",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "android/app/build.gradle",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Optional build wiring; ordinary target remains available",
+      "risk": "build/identity",
+      "owningTest": "control and Quest builds",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "android/app/src/main/java/com/generalsx/zerohour/DataPackInstaller.java",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only PC EXE CRC inspection/atomic profile record and migration; route the known stale MYSOREZ manifest mirror to the existing official publisher manifest; trim surrounding digest whitespace only",
+      "risk": "installation-time metadata and wire-format classification; ordinary Android behavior retained; full package digest gate unchanged",
+      "owningTest": "Java PE/profile tests; production metadata source selection and wrong-digest rejection; launcher compile/package; new QFE6A install and live match pending",
+      "removalCondition": "Upstream supplies reliable PC CRC format metadata and publisher manifest synchronization/whitespace handling"
+    },
+    {
+      "path": "android/app/src/main/java/com/generalsx/zerohour/GeneralsZHActivity.java",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest guards for private import/storage, driver choice and engine updates; expose optional local spatial AA choice to native rendering before SDL launch",
+      "risk": "Android app isolation",
+      "owningTest": "Java compile and merged manifest; import/relaunch hardware gate",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "android/app/src/main/java/com/generalsx/zerohour/SetupActivity.java",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest guards for private import/storage, driver choice and engine updates; show Quest PC-profile migration data action even without a newer package version; clear only ReplayCheck diagnostic markers on normal private Quest launches; default-off Off/Gentle/SMAA choice and old opt-in migration",
+      "risk": "Android app isolation",
+      "owningTest": "Java compile and merged manifest; import/relaunch hardware gate; normal-play versus replay detailed trace lifecycle hardware gate",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "android/app/src/main/java/com/generalsx/zerohour/UpdateManager.java",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest guards for private import/storage, driver choice and engine updates",
+      "risk": "Android app isolation",
+      "owningTest": "Java compile and merged manifest; import/relaunch hardware gate",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "cmake/dx8.cmake",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Optional build wiring; ordinary target remains available",
+      "risk": "build/identity",
+      "owningTest": "control and Quest builds",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "cmake/meson-arm64-android-cross.ini.in",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Optional build wiring; ordinary target remains available",
+      "risk": "build/identity",
+      "owningTest": "control and Quest builds",
+      "removalCondition": "Upstream provides equivalent optional platform support"
+    },
+    {
+      "path": "docs/DEV_BLOG/2026-09-DIARY.md",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Append Quest development evidence while preserving upstream guidance",
+      "risk": "documentation only",
+      "owningTest": "source boundary; no private fixture or machine paths",
+      "removalCondition": "Upstream documentation structure changes"
+    },
+    {
+      "path": "Core/Libraries/Source/WWVegas/WW3D2/textureloader.cpp",
+      "purpose": "Quest optional selected standalone cutout DDS/TGA A8 upload and alpha-only reduced mip coverage during loading; off/non-Quest inherited; independent exact-name fence decode/filter and resource-owned upload marker; preserved Off path",
+      "risk": "Presentation upload/loading; alpha silhouettes/memory; hardware replay/live gates pending",
+      "owningTest": "Pure pitched buffers/name allowlist/off and coverage fixtures; dual native builds; user comparison; fence periodic row/premultiplied/pitch/overlap/rollback fixtures and dual native build; device quality/replay pending",
+      "removalCondition": "Upstream equivalent opt-in sampling correction",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/W3DRoadBuffer.cpp",
+      "purpose": "Quest optional all-available road mips; no atlas/geometry/depth/reduction change",
+      "risk": "Presentation upload/loading; alpha silhouettes/memory; hardware replay/live gates pending",
+      "owningTest": "Pure pitched buffers/name allowlist/off and coverage fixtures; dual native builds; user comparison",
+      "removalCondition": "Upstream equivalent opt-in sampling correction",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "Core/GameEngineDevice/Source/W3DDevice/GameClient/W3DTreeBuffer.cpp",
+      "purpose": "Quest opt-in procedural tree draw scope only; atlas layout/source assets, animation and LOD unchanged; independent optional bounded static vertex updates with original flags and all tree state updates; default-off same-pair wind shader inputs only, original phase/RNG/topple/sink/push updates retained; isolated default-off premultiplied 3x3 base atlas material filter while original lock held, existing mip generation retained",
+      "risk": "Opt-in cutout draw blending and doubled submissions; overlap/performance/replay gates; opt-in tree appearance/coverage and extra load-time CPU scratch",
+      "owningTest": "Strict state eligibility, complete state restoration/failure fixtures, dual native builds and hardware comparison; bounded range and hidden-tree bookkeeping fixtures, native and hardware gates; bounded owner/atlas/breeze/eye/pair matching, exact shader-input reuse, original-state source audit and runtime diagnostic/replay gates; exact Off/base guards, material isolation/partial alpha/premultiplied color, invalid-late rejection, runtime upload/cutout diagnostics and replay gates",
+      "removalCondition": "Upstream equivalent isolated cutout AA",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "Core/GameEngineDevice/Include/W3DDevice/GameClient/HeightMap.h",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only terrain group storage offsets; original patch geometry/updates retained",
+      "risk": "presentation/resource lifetime",
+      "owningTest": "index/span/range host fixtures; both native builds; map/light/stereo and replay/live gates",
+      "removalCondition": "Upstream provides equivalent grouped terrain submission"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/Source/SDL3Device/GameClient/AndroidTextEditor.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only in-quad keyboard adapter, preserving the upstream serial-fenced applyText/filter path and phone JNI callbacks",
+      "risk": "UI input/focus only; no simulation or networking changes",
+      "owningTest": "Keyboard model tests; 30/60Hz builds; device text-entry and online tests",
+      "removalCondition": "Upstream provides an immersive Quest text-input backend"
+    },
+    {
+      "path": "README.md",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest publication entry point, feedback destination or omission of the inherited phone binary",
+      "risk": "documentation/distribution only",
+      "owningTest": "public source and history privacy review",
+      "removalCondition": "Upstream supplies an equivalent Quest entry point"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest publication entry point, feedback destination or omission of the inherited phone binary",
+      "risk": "documentation/distribution only",
+      "owningTest": "public source and history privacy review",
+      "removalCondition": "Upstream supplies an equivalent Quest entry point"
+    },
+    {
+      "path": "SECURITY.md",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest publication entry point, feedback destination or omission of the inherited phone binary",
+      "risk": "documentation/distribution only",
+      "owningTest": "public source and history privacy review",
+      "removalCondition": "Upstream supplies an equivalent Quest entry point"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/config.yml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest publication entry point, feedback destination or omission of the inherited phone binary",
+      "risk": "documentation/distribution only",
+      "owningTest": "public source and history privacy review",
+      "removalCondition": "Upstream supplies an equivalent Quest entry point"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug-report.yaml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest publication entry point, feedback destination or omission of the inherited phone binary",
+      "risk": "documentation/distribution only",
+      "owningTest": "public source and history privacy review",
+      "removalCondition": "Upstream supplies an equivalent Quest entry point"
+    },
+    {
+      "path": "apk/GeneralsXZH-android-v1.4.0.apk",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest publication entry point, feedback destination or omission of the inherited phone binary",
+      "risk": "documentation/distribution only",
+      "owningTest": "public source and history privacy review",
+      "removalCondition": "Upstream supplies an equivalent Quest entry point"
+    },
+    {
+      "path": "docs/HOWTO/README.md",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Index the Quest tutorials",
+      "risk": "documentation only",
+      "owningTest": "local Markdown link check",
+      "removalCondition": "Upstream reorganizes tutorials"
+    }
+  ],
+  "followUpUpstreamEdits": [
+    {
+      "path": "GeneralsMD/Code/GameEngine/Include/Common/GXLogging.h",
+      "purpose": "Resolve logging preference in the Quest app's private storage",
+      "risk": "app identity; ordinary Android default retained",
+      "owningTest": "Quest native builds and package-specific log captures",
+      "removalCondition": "Upstream parameterizes application identity",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngine/Include/Common/GXRemoteConfig.h",
+      "purpose": "Resolve the installed PC data-pack checksum seed in Quest storage",
+      "risk": "crossplay configuration; ordinary Android default retained",
+      "owningTest": "092826 PC-hosted match; 189 matching checkpoints",
+      "removalCondition": "Upstream parameterizes application identity",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngine/Source/Common/GXReplayCheck.cpp",
+      "purpose": "Retain the last playback frame before exit resets the counter",
+      "risk": "diagnostic reporting only",
+      "owningTest": "Quest PC replay reports 718 frames and 7 matching checkpoints",
+      "removalCondition": "Upstream retains the playback frame in its result",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLLobbyMenu.cpp",
+      "purpose": "Explain existing checksum rejection and data-pack update steps on Quest",
+      "risk": "message text only; actual checksum gates retained",
+      "owningTest": "native builds; PC join diagnostics",
+      "removalCondition": "Upstream provides equivalent current data-pack guidance",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/Source/SDL3Device/GameClient/SDL3Mouse.cpp",
+      "purpose": "Run the inherited translator for Quest controller rays and map menu points to the full XR canvas",
+      "risk": "Quest-only UI/input; ordinary touch behavior retained",
+      "owningTest": "user-tested Quest menus, skirmish and completed live match",
+      "removalCondition": "Upstream provides equivalent optional XR pointer support",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "android/app/src/main/java/com/generalsx/zerohour/ReplayCheckActivity.java",
+      "purpose": "Keep the pending replay launch Intent through orientation recreation",
+      "risk": "Android replay launcher lifecycle",
+      "owningTest": "user-run PC and Quest replay checks start and complete",
+      "removalCondition": "Upstream preserves replay launch across activity recreation",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "Core/GameEngine/Include/GameClient/ControlBar.h",
+      "purpose": "Quest-only const inline accessor for existing build-tooltip layout; crop uses live bounds without name-key allocation or widget mutations",
+      "risk": "read-only UI accessor; no class layout or ordinary-target change",
+      "owningTest": "Quest dual-Hz native builds; long building description wrist HUD hardware gate",
+      "removalCondition": "Upstream exposes the existing tooltip layout or supplies equivalent XR crop bounds",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "android/app/src/main/res/values/strings.xml",
+      "purpose": "Labels for the Quest-only Off/Gentle/SMAA choice; resource IDs remain available to the ordinary Java variant",
+      "risk": "unused resource strings in ordinary Android; no behavior change",
+      "owningTest": "Java resource merge and variant compilation",
+      "removalCondition": "Upstream exposes an equivalent Quest graphics option",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "Core/Libraries/Source/WWVegas/WW3D2/dx8wrapper.cpp",
+      "purpose": "Quest-only draw observer after state application, immediately before actual indexed world submissions; optional scoped soft cutout indexed draws with exact device state restoration",
+      "risk": "Opt-in extra presentation draw only; blend/depth overlap and GPU cost need hardware verification; off/non-Quest inherited",
+      "owningTest": "host draw/readback fixture; dual native builds; source boundary; device diagnosis pending; cutout state eligibility/restoration/failure fixtures",
+      "removalCondition": "Upstream supplies equivalent optional read-only draw observation",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "Core/Libraries/Source/WWVegas/WW3D2/texture.h",
+      "purpose": "Quest-only read-only texture identity accessor; never changes LastAccessed",
+      "risk": "manual bounded presentation diagnostics only; no render/material/LOD mutation",
+      "owningTest": "host draw/readback fixture; dual native builds; source boundary; device diagnosis pending",
+      "removalCondition": "Upstream supplies equivalent optional read-only draw observation",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "Core/GameEngineDevice/Source/W3DDevice/GameClient/TerrainTex.cpp",
+      "purpose": "Quest-only default-off neutral upload diagnostic and optional per-material RGB smoothing of existing terrain mip levels 1/2 after generation",
+      "risk": "Opt-in presentation mutation; alpha, level zero, mip count, geometry, LOD, clocks and retail data unchanged; candidate runtime CRC gate pending",
+      "owningTest": "Neutral user test/capture verified; RGB checkerboard/ramp, isolated class/gutter, alpha/off/pitch/guard fixtures; dual native/package and hardware quality/CRC gates",
+      "removalCondition": "Upstream supplies equivalent optional atlas-safe terrain minification or user rejects mitigation",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "Core/Libraries/Source/WWVegas/WW3D2/dx8wrapper.h",
+      "purpose": "Quest opt-in POINT-to-LINEAR mip mapping before state cache comparison; NONE and other states unchanged",
+      "risk": "Presentation sampling; default/non-Quest exact; runtime quality/performance/CRC gates pending",
+      "owningTest": "Pure mapping/extent fixtures; dual native builds; applied draw capture metadata; user skirmish/online gates",
+      "removalCondition": "Upstream offers equivalent optional XR texture filtering",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "Core/GameEngineDevice/Source/W3DDevice/GameClient/W3DTerrainTracks.cpp",
+      "purpose": "Opt-in exact packed-vertex second-eye upload comparison; both eye draws retained",
+      "risk": "presentation buffer lifecycle; default/non-Quest inherited; runtime CRC gate pending",
+      "owningTest": "host cache/audio/range fixtures; dual native builds; source boundary; user stereo/performance and replay/live gates",
+      "removalCondition": "Upstream supplies equivalent optional behavior or runtime experiment is rejected",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "Core/GameEngineDevice/Source/W3DDevice/GameClient/HeightMap.cpp",
+      "purpose": "Opt-in identical pure terrain diffuse cache within one stereo pair; excludes scene lights; default-off Quest terrain submission grouping with synchronized patch range locks",
+      "risk": "presentation lighting, no geometry/texture mutation; default/non-Quest inherited; runtime CRC gate pending",
+      "owningTest": "host cache/audio/range fixtures; dual native builds; source boundary; user stereo/performance and replay/live gates; exact indices/partial groups/range locks, native, stereo/map/light and replay/live gates",
+      "removalCondition": "Upstream supplies equivalent optional behavior or runtime experiment is rejected",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Shadow/W3DProjectedShadow.cpp",
+      "purpose": "Opt-in second-eye shadow-buffer append; overflow and resource reset retained",
+      "risk": "presentation dynamic buffer lifecycle; default/non-Quest inherited; runtime CRC gate pending",
+      "owningTest": "host cache/audio/range fixtures; dual native builds; source boundary; user stereo/performance and replay/live gates",
+      "removalCondition": "Upstream supplies equivalent optional behavior or runtime experiment is rejected",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "Core/GameEngineDevice/Source/W3DDevice/GameClient/WorldHeightMap.cpp",
+      "purpose": "Quest-only default-off GPU atlas upgrade after inherited upload/height assignment; four levels only after map/material/stored and emitted base/blend UV validation",
+      "risk": "Presentation texture resource; map/UV/triangle flags/geometry/simulation/network untouched; extra load-time validation/copy and small far-level memory; runtime CRC gate pending",
+      "owningTest": "Host material/quad/cliff/pitch/box/source/guard fixtures; dual native builds, source/profile boundary, native allocation/capture and user near/far/stereo/FPS/replay/live gates",
+      "removalCondition": "Upstream equivalent safe optional terrain minification or user rejects distance benefit",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "android/app/src/main/res/values-de/strings.xml",
+      "purpose": "German labels for independent optional distant-ground texture experiment",
+      "risk": "Two additional resource strings only; no simulation/network/data changes",
+      "owningTest": "XML/Java/package compile; user launcher choice and default-off behavior",
+      "removalCondition": "Upstream translation/option supersedes this opt-in trial",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngine/Source/Common/GameEngine.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Exclude upstream offline catch-up from Quest; retain one regular engine update per XR loop",
+      "risk": "simulation cadence guard",
+      "owningTest": "control/Quest native build; replay and live PC match hardware gates",
+      "removalCondition": "Upstream optional XR equivalent"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only default-off shadow drawing flags, independent of detail level",
+      "risk": "renderer allocation/stereo",
+      "owningTest": "control/Quest native build; replay and live PC match hardware gates",
+      "removalCondition": "Upstream optional XR equivalent"
+    },
+    {
+      "path": "android/app/src/main/res/values-ar/strings.xml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only resource labels for shared Java compilation; English fallback outside German",
+      "risk": "unused labels on phone",
+      "owningTest": "phone and Quest Java/resource compilation",
+      "removalCondition": "Upstream flavor-specific Java isolation"
+    },
+    {
+      "path": "android/app/src/main/res/values-b+isv/strings.xml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only resource labels for shared Java compilation; English fallback outside German",
+      "risk": "unused labels on phone",
+      "owningTest": "phone and Quest Java/resource compilation",
+      "removalCondition": "Upstream flavor-specific Java isolation"
+    },
+    {
+      "path": "android/app/src/main/res/values-es/strings.xml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only resource labels for shared Java compilation; English fallback outside German",
+      "risk": "unused labels on phone",
+      "owningTest": "phone and Quest Java/resource compilation",
+      "removalCondition": "Upstream flavor-specific Java isolation"
+    },
+    {
+      "path": "android/app/src/main/res/values-fa/strings.xml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only resource labels for shared Java compilation; English fallback outside German",
+      "risk": "unused labels on phone",
+      "owningTest": "phone and Quest Java/resource compilation",
+      "removalCondition": "Upstream flavor-specific Java isolation"
+    },
+    {
+      "path": "android/app/src/main/res/values-fr/strings.xml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only resource labels for shared Java compilation; English fallback outside German",
+      "risk": "unused labels on phone",
+      "owningTest": "phone and Quest Java/resource compilation",
+      "removalCondition": "Upstream flavor-specific Java isolation"
+    },
+    {
+      "path": "android/app/src/main/res/values-ko/strings.xml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only resource labels for shared Java compilation; English fallback outside German",
+      "risk": "unused labels on phone",
+      "owningTest": "phone and Quest Java/resource compilation",
+      "removalCondition": "Upstream flavor-specific Java isolation"
+    },
+    {
+      "path": "android/app/src/main/res/values-pl/strings.xml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only resource labels for shared Java compilation; English fallback outside German",
+      "risk": "unused labels on phone",
+      "owningTest": "phone and Quest Java/resource compilation",
+      "removalCondition": "Upstream flavor-specific Java isolation"
+    },
+    {
+      "path": "android/app/src/main/res/values-pt-rBR/strings.xml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only resource labels for shared Java compilation; English fallback outside German",
+      "risk": "unused labels on phone",
+      "owningTest": "phone and Quest Java/resource compilation",
+      "removalCondition": "Upstream flavor-specific Java isolation"
+    },
+    {
+      "path": "android/app/src/main/res/values-ru/strings.xml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only resource labels for shared Java compilation; English fallback outside German",
+      "risk": "unused labels on phone",
+      "owningTest": "phone and Quest Java/resource compilation",
+      "removalCondition": "Upstream flavor-specific Java isolation"
+    },
+    {
+      "path": "android/app/src/main/res/values-uk/strings.xml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only resource labels for shared Java compilation; English fallback outside German",
+      "risk": "unused labels on phone",
+      "owningTest": "phone and Quest Java/resource compilation",
+      "removalCondition": "Upstream flavor-specific Java isolation"
+    },
+    {
+      "path": "android/app/src/main/res/values-zh/strings.xml",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only resource labels for shared Java compilation; English fallback outside German",
+      "risk": "unused labels on phone",
+      "owningTest": "phone and Quest Java/resource compilation",
+      "removalCondition": "Upstream flavor-specific Java isolation"
+    },
+    {
+      "path": "Core/GameEngine/Source/GameClient/GUI/LoadScreen.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only frame ownership and original abort-path service in blocking campaign movies",
+      "risk": "campaign presentation/lifecycle; no multiplayer loading hook",
+      "owningTest": "host frame-ownership fixtures; both native profiles; campaign headset gate",
+      "removalCondition": "Upstream supplies XR-aware nonblocking movie presentation"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ScoreScreen.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only frame ownership and original abort-path service in blocking campaign movies",
+      "risk": "campaign presentation/lifecycle; no multiplayer loading hook",
+      "owningTest": "host frame-ownership fixtures; both native profiles; campaign headset gate",
+      "removalCondition": "Upstream supplies XR-aware nonblocking movie presentation"
+    },
+    {
+      "path": "Core/GameEngineDevice/Source/W3DDevice/GameClient/W3DShaderManager.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest campaign view filters restore the active quad color/depth pair instead of the cached Android backbuffer",
+      "risk": "campaign render target restoration; single sample",
+      "owningTest": "both native profiles; USA scripted-camera filters headset gate",
+      "removalCondition": "Upstream filters capture the active render target for each pass"
+    },
+    {
+      "path": "android/app/src/main/java/com/generalsx/zerohour/GeneralsOnlineActivity.java",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest PC compatibility default initialization and persistent deliberate Off choice through existing marker UI",
+      "risk": "launcher preference/marker; no protocol change",
+      "owningTest": "production Java marker fixtures; Quest Java compilation; crossplay evidence remains per build/match",
+      "removalCondition": "Upstream offers configurable platform-specific crossplay defaults"
+    },
+    {
+      "path": "android/app/src/main/java/com/generalsx/zerohour/QuestPcCompatibility.java",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Owned Quest helper preserving the upstream gx_pc_compat marker contract and existing contents",
+      "risk": "Quest-private file initialization",
+      "owningTest": "production Java marker fixtures; Quest Java compilation; crossplay evidence remains per build/match",
+      "removalCondition": "Upstream offers configurable platform-specific crossplay defaults"
+    }
+  ],
+  "followUpUpstreamCommit": "8ef2349af61c5e67fd8de82ebd5c34e8df794173",
+  "initialBudget": {
+    "upstreamFiles": 27,
+    "addedLines": 415,
+    "removedLines": 17
+  },
+  "budgetPolicy": "Report increases; never hide edits in a patching script."
+}

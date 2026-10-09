@@ -78,6 +78,9 @@ public:
 	void Flush(RenderInfoClass & rinfo);	//draw queued up models.
 	/// Drawing control method
 	void drawTerrainOnly(Bool draw) {m_drawTerrainOnly = draw;};
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	void setFrameUpdateEnabled(Bool enabled) { m_questFrameUpdateEnabled = enabled; }
+#endif
 
 	/// Drawing control method
 	void renderSpecificDrawables(RenderInfoClass &rinfo, Int numDrawables, Drawable **theDrawables) ;
@@ -110,6 +113,9 @@ protected:
 protected:
 	RefRenderObjListClass	m_dynamicLightList;
 	Bool									m_drawTerrainOnly;
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	Bool m_questFrameUpdateEnabled = TRUE;
+#endif
 	LightClass						*m_globalLight[LightEnvironmentClass::MAX_LIGHTS];				///< The global directional light (sun, moon) Applies to objects.
 	LightClass						*m_scratchLight; ///< a workspace for copying global lights and modifying // MLorenzen
 	Vector3 m_infantryAmbient;	///<scene ambient modified to make infantry easier to see

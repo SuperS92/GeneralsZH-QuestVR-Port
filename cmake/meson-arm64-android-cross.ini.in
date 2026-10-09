@@ -12,10 +12,10 @@
 # SDL3 must be discoverable via PKG_CONFIG_PATH (generated sdl3.pc, see dx8.cmake).
 
 [binaries]
-c = '@ANDROID_TOOLCHAIN_BIN@/aarch64-linux-android@ANDROID_API@-clang'
-cpp = '@ANDROID_TOOLCHAIN_BIN@/aarch64-linux-android@ANDROID_API@-clang++'
-ar = '@ANDROID_TOOLCHAIN_BIN@/llvm-ar'
-strip = '@ANDROID_TOOLCHAIN_BIN@/llvm-strip'
+c = '@ANDROID_TOOLCHAIN_BIN@/aarch64-linux-android@ANDROID_API@-clang@DXVK_CLANG_SUFFIX@'
+cpp = '@ANDROID_TOOLCHAIN_BIN@/aarch64-linux-android@ANDROID_API@-clang++@DXVK_CLANG_SUFFIX@'
+ar = '@ANDROID_TOOLCHAIN_BIN@/llvm-ar@DXVK_TOOL_SUFFIX@'
+strip = '@ANDROID_TOOLCHAIN_BIN@/llvm-strip@DXVK_TOOL_SUFFIX@'
 pkg-config = 'pkg-config'
 
 [host_machine]
@@ -31,7 +31,7 @@ c_args = ['-fPIC']
 # pinned Vulkan-Headers submodule (v307) still keeps that extension in
 # vulkan_beta.h behind this define. Harmless on Android — the extension is
 # simply never reported by the driver, so the code paths stay dormant.
-cpp_args = ['-fPIC', '-DVK_ENABLE_BETA_EXTENSIONS']
+cpp_args = ['-fPIC', '-DVK_ENABLE_BETA_EXTENSIONS'@QUEST_DXVK_CXX_DEFINE@]
 c_link_args = []
 cpp_link_args = ['-static-libstdc++']
 

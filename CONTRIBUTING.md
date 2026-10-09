@@ -1,3 +1,13 @@
+# Contributing to the Quest port
+
+Bug reports, small improvements and focused pull requests are welcome. Please
+discuss larger changes first. Preserve PC crossplay, the optional Quest boundary
+and upstream numeric behavior. Keep private logs, game assets and secrets out
+of commits. Build and test the affected paths; compilation alone is not a
+multiplayer compatibility test.
+
+The inherited engine contribution guidelines follow below.
+
 # How to contribute as a developer
 
 To contribute, fork this repository to create your own copy that you can clone locally and push back to. You can use your fork to create pull requests for your code to be merged into this repository.

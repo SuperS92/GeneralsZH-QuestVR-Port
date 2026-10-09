@@ -31,6 +31,9 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestGraphicsChoices.h"
+#endif
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #include "Common/GameLOD.h"
@@ -634,6 +637,14 @@ void GameLODManager::applyStaticLODLevel(StaticGameLODLevel level)
 		TheWritableGlobalData->m_maxParticleCount=lodInfo->m_maxParticleCount;
 		TheWritableGlobalData->m_useShadowVolumes=lodInfo->m_useShadowVolumes;
 		TheWritableGlobalData->m_useShadowDecals=lodInfo->m_useShadowDecals;
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        // GeneralsX @feature Codex 09/10/2026 Override only shadow flags; retain all LOD/update decisions.
+        TheWritableGlobalData->m_useShadowVolumes = QuestXR::ShadowsRequested();
+        TheWritableGlobalData->m_useShadowDecals = QuestXR::ShadowsRequested();
+        fprintf(stderr, "[quest-shadows] requested=%d effectiveVolumes=%d effectiveDecals=%d\n",
+            (int)QuestXR::ShadowsRequested(), (int)TheGlobalData->m_useShadowVolumes,
+            (int)TheGlobalData->m_useShadowDecals);
+#endif
 
 		TheWritableGlobalData->m_textureReductionFactor = requestedTextureReduction;
 

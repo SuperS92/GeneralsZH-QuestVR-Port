@@ -49,6 +49,9 @@
 #include "W3DDevice/GameClient/TileData.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/TerrainTex.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestTerrainFarMips.h"
+#endif
 #include "W3DDevice/GameClient/W3DShadow.h"
 
 #include "Common/file.h"
@@ -2131,6 +2134,15 @@ TextureClass *WorldHeightMap::getTerrainTexture()
 		REF_PTR_RELEASE(m_terrainTex);
 		m_terrainTex = MSGNEW("WorldHeightMap_getTerrainTexture") TerrainTextureClass(pow2Height);
 		m_terrainTexHeight = m_terrainTex->update(this);
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        // GeneralsX @feature Codex 07/10/2026 Validate read-only emitted UVs before replacing the GPU atlas.
+        if (auto *farTexture = QuestXR::CreateTerrainFarMip(m_terrainTex->Peek_D3D_Texture(),
+            m_textureClasses, m_numTextureClasses, m_cliffInfo, m_numCliffInfo, this)) {
+            m_terrainTex->Set_D3D_Base_Texture(farTexture);
+            m_terrainTex->MipLevelCount = MIP_LEVELS_4;
+            farTexture->Release();
+        }
+#endif
 		char buf[64];
 		sprintf(buf, "Base tex height %d", pow2Height);
 		DEBUG_LOG((buf));

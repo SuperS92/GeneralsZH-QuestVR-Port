@@ -1,0 +1,22 @@
+diff --git a/src/d3d8/d3d8_device.h b/src/d3d8/d3d8_device.h
+index 6905cd2e..8c09f887 100644
+--- a/src/d3d8/d3d8_device.h
++++ b/src/d3d8/d3d8_device.h
+@@ -40,6 +40,17 @@ namespace dxvk {
+ 
+     ~D3D8Device();
+ 
++#ifdef SAGE_USE_OPENXR
++    // The Quest compositor needs the Vulkan interop exposed by the wrapped
++    // D3D9 device. QueryInterface on the D3D8 wrapper normally accepts only
++    // D3D8 interfaces, so forward this bridge explicitly for Quest builds.
++    IUnknown* GetInterface(REFIID riid) override {
++      if (riid == __uuidof(IDxvkD3D8Bridge))
++        return m_bridge.ptr();
++      return D3D8DeviceBase::GetInterface(riid);
++    }
++#endif
++
+     HRESULT STDMETHODCALLTYPE TestCooperativeLevel();
+ 
+     UINT    STDMETHODCALLTYPE GetAvailableTextureMem();

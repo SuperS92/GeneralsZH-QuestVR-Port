@@ -19,3 +19,6 @@ To add a new tutorial:
 2. Use UPPERCASE_WITH_UNDERSCORES naming (e.g., `MY_NEW_TUTORIAL.md`)
 3. Add an entry to the table above
 4. Follow the existing tutorial format (title, overview, steps, troubleshooting)
+
+- [Quest setup and PC crossplay](QUEST_SETUP.md)
+- [Quest controller guide](QUEST_CONTROLS.md)

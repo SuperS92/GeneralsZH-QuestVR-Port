@@ -28,6 +28,7 @@ android {
 
     defaultConfig {
         applicationId 'com.generalsx.zerohour'
+        buildConfigField 'boolean', 'QUEST_VR', 'false'
         // API 28 (Android 9): floor that still covers the Redmi Note 8 Pro
         // line while giving bionic glob(3) and stable Vulkan loader behavior.
         // The real graphics gate is the GPU driver, not the OS version — see
@@ -77,6 +78,24 @@ android {
         versionName (project.hasProperty('androidVersionName') ? project.androidVersionName : '1.4.0')
         ndk {
             abiFilters 'arm64-v8a'
+        }
+    }
+
+    buildFeatures { buildConfig true }
+    // The ordinary upstream Gradle task/output names stay unchanged.
+    if (project.hasProperty('questVR')) {
+        flavorDimensions += 'platform'
+        productFlavors {
+            quest {
+                dimension 'platform'
+                applicationId 'com.generalsx.questvr'
+                // GeneralsX @build Codex 09/10/2026 Share the Quest display/install version with native packaging.
+                def questVersion = new groovy.json.JsonSlurper().parse(rootProject.file('../docs/WORKDIR/quest/APP_VERSION.json'))
+                versionCode (questVersion.versionCode as Integer)
+                versionName questVersion.versionName
+                buildConfigField 'boolean', 'QUEST_VR', 'true'
+                resValue 'string', 'app_name', 'Generals ZH Quest VR'
+            }
         }
     }
 
@@ -155,4 +174,3 @@ dependencies {
     // Material already, but declared directly since we call its APIs.
     implementation 'androidx.core:core:1.13.1'
 }
-

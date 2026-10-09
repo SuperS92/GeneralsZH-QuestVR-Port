@@ -35,6 +35,9 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#if defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestVRKeyboard.h"
+#endif
 
 namespace
 {
@@ -117,6 +120,17 @@ namespace
 			TheWindowManager->winSendSystemMsg(field->winGetOwner(), GEM_UPDATE_TEXT, (WindowMsgData)field, 0);
 	}
 
+	// GeneralsX @feature Codex 09/10/2026 Both editors use the same serial-fenced queue.
+	void queuePending(const std::u16string &copy, int serial, bool done, bool submit)
+	{
+		std::lock_guard<std::mutex> lock(s_pendingMutex);
+		if (s_pending.serial != serial) s_pending = Pending();
+		s_pending.serial = serial;
+		s_pending.hasText = true;
+		s_pending.text = copy;
+		if (done) { s_pending.done = true; s_pending.submit = submit; }
+	}
+
 	void storePending(JNIEnv* env, jstring text, jint serial, bool done, bool submit)
 	{
 		std::u16string copy;
@@ -168,6 +182,16 @@ bool AndroidTextEditor::open(GameWindow* field)
 		maxLength = entry->maxTextLen > 1 ? entry->maxTextLen - 1 : 0;
 	}
 
+#if defined(SAGE_USE_OPENXR)
+	// GeneralsX @bugfix Codex 09/10/2026 Android EditText is outside immersive XR.
+	std::u16string units;
+	for (Int i = 0; i < current.getLength(); ++i)
+		units.push_back(static_cast<char16_t>(current.getCharAt(i)));
+	++s_serial;
+	const bool shown = QuestVRKeyboard::Show(units, maxLength, flags, s_serial, queuePending);
+	if (shown) s_field = field;
+	return shown;
+#else
 	JNIEnv* jni = static_cast<JNIEnv*>(SDL_GetAndroidJNIEnv());
 	if (jni == nullptr)
 		return false;
@@ -190,6 +214,7 @@ bool AndroidTextEditor::open(GameWindow* field)
 		s_field = field;
 	jni->DeleteLocalRef(initial);
 	return shown;
+#endif
 }
 
 void AndroidTextEditor::close()
@@ -198,7 +223,11 @@ void AndroidTextEditor::close()
 		return;
 	s_field = nullptr;
 	++s_serial;
+#if defined(SAGE_USE_OPENXR)
+	QuestVRKeyboard::Hide();
+#else
 	callActivity("hideTextEditor", "()V", nullptr);
+#endif
 }
 
 GameWindow* AndroidTextEditor::field()

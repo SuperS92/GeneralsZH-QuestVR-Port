@@ -108,3 +108,20 @@ android-staging/
 # is disabled on this fork, so a ~40MB binary can't go into version control
 # at all even if it were source), not something to commit.
 /GeneralsXZH-android-local.apk
+
+# Quest port: sealed donor snapshots, private replays, caches and local releases.
+/work/
+/releases/
+
+# Quest publication privacy: never stage local accounts, captures or signing keys.
+.env
+.env.*
+*.rep
+*.sav
+*.p12
+*.pfx
+*.jks
+*.keystore
+/private/
+/captures/
+/outputs/

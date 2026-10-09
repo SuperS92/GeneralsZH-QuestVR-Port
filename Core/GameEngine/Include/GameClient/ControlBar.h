@@ -1047,6 +1047,11 @@ public:
 	void hideBuildTooltipLayout();
 	void deleteBuildTooltipLayout();
 	Bool getShowBuildTooltipLayout(){return m_showBuildToolTipLayout;	}
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	// GeneralsX @bugfix Codex 30/09/2026 Let the wrist crop include the actual
+	// description bounds without new name-key allocation or widget mutation.
+	WindowLayout *getQuestBuildTooltipLayout() const { return m_buildToolTipLayout; }
+#endif
 	Bool isBuildTooltipLayoutVisible() const;	///< the command description popup is on screen
 	void populateBuildTooltipLayout( const CommandButton *commandButton, GameWindow *tooltipWin = nullptr );
 	void repopulateBuildTooltipLayout();

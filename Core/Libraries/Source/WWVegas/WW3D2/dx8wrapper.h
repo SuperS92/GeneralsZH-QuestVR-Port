@@ -57,6 +57,9 @@
 #include "dx8caps.h"
 
 #include "texture.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "../../../../GameEngineDevice/Include/VRDevice/QuestGraphicsChoices.h"
+#endif
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
 #include "vertmaterial.h"
@@ -958,6 +961,11 @@ WWINLINE void DX8Wrapper::Set_DX8_Clip_Plane(DWORD Index, CONST float* pPlane)
 
 WWINLINE void DX8Wrapper::Set_DX8_Texture_Stage_State(unsigned stage, D3DTEXTURESTAGESTATETYPE state, unsigned value)
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	// GeneralsX @feature Codex 02/10/2026 Map before cache comparison; NONE stays NONE.
+	if (state == D3DTSS_MIPFILTER && value == D3DTEXF_POINT)
+		value = QuestXR::MapMipFilter(value, QuestXR::TextureFilterChoice());
+#endif
   	if (stage >= MAX_TEXTURE_STAGES)
   	{	DX8CALL(SetTextureStageState( stage, state, value ));
   		return;

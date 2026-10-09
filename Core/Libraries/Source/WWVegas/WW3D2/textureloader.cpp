@@ -39,6 +39,10 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "textureloader.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "../../../../GameEngineDevice/Include/VRDevice/QuestCutoutMips.h"
+#include "../../../../GameEngineDevice/Include/VRDevice/QuestFenceContours.h"
+#endif
 #include "mutex.h"
 #include "thread.h"
 #include "wwdebug.h"
@@ -1633,6 +1637,14 @@ bool TextureLoadTaskClass::Begin_Compressed_Load()
 	}
 
 	Format = Get_Valid_Texture_Format(orig_format, Texture->Is_Compression_Allowed());
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @feature Codex 02/10/2026 Existing DDS decoder uploads selected cutouts as A8.
+    if (Texture->MipLevelCount != MIP_LEVELS_1 && (QuestXR::UseCutoutMipFix(Texture->Get_Full_Path().str())
+            || QuestXR::UseFenceContours(Texture->Get_Full_Path().str()))
+        && (orig_format == WW3D_FORMAT_DXT1 || orig_format == WW3D_FORMAT_DXT5 || orig_format == WW3D_FORMAT_A8R8G8B8)
+        && DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(WW3D_FORMAT_A8R8G8B8))
+        Format = WW3D_FORMAT_A8R8G8B8;
+#endif
 
 	Reduction = orig_reduction;
 	Validate_Reduction(Texture, Reduction, orig_mip_count);
@@ -1723,6 +1735,14 @@ bool TextureLoadTaskClass::Begin_Uncompressed_Load()
 		Format = Get_Valid_Texture_Format(Format, false);
 	}
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @feature Codex 02/10/2026 Match DDS choice for native alpha-bearing TGA sources.
+    if (orig_format == WW3D_FORMAT_A8R8G8B8 && Texture->MipLevelCount != MIP_LEVELS_1
+        && (QuestXR::UseCutoutMipFix(Texture->Get_Full_Path().str())
+            || QuestXR::UseFenceContours(Texture->Get_Full_Path().str()))
+        && DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(WW3D_FORMAT_A8R8G8B8))
+        Format = WW3D_FORMAT_A8R8G8B8;
+#endif
 	D3DTexture = DX8Wrapper::_Create_DX8_Texture
 	(
 		Width,
@@ -1771,16 +1791,29 @@ void TextureLoadTaskClass::Lock_Surfaces()
 
 void TextureLoadTaskClass::Unlock_Surfaces()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    bool fenceUnlockOk = true;
+#endif
 	for (unsigned int i = 0; i < MipLevelCount; ++i)
 	{
 		if (LockedSurfacePtr[i])
 		{
 			WWASSERT(ThreadClass::_Get_Current_Thread_ID() == DX8Wrapper::_Get_Main_Thread_ID());
-			DX8_ErrorCode(Peek_D3D_Texture()->UnlockRect(i));
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+            if (QuestXR::UseFenceContours(Texture->Get_Full_Path().str())) {
+                const HRESULT unlocked = Peek_D3D_Texture()->UnlockRect(i);
+                fenceUnlockOk = SUCCEEDED(unlocked) && fenceUnlockOk;
+                DX8_ErrorCode(unlocked);
+            } else
+#endif
+            DX8_ErrorCode(Peek_D3D_Texture()->UnlockRect(i));
 		}
 		LockedSurfacePtr[i] = nullptr;
 	}
-
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @feature Codex 07/10/2026 Never blend an unfiltered, failed or stale fence resource.
+    QuestXR::CompleteFenceContourUpload(Peek_D3D_Texture(), fenceUnlockOk);
+#endif
 #ifndef USE_MANAGED_TEXTURES
 	IDirect3DTexture8* tex = DX8Wrapper::_Create_DX8_Texture(Width, Height, Format, Texture->MipLevelCount,D3DPOOL_DEFAULT);
 	DX8CALL(UpdateTexture(Peek_D3D_Texture(),tex));
@@ -1825,6 +1858,16 @@ bool TextureLoadTaskClass::Load_Compressed_Mipmap()
 		height >>= 1;
 	}
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @feature Codex 02/10/2026 CPU upload only; no locks, draw state or shared atlas mutation.
+    if (Format == WW3D_FORMAT_A8R8G8B8) {
+        QuestXR::ApplyLoadedCutoutAlpha(LockedSurfacePtr, LockedSurfacePitch, Width, Height,
+            MipLevelCount, Texture->Get_Full_Path().str());
+        // GeneralsX @feature Codex 07/10/2026 Separate exact-name fence filtering; resource tag commits after successful unlocks.
+        QuestXR::ApplyLoadedFenceContours(Peek_D3D_Texture(), LockedSurfacePtr, LockedSurfacePitch,
+            Width, Height, MipLevelCount, Texture->Get_Full_Path().str());
+    }
+#endif
 	return true;
 }
 
@@ -1967,6 +2010,16 @@ bool TextureLoadTaskClass::Load_Uncompressed_Mipmap()
 
 	delete[] converted_surface;
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @feature Codex 02/10/2026 CPU upload only; no locks, draw state or shared atlas mutation.
+    if (Format == WW3D_FORMAT_A8R8G8B8) {
+        QuestXR::ApplyLoadedCutoutAlpha(LockedSurfacePtr, LockedSurfacePitch, Width, Height,
+            MipLevelCount, Texture->Get_Full_Path().str());
+        // GeneralsX @feature Codex 07/10/2026 Separate exact-name fence filtering; resource tag commits after successful unlocks.
+        QuestXR::ApplyLoadedFenceContours(Peek_D3D_Texture(), LockedSurfacePtr, LockedSurfacePitch,
+            Width, Height, MipLevelCount, Texture->Get_Full_Path().str());
+    }
+#endif
 	return true;
 }
 

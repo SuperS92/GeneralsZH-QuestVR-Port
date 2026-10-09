@@ -542,14 +542,15 @@ void SDL3Mouse::setTouchCursorPos(Int x, Int y)
 
 /**
  * GeneralsX @feature Android port 01/08/2026 See the declaration comment in
- * SDL3Mouse.h: touch input on this platform drives the message stream
- * directly from SDL3GameEngine.cpp, so this object never receives real
- * events (nothing calls addSDLEvent() on it here) and its inherited
- * per-frame MSG_RAW_MOUSE_POSITION heartbeat would only inject a second,
- * stale position source. No-op.
+ * SDL3Mouse.h: ordinary mobile touch input drives the message stream
+ * directly from SDL3GameEngine.cpp. Quest XR instead feeds controller-ray
+ * events into this mouse, so its inherited translator must run there.
  */
 void SDL3Mouse::createStreamMessages()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	Mouse::createStreamMessages();
+#endif
 }
 #endif
 
@@ -820,6 +821,19 @@ void SDL3Mouse::scaleMouseCoordinates(int rawX, int rawY, Uint32 windowID, int& 
 
 	int internalWidth  = TheDisplay->getWidth();
 	int internalHeight = TheDisplay->getHeight();
+
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	// The OpenXR menu quad spans the complete game canvas. Its ray position is
+	// normalized over that canvas, regardless of the flat window's pillarbox.
+	// Match the reticle drawn by W3DDisplay::drawQuestXRMenu exactly.
+	scaledX = static_cast<int>(rawX * static_cast<float>(internalWidth) / windowWidth);
+	scaledY = static_cast<int>(rawY * static_cast<float>(internalHeight) / windowHeight);
+	if (scaledX < 0) scaledX = 0;
+	if (scaledY < 0) scaledY = 0;
+	if (scaledX >= internalWidth) scaledX = internalWidth - 1;
+	if (scaledY >= internalHeight) scaledY = internalHeight - 1;
+	return;
+#endif
 
 	int pbX, pbY, pbW, pbH;
 	if (TheDisplay->getViewportRect(pbX, pbY, pbW, pbH)) {

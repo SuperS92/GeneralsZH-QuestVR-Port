@@ -35,7 +35,11 @@ static void drawFramerateBar();
 
 // SYSTEM INCLUDES ////////////////////////////////////////////////////////////
 #include <chrono>
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestXRInterface.h"
+#endif
 #include <numeric>
+#include <stdexcept>
 #include <stdlib.h>
 #include <windows.h>
 // GeneralsX @build Android port GLES experiment - see gxTraceDisplayDrawPhase
@@ -125,6 +129,9 @@ static void drawFramerateBar();
 #endif
 
 #include "WinMain.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestCampaign.h"
+#endif
 
 
 // DEFINE AND ENUMS ///////////////////////////////////////////////////////////
@@ -441,6 +448,9 @@ W3DDisplay::W3DDisplay()
 	m_batchMode = DRAW_IMAGE_ALPHA;
 	m_batchGrayscale = FALSE;
 	m_batchNeedsInit = FALSE;
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	m_questXRCamera = nullptr;
+#endif
 
 #ifdef PROFILER_ENABLED
 	m_profilerFrameCapture = NEW W3DProfilerFrameCapture();
@@ -487,6 +497,10 @@ W3DDisplay::~W3DDisplay()
 	//
 	Display::deleteViews();
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	QuestXR_DetachD3D8Device();
+	REF_PTR_RELEASE(m_questXRCamera);
+#endif
 	REF_PTR_RELEASE( m_3DScene );
 	REF_PTR_RELEASE( m_2DScene );
 	REF_PTR_RELEASE( m_3DInterfaceScene );
@@ -1367,6 +1381,10 @@ void W3DDisplay::init()
 	}
 
 	// we're now online
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	if (!QuestXR_AttachD3D8Device(DX8Wrapper::_Get_D3D_Device8(), getWidth(), getHeight()))
+		throw std::runtime_error("Quest OpenXR graphics binding failed");
+#endif
 	m_initialized = true;
 	if( TheGlobalData->m_displayDebug )
 	{
@@ -2246,6 +2264,17 @@ static void gxTraceDisplayDrawPhase(double preRTTUs, double waterShadowRTTUs,
 //DECLARE_PERF_TIMER(W3DDisplay_draw)
 void W3DDisplay::draw()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @bugfix Codex 09/10/2026 A blocking campaign movie can outlive
+    // the foreground session. Gate before resize, scene, water or shadow GPU work.
+    // End its frame on every display return, including minimized/headless paths.
+    struct BlockingMovieDrawScope {
+        ~BlockingMovieDrawScope() { QuestCampaign::EndMovieDraw(); }
+    } blockingMovieDrawScope;
+    if (QuestCampaign::IsBlockingMovie() && !QuestCampaign::BeginMovieDraw()) {
+        return;
+    }
+#endif
 	//USE_PERF_TIMER(W3DDisplay_draw)
 	const bool gxPerfTrace = GXTrace::isPerfEnabled();
 	std::chrono::steady_clock::time_point gxdT0, gxdT1, gxdT2, gxdT3, gxdT3b;
@@ -2422,6 +2451,12 @@ AGAIN:
 
 		if (gxPerfTrace) gxdT2 = std::chrono::steady_clock::now();
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+		if (!TheGlobalData->m_disableRender && !TheGlobalData->m_breakTheMovie) {
+			drawQuestXRStereo(primaryW3DView);
+		}
+		break; // Both eye and UI targets have been submitted; skip the flat pass.
+#endif
 		// Switch to offscreen RT AFTER pre-render (shadows/water) completes, BEFORE main render.
 		DX8Wrapper::Pillarbox_Begin();
 

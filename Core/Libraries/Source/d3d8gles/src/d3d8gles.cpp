@@ -95,6 +95,9 @@ static const char *ReadRenderBackendConfigFile()
 
 extern "C" bool d3d8gles_ShouldUseVulkanBackend()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	return true;
+#endif
 	const char *configured = ReadRenderBackendConfigFile();
 	if (configured != nullptr) {
 		return strcmp(configured, "vulkan") == 0;

@@ -1626,7 +1626,11 @@ void W3DView::update()
 		const Bool isWithinHeightConstraints = isWithinCameraHeightConstraints();
 
 		// if scrolling, only adjust if we're too close or too far
-		const Bool adjustZoomWhenScrolling = isScrolling && (!isScrollingTooFast || !isWithinHeightConstraints);
+		const Bool adjustZoomWhenScrolling = isScrolling && (
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+            m_questExplicitHeightAdjustment ||
+#endif
+            !isScrollingTooFast || !isWithinHeightConstraints);
 
 		// if not scrolling, settle toward desired height above ground
 		const Bool adjustZoomWhenNotScrolling = !isScrolling && !didScriptedMovement;
@@ -1675,6 +1679,9 @@ void W3DView::update()
 		}
 	}
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	m_questExplicitHeightAdjustment = FALSE;
+#endif
 	if (TheScriptEngine->isTimeFast()) {
 		return; // don't draw - makes it faster :) jba.
 	}
@@ -2288,6 +2295,9 @@ void W3DView::setDefaultView(Real pitch, Real angle, Real maxHeight)
 void W3DView::setHeightAboveGround(Real z)
 {
 	View::setHeightAboveGround(z);
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	m_questExplicitHeightAdjustment = TRUE;
+#endif
 
 	stopDoingScriptedCamera();
 	m_CameraArrivedAtWaypointOnPathFlag = false;

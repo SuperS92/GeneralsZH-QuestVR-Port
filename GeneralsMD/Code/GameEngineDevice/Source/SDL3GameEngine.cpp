@@ -62,6 +62,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <algorithm>
+#include <stdexcept>
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestXRInterface.h"
+#include "VRDevice/QuestVRInput.h"
+#include "VRDevice/QuestVRKeyboard.h"
+#include "VRDevice/QuestCampaign.h"
+#endif
 
 #include "GameClient/LookAtXlat.h"
 #include "Common/AudioAffect.h"
@@ -242,9 +250,10 @@ static bool SDLCALL mobileLifecycleWatcher(void *userdata, SDL_Event *event)
 //   route around). What we DO get to remove is everything downstream of
 //   that: no persisted cursor object, no OS mouse cursor, no hover-then-
 //   click timing built for a physical mouse, no per-frame position
-//   heartbeat -- SDL3Mouse::createStreamMessages() is a no-op on mobile
-//   (see SDL3Mouse.cpp) specifically so nothing but real touch events ever
-//   produces a mouse-shaped message. A GameMessage type being literally
+//   heartbeat -- SDL3Mouse::createStreamMessages() is a no-op for touch
+//   (see SDL3Mouse.cpp), so only real touch events produce mouse-shaped
+//   messages in ordinary mobile builds. Quest XR enables that translator
+//   for its controller ray. A GameMessage type being literally
 //   named MSG_RAW_MOUSE_LEFT_BUTTON_DOWN is a historical label, not mouse
 //   emulation: no mouse is being pretended to exist, no cursor persists
 //   between touches, and nothing here reads back "where the mouse is".
@@ -2211,6 +2220,9 @@ SDL3GameEngine::SDL3GameEngine()
  */
 SDL3GameEngine::~SDL3GameEngine()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	QuestVRInput_Shutdown();
+#endif
 	if (m_SDLWindow && m_IsTextInputActive) {
 		SDL_StopTextInput(m_SDLWindow);
 		m_IsTextInputActive = false;
@@ -2289,6 +2301,120 @@ void SDL3GameEngine::reset(void)
 /**
  * From GameEngine: update() - per-frame update
  */
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+namespace {
+void sendSyntheticMouse(SDL3Mouse *mouse, SDL_Window *window, Uint32 type,
+                        float x, float y, Uint8 button = 0, float wheelY = 0.0f)
+{
+	// The windowID must be valid: SDL3Mouse::scaleMouseCoordinates() looks the
+	// window up by id to map window points into the game's internal resolution,
+	// and silently skips scaling when the lookup fails.
+	const SDL_WindowID windowID = SDL_GetWindowID(window);
+
+	SDL_Event ev;
+	SDL_zero(ev);
+	ev.type = type;
+	ev.common.timestamp = SDL_GetTicksNS();
+	switch (type) {
+		case SDL_EVENT_MOUSE_MOTION:
+			ev.motion.windowID = windowID;
+			ev.motion.x = x;
+			ev.motion.y = y;
+			break;
+		case SDL_EVENT_MOUSE_BUTTON_DOWN:
+		case SDL_EVENT_MOUSE_BUTTON_UP:
+			ev.button.windowID = windowID;
+			ev.button.button = button;
+			ev.button.down = (type == SDL_EVENT_MOUSE_BUTTON_DOWN);
+			ev.button.clicks = 1;
+			ev.button.x = x;
+			ev.button.y = y;
+			break;
+		case SDL_EVENT_MOUSE_WHEEL:
+			ev.wheel.windowID = windowID;
+			ev.wheel.x = 0.0f;
+			ev.wheel.y = wheelY;
+			ev.wheel.mouse_x = x;
+			ev.wheel.mouse_y = y;
+			break;
+	}
+	mouse->addSDLEvent(&ev);
+}
+
+bool updateQuestUIPointer(SDL3Mouse *mouse, SDL_Window *window)
+{
+	static bool leftHeld = false;
+	static bool rightHeld = false;
+	static bool wasPointing = false;
+	static float lastX = 0.0f;
+	static float lastY = 0.0f;
+	QuestXRControllerState controller{};
+	const bool haveState = QuestXR_GetControllerState(1, &controller);
+
+	int width = 0;
+	int height = 0;
+	SDL_GetWindowSize(window, &width, &height);
+	const bool canPoint = haveState && controller.menuPointValid != 0
+		&& width > 0 && height > 0;
+	// GeneralsX @bugfix Codex 09/10/2026 Modal key clicks never reach the underlying UI.
+	QuestVRKeyboard::UpdatePointer(controller, canPoint);
+	bool textEntryClicked = false;
+	const bool radialConsumes = QuestVRKeyboard::InputBlocked() || (canPoint && QuestVRInput_ConsumesUiPoint(
+		controller.menuPoint[0], controller.menuPoint[1]));
+	const bool injectIntoLegacyUi = canPoint && !radialConsumes;
+	if (injectIntoLegacyUi) {
+		// GeneralsX @bugfix Codex 16/09/2026 Keep the XR cursor outside
+		// Generals' three-pixel edge-scroll zone. A panel ray could otherwise
+		// start scrolling the battlefield and leave that state latched after the
+		// ray moved back into the world.
+		constexpr float safeEdge = 4.0f;
+		lastX = std::max(safeEdge, std::min(
+			controller.menuPoint[0] * static_cast<float>(width),
+			static_cast<float>(width) - safeEdge));
+		lastY = std::max(safeEdge, std::min(
+			controller.menuPoint[1] * static_cast<float>(height),
+			static_cast<float>(height) - safeEdge));
+		sendSyntheticMouse(mouse, window, SDL_EVENT_MOUSE_MOTION, lastX, lastY);
+	}
+
+	if (injectIntoLegacyUi && (controller.pressed & QUEST_XR_BUTTON_TRIGGER) != 0 && !leftHeld) {
+		sendSyntheticMouse(mouse, window, SDL_EVENT_MOUSE_BUTTON_DOWN,
+			lastX, lastY, SDL_BUTTON_LEFT);
+		leftHeld = true;
+		GameWindow *tapped = TheWindowManager
+			? TheWindowManager->getWindowUnderCursor(static_cast<Int>(lastX), static_cast<Int>(lastY)) : nullptr;
+		textEntryClicked = tapped && BitIsSet(tapped->winGetStyle(), GWS_ENTRY_FIELD);
+	}
+	if (leftHeld && (!injectIntoLegacyUi || (controller.buttons & QUEST_XR_BUTTON_TRIGGER) == 0)) {
+		sendSyntheticMouse(mouse, window, SDL_EVENT_MOUSE_BUTTON_UP,
+			lastX, lastY, SDL_BUTTON_LEFT);
+		leftHeld = false;
+	}
+
+	if (injectIntoLegacyUi && (controller.pressed & QUEST_XR_BUTTON_PRIMARY) != 0 && !rightHeld) {
+		sendSyntheticMouse(mouse, window, SDL_EVENT_MOUSE_BUTTON_DOWN,
+			lastX, lastY, SDL_BUTTON_RIGHT);
+		rightHeld = true;
+	}
+	if (rightHeld && (!injectIntoLegacyUi || (controller.buttons & QUEST_XR_BUTTON_PRIMARY) == 0)) {
+		sendSyntheticMouse(mouse, window, SDL_EVENT_MOUSE_BUTTON_UP,
+			lastX, lastY, SDL_BUTTON_RIGHT);
+		rightHeld = false;
+	}
+
+	if (!injectIntoLegacyUi && wasPointing && width > 0 && height > 0) {
+		// GeneralsX @bugfix Codex 16/09/2026 A neutral motion event stops any
+		// legacy edge-scroll state immediately when the ray leaves the HUD.
+		lastX = static_cast<float>(width) * 0.5f;
+		lastY = static_cast<float>(height) * 0.5f;
+		sendSyntheticMouse(mouse, window, SDL_EVENT_MOUSE_MOTION, lastX, lastY);
+	}
+	wasPointing = injectIntoLegacyUi;
+	return textEntryClicked;
+}
+}
+#endif
+
 void SDL3GameEngine::update(void)
 {
 	pollSDL3Events();
@@ -2316,11 +2442,52 @@ void SDL3GameEngine::update(void)
 	static bool s_wasPausedLastFrame = false;
 	const bool pausedNow = mobileShouldPauseRendering();
 	if (pausedNow && s_wasPausedLastFrame) {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+		QuestXR_PollLifecycle();
+#endif
 		SDL_Delay(50);
 		return;
 	}
 	s_wasPausedLastFrame = pausedNow;
 #endif
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+
+	// GeneralsX @bugfix Codex 09/10/2026 Match keyboard ray geometry to its full UI quad.
+	const bool fullScreenUI = TheGameLogic == nullptr || !TheGameLogic->isInGame()
+		|| (TheShell != nullptr && TheShell->isShellActive())
+		|| (TheInGameUI != nullptr && TheInGameUI->isQuitMenuVisible())
+		|| QuestVRKeyboard::IsOpen() || QuestCampaign::NeedsFullUI();
+	QuestXR_SetMenuPresentation(fullScreenUI ? QUEST_XR_MENU_FRONTEND
+		: (QuestVRInput_ShouldShowHud() ? QUEST_XR_MENU_HUD : QUEST_XR_MENU_HIDDEN));
+    if (!QuestXR_BeginFrame()) throw std::runtime_error("Quest OpenXR begin frame failed");
+    struct QuestFrameScope {
+        ~QuestFrameScope() { QuestXR_EndFrame(); }
+    } questFrameScope;
+	// GeneralsX @bugfix Codex 09/10/2026 Laser entry-field clicks rearm like deliberate touch taps.
+	if (TheMouse != nullptr && m_SDLWindow != nullptr
+		&& updateQuestUIPointer(static_cast<SDL3Mouse *>(TheMouse), m_SDLWindow))
+		m_PendingTextInputRearmFrames = 20;
+    // Campaign B uses the upstream Escape translator; it never force-finishes scripts.
+    if (QuestCampaign::IsFlatSequence() && TheKeyboard) {
+        QuestXRControllerState right{};
+        if (QuestXR_GetControllerState(1, &right) && right.connected
+            && (right.pressed & QUEST_XR_BUTTON_SECONDARY)) {
+            auto *keyboard = dynamic_cast<SDL3Keyboard *>(TheKeyboard);
+            if (keyboard) {
+                SDL_Event ev{};
+                ev.type = SDL_EVENT_KEY_DOWN;
+                ev.key.scancode = SDL_SCANCODE_ESCAPE;
+                ev.key.key = SDLK_ESCAPE;
+                ev.key.down = true;
+                keyboard->addSDLEvent(&ev);
+                ev.type = SDL_EVENT_KEY_UP;
+                ev.key.down = false;
+                keyboard->addSDLEvent(&ev);
+            }
+        }
+    }
+	QuestVRInput_Update();
+#else
 #if defined(__ANDROID__)
 	// GeneralsX @bugfix Android port 28/09/2026 Game speed above the screen's refresh rate. The
 	// skirmish Game Speed slider raises the frame-rate limit, and logic runs one step per
@@ -2336,7 +2503,9 @@ void SDL3GameEngine::update(void)
 		d3d8gles_SetPresentUncapped(uncapped);
 	}
 #endif
+#endif
 	GameEngine::update();
+
 }
 
 /**
@@ -2910,4 +3079,3 @@ AudioManager *SDL3GameEngine::createAudioManager(Bool dummy)
 }
 
 #endif // !_WIN32
-

@@ -313,6 +313,9 @@ static void FilterPipeWireOpenAL()
  */
 static void TryLoadCustomVulkanDriver(const char *internalPath)
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	return; // OpenXR and DXVK must bind the runtime-selected system device.
+#endif
 	char cfgPath[1024];
 	snprintf(cfgPath, sizeof(cfgPath), "%s/custom_driver.cfg", internalPath);
 	FILE *cfg = fopen(cfgPath, "r");
@@ -461,6 +464,10 @@ GameEngine *CreateGameEngine(void)
  * @param argv Command line arguments
  * @return Exit code (0 = success)
  */
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "QuestVR/QuestOpenXRBootstrap.h"
+#endif
+
 int main(int argc, char* argv[])
 {
 	int exitcode = 1;
@@ -469,6 +476,9 @@ int main(int argc, char* argv[])
 	// Store command line arguments in globals for CommandLine.cpp parser
 	__argc = argc;
 	__argv = argv;
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	if (!QuestXR::GetBootstrap().initialize()) return 1;
+#endif
 
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
 	// Diagnostic capture: an icon-launched app's stderr goes nowhere we can read,
@@ -727,6 +737,11 @@ int main(int argc, char* argv[])
 			// way AndroidCrashHandler.cpp derives its path: Android's shared
 			// storage mount is always /storage/emulated/<userId>, and
 			// per-user UIDs are always userId*100000 + appId.
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+			std::string questUserData = std::string(internalPath) + "/UserData/ZeroHour";
+			std::filesystem::create_directories(questUserData);
+			setenv("GENERALSX_USERDATA_DIR", questUserData.c_str(), 1);
+#else
 			int userId = (int)(getuid() / 100000);
 			char generalsRoot[280];
 			int rootLen = snprintf(generalsRoot, sizeof(generalsRoot),
@@ -752,6 +767,7 @@ int main(int argc, char* argv[])
 					mkdir(baseUserDataDir, 0755);
 				}
 			}
+			#endif // SAGE_USE_OPENXR private versus shared userdata
 		}
 		if (cachePath != nullptr) {
 			// DXVK shader cache: regenerable, belongs in the OS-purgeable dir.

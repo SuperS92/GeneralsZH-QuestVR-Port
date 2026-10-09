@@ -1,0 +1,90 @@
+{
+  "donorCommit": "176a7ce77b615fb8681f8c250625fd3fb5acb4b9",
+  "excludedImmediateNext": "7270ad38ed094200e60bcff8dc939fa4fd14f68f",
+  "imports": [
+    {
+      "source": "Core/GameEngineDevice/Include/VRDevice/QuestXRInterface.h",
+      "destination": "Core/GameEngineDevice/Include/VRDevice/QuestXRInterface.h",
+      "sourceSha256": "de91b0ecb0e269a2bce814edf12bcd56201d3ff23bb57c3ab63b8878981c87d5",
+      "adaptation": "Typed presentation API and host-testable input math; upstream logic is not imported"
+    },
+    {
+      "source": "Core/GameEngineDevice/Include/VRDevice/QuestVRMath.h",
+      "destination": "Core/GameEngineDevice/Include/VRDevice/QuestVRMath.h",
+      "sourceSha256": "35183c537c3d8fae7bfc023bdc5f3203ec0f4eab508b14ddfed1bf5e490d8b3d",
+      "adaptation": "Typed presentation API and host-testable input math; upstream logic is not imported"
+    },
+    {
+      "source": "Core/GameEngineDevice/Include/VRDevice/QuestVRInput.h",
+      "destination": "Core/GameEngineDevice/Include/VRDevice/QuestVRInput.h",
+      "sourceSha256": "9646eee61601a6ad2cf36747e00c4a4d3a6d8273d81ac15aed0d2f267981a746",
+      "adaptation": "Typed presentation API and host-testable input math; upstream logic is not imported"
+    },
+    {
+      "source": "GeneralsMD/Code/Main/QuestOpenXRBootstrap.cpp",
+      "destination": "GeneralsMD/Code/Main/QuestVR/QuestOpenXRBootstrap.cpp",
+      "sourceSha256": "123d24299187329f6700fb69d6ee46a86bfe489b1d32afe8bb4f83942e94b443",
+      "adaptation": "Module relocation plus lifecycle event hook; single-sample default retained"
+    },
+    {
+      "source": "GeneralsMD/Code/Main/QuestOpenXRBootstrap.h",
+      "destination": "GeneralsMD/Code/Main/QuestVR/QuestOpenXRBootstrap.h",
+      "sourceSha256": "cd411b651222f591e840499a756147d730e81feca2e33abaee025d86a2800d0d",
+      "adaptation": "Module relocation plus lifecycle event hook; single-sample default retained"
+    },
+    {
+      "source": "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/QuestVRInput.cpp",
+      "destination": "GeneralsMD/Code/GameEngineDevice/Source/QuestVR/QuestVRInput.cpp",
+      "sourceSha256": "42d40c4ab45d0d8eb88b2f3797ff2c33ea83427828d9f8b2da6967c0fdce06bd",
+      "adaptation": "Placement calls current translator; axis math extracted without changing behavior"
+    },
+    {
+      "source": "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/W3DDisplay.cpp",
+      "destination": "GeneralsMD/Code/GameEngineDevice/Source/QuestVR/QuestVRPresentation.cpp",
+      "sourceSha256": "27557e118578f50b4af2d3e65ee34ff16dc5cc793df321ab90d2297d94e6cbb0",
+      "adaptation": "Only crop/menu/stereo methods; current upstream preparation remains"
+    },
+    {
+      "source": "GeneralsMD/Code/GameEngineDevice/Source/SDL3GameEngine.cpp",
+      "destination": "GeneralsMD/Code/GameEngineDevice/Source/SDL3GameEngine.cpp",
+      "sourceSha256": "80cf7e26f656a9a8cb1721c57457ce4b60462e1b604ad1adb2a5a67f8c5bc5ac",
+      "adaptation": "Only synthetic pointer helper/menu-pointer method; current engine update and lifecycle gate remain"
+    },
+    {
+      "source": "Core/GameEngineDevice/Source/W3DDevice/GameClient/W3DView.cpp",
+      "destination": "Core/GameEngineDevice/Source/W3DDevice/GameClient/W3DView.cpp",
+      "sourceSha256": "5775cbd017c5da7f058040f2caf8a3b7c7c006ba05fc17c527a9b77e9765bf7d",
+      "adaptation": "Only explicit-height arbitration during simultaneous panning"
+    },
+    {
+      "source": "references/fbraz3-dxvk/src/dxvk/dxvk_openxr.cpp",
+      "destination": "Patches/quest-v044-dxvk-interop.patch",
+      "sourceSha256": "4b5616ea2d271b8e6a68de50cfef141ba2e0e1061aa16abceb8f7cbd6d2a066a",
+      "adaptation": "Android OpenXR extension provider/COM forwarding only, after current upstream patches"
+    },
+    {
+      "source": "references/fbraz3-dxvk/src/dxvk/dxvk_instance.cpp",
+      "destination": "Patches/quest-v044-dxvk-interop.patch",
+      "sourceSha256": "eb1a000cfb3fcb1eb0e2318050f936ae68e518bafe2b122310f1893ea7aec9fd",
+      "adaptation": "Android OpenXR extension provider/COM forwarding only, after current upstream patches"
+    },
+    {
+      "source": "references/fbraz3-dxvk/src/dxvk/meson.build",
+      "destination": "Patches/quest-v044-dxvk-interop.patch",
+      "sourceSha256": "d6bd8d113931a6df8224f9b8e187b1f1eceaec1eed87cbef2118b72b600d41d8",
+      "adaptation": "Android OpenXR extension provider/COM forwarding only, after current upstream patches"
+    },
+    {
+      "source": "references/fbraz3-dxvk/src/d3d8/d3d8_resource.h",
+      "destination": "Patches/quest-v044-dxvk-interop.patch",
+      "sourceSha256": "adb8ec77cda6641b79815645b8c968c376f5244e185ead147a057160436a10a7",
+      "adaptation": "Android OpenXR extension provider/COM forwarding only, after current upstream patches"
+    },
+    {
+      "source": "docs/WORKDIR/support/QUEST3_CONTROL_MAPPING.md",
+      "destination": "docs/WORKDIR/quest/CONTROLS_V044_REFERENCE.md",
+      "sourceSha256": "9e98967fd615390e0d67da915dbfb7788aa4ef37950481eca345b6428a3d672e",
+      "adaptation": "Historical reference; its simulation timing claims are superseded"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+--- a/portfile.cmake
++++ b/portfile.cmake
+@@ -1,3 +1,8 @@
++# Local host-only tool build: COFF has no ELF __start/__stop section symbols.
++set(QUEST_HOST_PROTOBUF_PATCH "")
++if(VCPKG_TARGET_IS_MINGW)
++    set(QUEST_HOST_PROTOBUF_PATCH quest-mingw-protoc.patch)
++endif()
+ vcpkg_from_github(
+     OUT_SOURCE_PATH SOURCE_PATH
+     REPO protocolbuffers/protobuf
+@@ -5,6 +10,7 @@
+     SHA512 32a9ae3de113b8c94e2aed21ad8f58e5ed4419a6d4078e51f614f0fabbf3bfe6c4affc62c2c1326e030a54df0fdcc47bb715b45022191a363f17680ec651b68e
+     HEAD_REF master
+     PATCHES
++        ${QUEST_HOST_PROTOBUF_PATCH}
+         fix-static-build.patch
+         fix-default-proto-file-path.patch
+         fix-utf8-range.patch

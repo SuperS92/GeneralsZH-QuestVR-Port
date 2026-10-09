@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// GeneralsX @feature Codex 30/09/2026 Spatial edge AA, inspired by FXAA's
+// luminance-directed sampling. No history, jitter, scene or depth mutation.
+#version 450
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(binding = 0) uniform sampler2D sourceEye;
+layout(binding = 1, rgba8) writeonly uniform image2D filteredEye;
+float luminance(vec3 rgb) { return dot(rgb, vec3(0.299, 0.587, 0.114)); }
+void main() {
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(filteredEye);
+    if (any(greaterThanEqual(pixel, size))) return;
+    vec2 texel = 1.0 / vec2(size);
+    vec2 uv = (vec2(pixel) + 0.5) * texel;
+    vec4 original = texelFetch(sourceEye, pixel, 0);
+    float center = luminance(original.rgb);
+    float nw = luminance(textureLod(sourceEye, uv + vec2(-1, -1) * texel, 0).rgb);
+    float ne = luminance(textureLod(sourceEye, uv + vec2( 1, -1) * texel, 0).rgb);
+    float sw = luminance(textureLod(sourceEye, uv + vec2(-1,  1) * texel, 0).rgb);
+    float se = luminance(textureLod(sourceEye, uv + vec2( 1,  1) * texel, 0).rgb);
+    float low = min(center, min(min(nw, ne), min(sw, se)));
+    float high = max(center, max(max(nw, ne), max(sw, se)));
+    if (high - low < max(0.03125, high * 0.125)) {
+        imageStore(filteredEye, pixel, original);
+        return;
+    }
+    vec2 direction = vec2(sw + se - nw - ne, nw + sw - ne - se);
+    float floorValue = max((nw + ne + sw + se) * 0.03125, 0.0078125);
+    direction /= min(abs(direction.x), abs(direction.y)) + floorValue;
+    direction = clamp(direction, vec2(-8), vec2(8)) * texel;
+    vec3 inner = 0.5 * (textureLod(sourceEye, uv - direction / 6.0, 0).rgb
+                     + textureLod(sourceEye, uv + direction / 6.0, 0).rgb);
+    vec3 wider = 0.5 * inner + 0.25 * (textureLod(sourceEye, uv - direction * 0.5, 0).rgb
+                                   + textureLod(sourceEye, uv + direction * 0.5, 0).rgb);
+    float widerLuma = luminance(wider);
+    // GeneralsX @tweak Codex 01/10/2026 Preserve half the original detail;
+    // the first full-strength Quest experiment softened the world too much.
+    vec3 filtered = widerLuma < low || widerLuma > high ? inner : wider;
+    imageStore(filteredEye, pixel, vec4(mix(original.rgb, filtered, 0.5), original.a));
+}

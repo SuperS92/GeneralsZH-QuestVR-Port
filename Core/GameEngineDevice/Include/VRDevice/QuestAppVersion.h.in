@@ -1,0 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// GeneralsX @build Codex 09/10/2026 Generated from APP_VERSION.json; presentation-only dependency.
+#pragma once
+#define QUEST_XR_APP_VERSION "@QUEST_XR_APP_VERSION@"

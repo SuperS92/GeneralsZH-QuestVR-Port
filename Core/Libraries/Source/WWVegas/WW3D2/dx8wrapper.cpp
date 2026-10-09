@@ -51,6 +51,10 @@
 #endif
 
 #include "dx8wrapper.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "../../../../GameEngineDevice/Include/VRDevice/QuestDrawCapture.h"
+#include "../../../../GameEngineDevice/Include/VRDevice/QuestSoftCutouts.h"
+#endif
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
 #endif
@@ -2737,12 +2741,23 @@ void DX8Wrapper::Draw_Sorting_IB_VB(
 	DX8_RECORD_INDEX_BUFFER_CHANGE();
 
 	DX8_RECORD_DRAW_CALLS();
+	// GeneralsX @feature Codex 02/10/2026 Observe the applied world material before submission.
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	QuestXR_RecordDiagnosticDraw(D3DDevice, render_state.Textures, MAX_TEXTURE_STAGES);
+#endif
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @feature Codex 02/10/2026 Optional selected cutout draw; native state restored.
+    if (!QuestXR_DrawSoftCutout(D3DDevice, render_state.Textures, MAX_TEXTURE_STAGES,
+        D3DPT_TRIANGLELIST, 0, vertex_count, dyn_ib_access.IndexBufferOffset, polygon_count))
+#endif
+    {
 	DX8CALL(DrawIndexedPrimitive(
 		D3DPT_TRIANGLELIST,
 		0,		// start vertex
 		vertex_count,
 		dyn_ib_access.IndexBufferOffset,
 		polygon_count));
+    }
 
 	DX8_RECORD_RENDER(polygon_count,vertex_count,render_state.shader);
 }
@@ -2851,12 +2866,23 @@ void DX8Wrapper::Draw(
 				}*/
 				DX8_RECORD_RENDER(polygon_count,vertex_count,render_state.shader);
 				DX8_RECORD_DRAW_CALLS();
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+				// GeneralsX @feature Codex 02/10/2026 Same observation for ordinary indexed draws.
+				QuestXR_RecordDiagnosticDraw(D3DDevice, render_state.Textures, MAX_TEXTURE_STAGES);
+#endif
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+                if (!QuestXR_DrawSoftCutout(D3DDevice, render_state.Textures, MAX_TEXTURE_STAGES,
+                    primitive_type, min_vertex_index, vertex_count,
+                    start_index + render_state.iba_offset, polygon_count))
+#endif
+                {
 				DX8CALL(DrawIndexedPrimitive(
 					(D3DPRIMITIVETYPE)primitive_type,
 					min_vertex_index,
 					vertex_count,
 					start_index+render_state.iba_offset,
 					polygon_count));
+                }
 			}
 			break;
 		case BUFFER_TYPE_SORTING:

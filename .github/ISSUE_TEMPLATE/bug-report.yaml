@@ -1,66 +1,25 @@
-name: Bug Report
-description: Report bugs or issues you've encountered while playing the game
-labels: [ "Bug", "⚠️ Triage" ]
-
+name: Bug report
+description: Report a problem with the Quest port
 body:
-- type: checkboxes
-  attributes:
-    label: Prerequisites
-    description: Please make sure you've completed the following steps before submitting an issue
-    options:
-      - label: I have searched for similar issues and confirmed this is not a duplicate
-        required: true
-
-- type: checkboxes
-  attributes:
-    label: Game Version
-    description: Which version(s) of the game does this bug appear in?
-    options:
-      - label: "Command & Conquer Generals"
-        required: false
-      - label: "Command & Conquer Generals: Zero Hour"
-        required: false
-      - label: "Other (please specify below)"
-        required: false
-
-- type: checkboxes
-  attributes:
-    label: Operating System
-    description: Which operating system(s) does this bug appear on? (Select all that apply)
-    options:
-      - label: "macOS"
-        required: false
-      - label: "Linux"
-        required: false
-      - label: "Windows"
-        required: false
-      - label: "Other (please specify below)"
-        required: false
-
-- type: textarea
-  attributes:
-    label: Bug Description
-    description: |
-      What is the bug? What happened versus what you expected to happen?
-      Please provide a clear and detailed description.
-  validations:
-    required: true
-
-- type: textarea
-  attributes:
-    label: Reproduction Steps
-    description: How can we reproduce this bug?
-    placeholder: |
-      1. Start a new game with [specific settings]
-      2. Build/Select [specific unit/building]
-      3. Perform [specific action]
-      4. Observe [the bug]
-  validations:
-    required: true
-
-- type: textarea
-  attributes:
-    label: Additional Context
-    description: Add any relevant screenshots, video recordings, or other files here
-  validations:
-    required: false
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: Include expected behavior and any exact error message.
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Version and headset
+      placeholder: App version, Quest model, Quest OS version if known
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: Include game mode, map and relevant graphics settings. For multiplayer, include the other client's version and who hosted.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Optional evidence
+      description: A screenshot or short log can help. Redact account names, addresses, tokens and private paths. Do not attach retail game files, passwords or signing keys.

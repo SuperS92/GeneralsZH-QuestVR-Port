@@ -157,6 +157,10 @@ public:
 
 	// texture accessors (dx8)
 	IDirect3DBaseTexture8 *Peek_D3D_Base_Texture() const;
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	// GeneralsX @feature Codex 02/10/2026 Observe identity without changing LastAccessed.
+	IDirect3DBaseTexture8 *Peek_Diagnostic_D3D_Texture() const { return D3DTexture; }
+#endif
 	void Set_D3D_Base_Texture(IDirect3DBaseTexture8* tex);
 
 	PoolType Get_Pool() const { return Pool; }

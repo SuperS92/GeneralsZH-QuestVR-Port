@@ -1,0 +1,9 @@
+name: Feature request
+description: Suggest a small improvement or discuss an idea
+body:
+  - type: textarea
+    attributes:
+      label: Your idea
+      description: Explain what you want to do and how it would help. Small comfort features are welcome; larger changes cannot be promised.
+    validations:
+      required: true

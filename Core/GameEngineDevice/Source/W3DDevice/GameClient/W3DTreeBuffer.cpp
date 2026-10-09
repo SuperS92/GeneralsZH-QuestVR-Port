@@ -88,6 +88,13 @@ enum
 #include "WW3D2/mesh.h"
 #include "WW3D2/meshmdl.h"
 #include "d3dx8tex.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestSoftCutouts.h"
+#include "VRDevice/QuestTreeWind.h"
+#include "VRDevice/QuestTreeContours.h"
+#include "VRDevice/QuestPerformance.h"
+#include <algorithm>
+#endif
 
 
 // If TEST_AND_BLEND is defined, it will do an alpha test and blend.  Otherwise just alpha test. jba. [5/30/2003]
@@ -187,6 +194,26 @@ int W3DTreeBuffer::W3DTreeTextureClass::update(W3DTreeBuffer *buffer)
 		}
 
 	}
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @feature Codex 07/10/2026 Smooth complete tree material rectangles while the original base surface is locked.
+    if (QuestXR::TreeContoursRequested()) {
+        QuestXR::TreeContourRegion regions[64];
+        unsigned count = 0;
+        for (Int type = 0; type < buffer->m_numTreeTypes && count < 64; ++type) {
+            const auto &material = buffer->m_treeTypes[type];
+            if (material.m_numTiles <= 0 || material.m_tileWidth <= 0) continue; // Shared materials have no new tiles.
+            const unsigned extent = material.m_tileWidth * TILE_PIXEL_EXTENT;
+            regions[count++] = {static_cast<unsigned>(material.m_textureOrigin.x),
+                static_cast<unsigned>(material.m_textureOrigin.y), extent, extent};
+        }
+        QuestXR::TreeContourResult result;
+        const bool filtered = surface_desc.Format == D3DFMT_A8R8G8B8 &&
+            QuestXR::SmoothTreeContours(static_cast<uint8_t *>(locked_rect.pBits),
+                static_cast<unsigned>(locked_rect.Pitch), surface_desc.Width, surface_desc.Height,
+                regions, count, true, result);
+        QuestXR::RecordTreeContourUpload(filtered, result);
+    }
+#endif
 	DX8_ErrorCode(surface_level->UnlockRect());
 	surface_level->Release();
 	DX8_ErrorCode(D3DXFilterTexture(Peek_D3D_Texture(), nullptr, (UINT)0, D3DX_FILTER_BOX));
@@ -976,6 +1003,9 @@ void W3DTreeBuffer::loadTreesInVertexAndIndexBuffers(RefRenderObjListIterator *p
 //=============================================================================
 void W3DTreeBuffer::updateVertexBuffer()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::PerformanceStageScope perfTrees(QuestXR::PerfStage::Trees);
+#endif
 	if (!m_indexTree[0] || !m_vertexTree[0] || !m_initialized) {
 		return;
 	}
@@ -984,18 +1014,9 @@ void W3DTreeBuffer::updateVertexBuffer()
 		if (m_curNumTreeIndices[bNdx]==0) {
 			break;
 		}
-		VertexFormatXYZNDUV1 *vb;
-		// Lock the buffers.
-	#ifdef USE_STATIC
-		DX8VertexBufferClass::WriteLockClass lockVtxBuffer(m_vertexTree[bNdx], 0);
-	#else
-		DX8VertexBufferClass::WriteLockClass lockVtxBuffer(m_vertexTree[bNdx], D3DLOCK_DISCARD);
-	#endif
-		vb=(VertexFormatXYZNDUV1*)lockVtxBuffer.Get_Vertex_Array();
-		if (!vb) {
-			continue;
-		}
-
+        // GeneralsX @performance Codex 05/10/2026 Static buffers keep flags=0; write only the changed visible interval.
+        auto updateVertices = [&](VertexFormatXYZNDUV1 *vb, Int rangeStart) {
+            if (!vb) return;
 		VertexFormatXYZNDUV1 *curVb;
 
 		Int curTree;
@@ -1016,7 +1037,7 @@ void W3DTreeBuffer::updateVertexBuffer()
 			DEBUG_ASSERTCRASH(type>=0 && m_treeTypes[type].m_mesh!=nullptr, ("Invalid tree type or mesh."));
 
 			Int startVertex = m_trees[curTree].firstIndex;
-			curVb = vb+startVertex;
+			curVb = vb+(startVertex-rangeStart);
 			Int i;
 			Int numVertex = m_treeTypes[type].m_mesh->Peek_Model()->Get_Vertex_Count();
 			Vector3 *pVert = m_treeTypes[type].m_mesh->Peek_Model()->Get_Vertex_Array();
@@ -1053,6 +1074,41 @@ void W3DTreeBuffer::updateVertexBuffer()
 				curVb++;
 			}
 		}
+        };
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR) && defined(USE_STATIC)
+        if (QuestXR::PerformanceRequested(QuestXR::PerfOption::TreeRange) && QuestXR::PerformanceEye() >= 0) {
+            Int first = m_vertexTree[bNdx]->Get_Vertex_Count(), last = 0;
+            bool pendingHidden = false;
+            for (Int t=0; t<m_numTrees; ++t) {
+                if (m_trees[t].bufferNdx != bNdx ||
+                    (m_trees[t].pushAsideDelta == 0.0f && m_trees[t].m_toppleState == TOPPLE_UPRIGHT)) continue;
+                pendingHidden = true;
+                if (!m_trees[t].visible) continue;
+                const Int type = m_trees[t].treeType;
+                const Int count = m_treeTypes[type].m_mesh->Peek_Model()->Get_Vertex_Count();
+                first = std::min(first, m_trees[t].firstIndex);
+                last = std::max(last, m_trees[t].firstIndex+count);
+            }
+            if (last <= first) {
+                if (pendingHidden) m_anyPushChanged = true; // Preserve the inherited hidden-tree bookkeeping.
+                QuestXR::RecordTreeRange(m_vertexTree[bNdx]->Get_Vertex_Count()*sizeof(VertexFormatXYZNDUV1), 0);
+                continue;
+            }
+            if (first >= 0 && last <= m_vertexTree[bNdx]->Get_Vertex_Count()) {
+                DX8VertexBufferClass::AppendLockClass lock(m_vertexTree[bNdx], first, last-first);
+                updateVertices((VertexFormatXYZNDUV1*)lock.Get_Vertex_Array(), first);
+                QuestXR::RecordTreeRange(m_vertexTree[bNdx]->Get_Vertex_Count()*sizeof(VertexFormatXYZNDUV1),
+                    (last-first)*sizeof(VertexFormatXYZNDUV1));
+                continue;
+            }
+        }
+#endif
+    #ifdef USE_STATIC
+        DX8VertexBufferClass::WriteLockClass lock(m_vertexTree[bNdx], 0);
+    #else
+        DX8VertexBufferClass::WriteLockClass lock(m_vertexTree[bNdx], D3DLOCK_DISCARD);
+    #endif
+        updateVertices((VertexFormatXYZNDUV1*)lock.Get_Vertex_Array(), 0);
 	}
 }
 
@@ -1728,6 +1784,20 @@ void W3DTreeBuffer::drawTrees(CameraClass * camera, RefRenderObjListIterator *pD
 		Vector4 noSway(0,0,0,0);
 		DX8Wrapper::_Get_D3D_Device8()->SetVertexShaderConstant(  8, &noSway,  1 );
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        // GeneralsX @feature Codex 07/10/2026 Share only shader wind inputs; all inherited phase/tree/RNG updates stay above.
+        if (QuestXR::TreeWindRequested()) {
+            static_assert(MAX_SWAY_TYPES == 10, "Review bounded Quest wind inputs if upstream sway types change");
+            float windInputs[MAX_SWAY_TYPES * 3];
+            for (Int s = 0; s < MAX_SWAY_TYPES; ++s) {
+                windInputs[s*3] = swayFactor[s].X; windInputs[s*3+1] = swayFactor[s].Y; windInputs[s*3+2] = swayFactor[s].Z;
+            }
+            if (QuestXR::ShareTreeWind(this, m_treeTexture, m_curSwayVersion, windInputs, MAX_SWAY_TYPES * 3)) {
+                for (Int s = 0; s < MAX_SWAY_TYPES; ++s)
+                    swayFactor[s].Set(windInputs[s*3], windInputs[s*3+1], windInputs[s*3+2]);
+            }
+        }
+#endif
 		// c8 - c8+MAX_SWAY_TYPES - the sway amount.
 		for	(i=0; i<MAX_SWAY_TYPES; i++) {
 			Vector4 sway4(swayFactor[i].X, swayFactor[i].Y, swayFactor[i].Z, 0);
@@ -1772,6 +1842,10 @@ void W3DTreeBuffer::drawTrees(CameraClass * camera, RefRenderObjListIterator *pD
 	}
 
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @feature Codex 02/10/2026 Identify procedural tree draws without atlas/name mutation.
+    QuestXR::SoftCutoutTreeScope softTreeScope;
+#endif
 	Int bNdx;
 	for (bNdx=0;bNdx<MAX_BUFFERS; bNdx++) {
 		if (m_curNumTreeIndices[bNdx]==0) {

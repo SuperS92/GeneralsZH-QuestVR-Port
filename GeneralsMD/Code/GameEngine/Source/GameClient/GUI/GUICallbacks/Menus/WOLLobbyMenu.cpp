@@ -2598,12 +2598,26 @@ WindowMsgHandledType WOLLobbyMenuSystem( GameWindow *window, UnsignedInt msg,
 							{
 								if (Lobby.exe_crc != TheGlobalData->m_exeCRC)
 								{
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+									UnicodeString mismatch;
+									mismatch.format(L"PC lobby EXE checksum %u differs from Quest %u. Update Online game data in the Quest launcher, keep PC play enabled, then restart the game. The PC must use the same GeneralsOnline data release.",
+										Lobby.exe_crc, TheGlobalData->m_exeCRC);
+									GSMessageBoxOk(TheGameText->fetch("GUI:JoinFailedDefault"), mismatch);
+#else
 									GSMessageBoxOk(TheGameText->fetch("GUI:JoinFailedDefault"),
 										UnicodeString(L"This Android build cannot join games hosted by the PC client: the two are different programs, so their EXE checksums never match. Games hosted from Android can be joined normally."));
+#endif
 								}
 								else if (TheGlobalData->m_iniCRC != VANILLA_INI_CRC)
 								{
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+									UnicodeString mismatch;
+									mismatch.format(L"Game-data checksum differs: PC %u, Quest %u. Update Online game data in the Quest launcher and use the same GeneralsOnline data release on the PC, then restart both games.",
+										Lobby.ini_crc, TheGlobalData->m_iniCRC);
+									GSMessageBoxOk(TheGameText->fetch("GUI:JoinFailedDefault"), mismatch);
+#else
 									GSMessageBoxOk(TheGameText->fetch("GUI:JoinFailedDefault"), UnicodeString(L"You have modified INI files or a modification."));
+#endif
 								}
 								else if (Lobby.ini_crc != VANILLA_INI_CRC)
 								{
@@ -2619,8 +2633,15 @@ WindowMsgHandledType WOLLobbyMenuSystem( GameWindow *window, UnsignedInt msg,
 									// data. The fix is to obtain theirs, not to accuse them; there is
 									// no honest way to fake it, since the numbers are computed from
 									// the files the match will actually be played with.
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+									UnicodeString mismatch;
+									mismatch.format(L"Game-data checksum differs: PC %u, Quest %u. Update Online game data in the Quest launcher and use the same GeneralsOnline data release on the PC, then restart both games.",
+										Lobby.ini_crc, TheGlobalData->m_iniCRC);
+									GSMessageBoxOk(TheGameText->fetch("GUI:JoinFailedDefault"), mismatch);
+#else
 									GSMessageBoxOk(TheGameText->fetch("GUI:JoinFailedDefault"),
 										UnicodeString(L"This game's INI data differs from yours. The PC client ships its own INI files; copy them into your game folder to join games hosted by it. The startup log line tagged [GX-CRC] shows whether they took."));
+#endif
 								}
 								else
 								{

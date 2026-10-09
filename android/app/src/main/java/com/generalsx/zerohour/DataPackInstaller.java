@@ -71,6 +71,16 @@ final class DataPackInstaller {
 
     private static final String MANIFEST_URL = "https://cdn.playgenerals.online/manifest.json";
 
+    // GeneralsX @bugfix Codex 09/10/2026 Preserve upstream whitespace handling,
+    // but a Quest package must have a complete SHA before download/extraction.
+    static String normalizeExpectedSha(String expected, boolean quest) throws IOException {
+        String normalized = expected.trim();
+        if (quest && !normalized.matches("[0-9A-Fa-f]{64}")) {
+            throw new IOException("manifest has no usable SHA-256 checksum");
+        }
+        return normalized;
+    }
+
     /**
      * GeneralsX @feature Android port 27/09/2026 The package's own manifest address can be
      * changed from the signed update settings (datapack_manifest_url), so a move of the
@@ -124,6 +134,7 @@ final class DataPackInstaller {
 
     /** Where the engine looks: BuildUserDataPathFromRegistry's Android branch. */
     static File userDataDir() {
+        if (BuildConfig.QUEST_VR) return QuestPlatform.userDataDir();
         return new File(android.os.Environment.getExternalStorageDirectory(),
             "Generals/Command and Conquer Generals Zero Hour Data");
     }
@@ -405,7 +416,7 @@ final class DataPackInstaller {
             long expectedSize = manifest.optLong("size", -1);
             // GeneralsX @bugfix Android port 02/10/2026 Trimmed: the 100126_QFE3 manifest publishes " 0857..." with a
             // leading space, and every update then failed as "checksum mismatch" on a correct download.
-            String expectedSha = manifest.optString("sha256", "").trim();
+            String expectedSha = normalizeExpectedSha(manifest.optString("sha256", ""), BuildConfig.QUEST_VR);
 
             if (downloadUrl.isEmpty() || !downloadUrl.startsWith("https://")) {
                 return Result.failure("manifest has no usable download URL");
@@ -604,8 +615,24 @@ final class DataPackInstaller {
         if (!dir.isDirectory() && !dir.mkdirs()) {
             throw new IOException("could not create " + dir.getAbsolutePath());
         }
-        try (FileWriter out = new FileWriter(file)) {
-            out.write(seed + "\n" + version + "\n" + "crc_revision=" + crcRevision + "\n");
+        // GeneralsX @bugfix Codex 09/10/2026 Atomic Quest storage, using the
+        // upstream v1.4.0 seed/revision format consumed by GlobalData.
+        if (BuildConfig.QUEST_VR) {
+            android.util.AtomicFile atomic = new android.util.AtomicFile(file);
+            FileOutputStream out = null;
+            try {
+                out = atomic.startWrite();
+                out.write((seed + "\n" + version + "\n" + "crc_revision=" + crcRevision + "\n")
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                atomic.finishWrite(out);
+            } catch (IOException e) {
+                if (out != null) atomic.failWrite(out);
+                throw e;
+            }
+        } else {
+            try (FileWriter out = new FileWriter(file)) {
+                out.write(seed + "\n" + version + "\n" + "crc_revision=" + crcRevision + "\n");
+            }
         }
         NetworkTrace.write(ctx, "[datapack] PC exe checksum state " + seed + " from " + PC_EXE_NAME
             + ", logic CRC revision tag " + (crcRevision == 1 ? "present" : "absent"));

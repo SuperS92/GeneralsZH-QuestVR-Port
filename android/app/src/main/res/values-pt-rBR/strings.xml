@@ -345,4 +345,13 @@
     <string name="setup_interface_scale_label">%1$d%%</string>
     <string name="setup_button_apply_interface_scale">Aplicar tamanho da interface</string>
     <string name="setup_interface_scale_help">Aumenta a interface do jogo sem mexer nos arquivos dele: a barra de controle com o radar cresce para cima a partir da borda inferior, e a barra de poderes do general, o chat, as mensagens de eventos, a lista de jogadores, o menu da partida com Salvar/Carregar e Opções e os botões do menu principal crescem a partir de onde estão. Nada sai da tela: cada parte só cresce até onde cabe, então num celular largo a barra de controle fica mais alta em vez de mais larga, e o campo de batalha acima dela, mais baixo. Funciona junto com o tamanho do texto do menu. Vale a partir da próxima vez que você abrir o jogo.</string>
+
+    <!-- Quest-only labels; shared Java sources must also compile in the phone flavor. -->
+    <string name="quest_shadows">Shadows</string>
+    <string name="quest_shadows_desc">Draws building and unit shadows. Enabled by default; may reduce FPS. Automatic quality reduction can temporarily suppress shadows under load. Applies on the next game start.</string>
+    <string name="quest_automatic_fixes">Edge guard, distant ground filtering, road mipmaps, audio loading and vehicle/tree upload optimizations are applied automatically.</string>
+    <string name="quest_support_title">Support MYSOREZ’s Android base</string>
+    <string name="quest_support_attribution">These links support MYSOREZ’s GeneralsZH Android project, which this Quest VR port is based on. They do not support the Quest VR maintainer or this Quest VR derivative.</string>
+    <string name="quest_terrain_batching">Terrain batching (experimental)</string>
+    <string name="quest_terrain_batching_desc">Groups terrain rendering commands. Enabled by default. You can turn it off for comparisons. Applies after fully closing the game and launcher and starting again.</string>
 </resources>

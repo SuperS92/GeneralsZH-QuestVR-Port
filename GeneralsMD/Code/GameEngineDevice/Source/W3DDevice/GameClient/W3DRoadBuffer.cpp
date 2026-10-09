@@ -47,6 +47,9 @@
 //-----------------------------------------------------------------------------
 
 #include "W3DDevice/GameClient/W3DRoadBuffer.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestGraphicsChoices.h"
+#endif
 
 #include <assetmgr.h>
 #include <texture.h>
@@ -174,7 +177,13 @@ void RoadType::loadTexture(AsciiString path, Int ID)
 	/// @todo - delay loading textures and only load textures referenced by map.
 	WW3DAssetManager *pMgr = W3DAssetManager::Get_Instance();
 
-	m_roadTexture = pMgr->Get_Texture(path.str(), MIP_LEVELS_3);
+	// GeneralsX @feature Codex 02/10/2026 Optional complete standalone road mip chain.
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    const MipCountType roadMips = QuestXR::RoadMipFixRequested() ? MIP_LEVELS_ALL : MIP_LEVELS_3;
+    m_roadTexture = pMgr->Get_Texture(path.str(), roadMips);
+#else
+    m_roadTexture = pMgr->Get_Texture(path.str(), MIP_LEVELS_3);
+#endif
 	//Hack to disable texture reduction
 	//m_roadTexture = pMgr->Get_Texture(path.str(), MIP_LEVELS_3, WW3D_FORMAT_UNKNOWN,true,TextureBaseClass::TEX_REGULAR, false);
 
@@ -204,7 +213,12 @@ void RoadType::loadTestTexture()
 {
 	if (m_isAutoLoaded && m_uniqueID>0 && !m_texturePath.isEmpty()) {
 		/// @todo - delay loading textures and only load textures referenced by map.
-		m_roadTexture = NEW_REF(TextureClass, (m_texturePath.str(), m_texturePath.str(), MIP_LEVELS_3));
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        const MipCountType roadMips = QuestXR::RoadMipFixRequested() ? MIP_LEVELS_ALL : MIP_LEVELS_3;
+        m_roadTexture = NEW_REF(TextureClass, (m_texturePath.str(), m_texturePath.str(), roadMips));
+#else
+        m_roadTexture = NEW_REF(TextureClass, (m_texturePath.str(), m_texturePath.str(), MIP_LEVELS_3));
+#endif
 		m_roadTexture->Get_Filter().Set_Mip_Mapping( TextureFilterClass::FILTER_TYPE_BEST );
 
 		m_roadTexture->Get_Filter().Set_U_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_REPEAT);

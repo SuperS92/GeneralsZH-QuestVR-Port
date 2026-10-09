@@ -45,6 +45,11 @@
 
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "W3DDevice/GameClient/HeightMap.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestPerformance.h"
+#include <cstring>
+#endif
+
 #include "Common/PerfTimer.h"
 #include "Common/GlobalData.h"
 #include "Common/Debug.h"
@@ -586,6 +591,9 @@ TerrainTracksRenderObjClassSystem::~TerrainTracksRenderObjClassSystem()
 //=============================================================================
 void TerrainTracksRenderObjClassSystem::ReAcquireResources()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::InvalidateTrackUpload();
+#endif
 	Int i;
 	const Int numModules=TheGlobalData->m_maxTerrainTracks;
 
@@ -623,6 +631,9 @@ void TerrainTracksRenderObjClassSystem::ReAcquireResources()
 //=============================================================================
 void TerrainTracksRenderObjClassSystem::ReleaseResources()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::InvalidateTrackUpload();
+#endif
 	REF_PTR_RELEASE(m_indexBuffer);
 	REF_PTR_RELEASE(m_vertexBuffer);
 	// Note - it is ok to not release the material, as it is a w3d object that
@@ -789,6 +800,9 @@ void TerrainTracksRenderObjClassSystem::update()
 //=============================================================================
 void TerrainTracksRenderObjClassSystem::flush()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::PerformanceStageScope perfTracks(QuestXR::PerfStage::Tracks);
+#endif
 /** @todo: Optimize system by drawing tracks as triangle strips and use dynamic vertex buffer access.
 May also try rendering all tracks with one call to W3D/D3D by grouping them by texture.
 Try improving the fit to vertical surfaces like cliffs.
@@ -823,8 +837,8 @@ Try improving the fit to vertical surfaces like cliffs.
 	//check if there is anything to draw and fill vertex buffer
 	if (m_edgesToFlush >= 2)
 	{
-		DX8VertexBufferClass::WriteLockClass lockVtxBuffer(m_vertexBuffer);
-		VertexFormatXYZDUV1 *verts = (VertexFormatXYZDUV1*)lockVtxBuffer.Get_Vertex_Array();
+        // GeneralsX @performance Codex 05/10/2026 Verify the exact per-eye packed vertices before omitting an upload.
+        auto fillVertices = [&](VertexFormatXYZDUV1 *verts) {
 		trackStartIndex=0;
 
 		mod=m_usedModules;
@@ -882,6 +896,29 @@ Try improving the fit to vertical surfaces like cliffs.
 			}
 			mod = mod->m_nextSystem;
 		}
+        };
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        if (QuestXR::PerformanceRequested(QuestXR::PerfOption::TrackUpload) && QuestXR::PerformanceEye() >= 0) {
+            static std::vector<VertexFormatXYZDUV1> packed;
+            packed.resize(m_vertexBuffer->Get_Vertex_Count());
+            fillVertices(packed.data());
+            size_t vertexCount = 0;
+            for (mod=m_usedModules; mod; mod=mod->m_nextSystem)
+                if (mod->m_activeEdgeCount >= 2 && mod->Is_Really_Visible()) vertexCount += mod->m_activeEdgeCount*2;
+            const size_t bytes = vertexCount * sizeof(VertexFormatXYZDUV1);
+            if (bytes && !QuestXR::TrackUploadMatches(this, m_vertexBuffer, packed.data(), bytes)) {
+                DX8VertexBufferClass::WriteLockClass lockVtxBuffer(m_vertexBuffer);
+                auto *destination = lockVtxBuffer.Get_Vertex_Array();
+                if (!destination) { QuestXR::InvalidateTrackUpload(); return; }
+                std::memcpy(destination, packed.data(), bytes);
+                QuestXR::RememberTrackUpload(this, m_vertexBuffer, packed.data(), bytes);
+            }
+        } else
+#endif
+        {
+            DX8VertexBufferClass::WriteLockClass lockVtxBuffer(m_vertexBuffer);
+            fillVertices((VertexFormatXYZDUV1*)lockVtxBuffer.Get_Vertex_Array());
+        }
 	}
 
 	//draw the filled vertex buffers

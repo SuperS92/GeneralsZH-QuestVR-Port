@@ -1,5 +1,9 @@
-# Security Policy
+# Security reports
 
-## Reporting a Vulnerability
+For Quest-specific vulnerabilities, use this repository's private vulnerability
+reporting feature when it is available. Do not post passwords, tokens, personal
+data or working exploits in public issues. If private reporting is unavailable,
+open an issue asking for a private reporting channel without disclosing details.
 
-If you have been informed of or discovered a security vulnerability, exploit or other flaw, please contact a developer of TheSuperHackers to report it privately. Public channels on Discord or the GitHub should be avoided, as the exploit may be taken from a public post and used before it can be patched. The best method is to contact xezon on discord. He can be reached in the [Community Outpost Discord](https://discord.gg/WzxQDZersE).
+For issues in the original engine or GeneralsOnline service, use the affected
+upstream project's security reporting channel.

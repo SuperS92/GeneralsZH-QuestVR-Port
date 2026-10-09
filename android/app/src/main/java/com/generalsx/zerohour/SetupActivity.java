@@ -95,9 +95,99 @@ public class SetupActivity extends Activity {
     static final int SIM_HZ_RETAIL = 30;
     static final int SIM_HZ_CROSSPLAY = 60;
 
+    // GeneralsX @feature Codex 30/09/2026 Quest-only, opt-in spatial AA test.
+    static final String PREF_QUEST_SPATIAL_AA = "quest_spatial_aa";
+    // GeneralsX @feature Codex 01/10/2026 Preserve existing opt-in as gentle AA.
+    static final String PREF_QUEST_AA_MODE = "quest_aa_mode";
+    // GeneralsX @feature Codex 02/10/2026 Local default-off terrain diagnostic.
+    static final String PREF_QUEST_TERRAIN_DETAIL_TEST = "quest_terrain_detail_test";
+    // GeneralsX @tweak Codex 02/10/2026 Retire completed neutral/blur trials; ignore stale preferences.
+    static boolean getQuestTerrainDetailTest(android.content.Context ctx) { return false; }
+    static final String PREF_QUEST_TERRAIN_MIP_FILTER = "quest_terrain_mip_filter";
+    static int getQuestTerrainMipFilter(android.content.Context ctx) { return 0; }
+    static final String PREF_QUEST_TEXTURE_FILTER = "quest_texture_filter";
+    static final String PREF_QUEST_RENDER_SCALE = "quest_render_scale";
+    // GeneralsX @feature Codex 02/10/2026 Independent default-off object texture comparisons.
+    static final String PREF_QUEST_ROAD_MIPS = "quest_road_mips";
+    static final String PREF_QUEST_CUTOUT_MIPS = "quest_cutout_mips";
+    static boolean getQuestRoadMips(android.content.Context ctx) {
+        // GeneralsX @tweak Codex 09/10/2026 Accepted defaults ignore retired preferences.
+        return BuildConfig.QUEST_VR;
+    }
+    // GeneralsX @tweak Codex 05/10/2026 Retire the alpha-mip pilot after no visible user benefit; ignore stale choices.
+    static boolean getQuestCutoutMips(android.content.Context ctx) { return false; }
+    // GeneralsX @feature Codex 02/10/2026 Independent default-off tree/railing edge comparison.
+    static final String PREF_QUEST_SOFT_CUTOUTS = "quest_soft_cutouts";
+    // GeneralsX @feature Codex 07/10/2026 Default-off shader-only stereo wind comparison.
+    static final String PREF_QUEST_TREE_WIND_PAIR = "quest_tree_wind_pair";
+    static boolean getQuestTreeWindPair(android.content.Context ctx) {
+        return false; // Retired after active device test produced no perceived benefit; ignore stale prefs.
+    }
+    // GeneralsX @feature Codex 07/10/2026 Default-off integrated tree-atlas contour choice.
+    // GeneralsX @feature Codex 07/10/2026 Default-off terrain distance experiment.
+    static final String PREF_QUEST_TERRAIN_FAR_MIPS = "quest_terrain_far_mips";
+    static boolean getQuestTerrainFarMips(android.content.Context ctx) {
+        // GeneralsX @tweak Codex 09/10/2026 Accepted defaults ignore retired preferences.
+        return BuildConfig.QUEST_VR;
+    }
+    // GeneralsX @feature Codex 07/10/2026 Default-off gentle filter for the added farthest ground mip only.
+    static final String PREF_QUEST_TERRAIN_FAR_FILTER = "quest_terrain_far_filter";
+    static boolean getQuestTerrainFarFilter(android.content.Context ctx) {
+        // GeneralsX @tweak Codex 09/10/2026 Accepted defaults ignore retired preferences.
+        return BuildConfig.QUEST_VR;
+    }
+    // GeneralsX @feature Codex 07/10/2026 Separate default-off fence appearance experiment.
+    static final String PREF_QUEST_FENCE_CONTOURS = "quest_fence_contours";
+    static boolean getQuestFenceContours(android.content.Context ctx) {
+        // GeneralsX @tweak Codex 09/10/2026 Accepted defaults ignore retired preferences.
+        return false;
+    }
+    static final String PREF_QUEST_TREE_CONTOURS = "quest_tree_contours";
+    static boolean getQuestTreeContours(android.content.Context ctx) {
+        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean(PREF_QUEST_TREE_CONTOURS, true);
+    }
+    static boolean getQuestSoftCutouts(android.content.Context ctx) {
+        return false; // Retired after active device test produced no sufficient flicker benefit.
+    }
+    // GeneralsX @performance Codex 05/10/2026 Independent default-off A/B options, local to this launcher.
+    static final String[] QUEST_PERF_KEYS = {"quest_perf_audio", "quest_perf_tracks", "quest_perf_terrain",
+        "quest_perf_trees", "quest_perf_shadows", "quest_perf_smaa", "quest_perf_metrics", "quest_terrain_batching"};
+    static final String[] QUEST_PERF_ENV = {"GX_QUEST_PERF_AUDIO", "GX_QUEST_PERF_TRACKS", "GX_QUEST_PERF_TERRAIN",
+        "GX_QUEST_PERF_TREES", "GX_QUEST_PERF_SHADOWS", "GX_QUEST_PERF_SMAA", "GX_QUEST_PERF_METRICS", "GX_QUEST_TERRAIN_BATCHING"};
+    static boolean getQuestPerformanceChoice(android.content.Context ctx, int index) {
+        // GeneralsX @performance Codex 09/10/2026 Accepted batching defaults On; metrics remain default Off.
+        if (!BuildConfig.QUEST_VR) return false;
+        if (index == 1 || index == 3) return true;
+        return (index == 6 || index == 7) && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean(QUEST_PERF_KEYS[index], index == 7);
+    }
+    static int getQuestTextureFilter(android.content.Context ctx) {
+        // GeneralsX @tweak Codex 09/10/2026 Accepted defaults ignore retired preferences.
+        return BuildConfig.QUEST_VR ? 2 : 0;
+    }
+    // GeneralsX @tweak Codex 09/10/2026 Accepted Quest shadow rendering defaults On.
+    static final String PREF_QUEST_SHADOWS = "quest_shadows";
+    static boolean getQuestShadows(android.content.Context ctx) {
+        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean(PREF_QUEST_SHADOWS, true);
+    }
+    static int getQuestRenderScale(android.content.Context ctx) {
+        if (!BuildConfig.QUEST_VR) return 1000;
+        int scale = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getInt(PREF_QUEST_RENDER_SCALE, 1500);
+        return scale == 1000 || scale == 1250 || scale == 1500 ? scale : 1500;
+    }
+
+    static int getQuestAAMode(android.content.Context ctx) {
+        if (!BuildConfig.QUEST_VR) return 0;
+        android.content.SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int mode = prefs.getInt(PREF_QUEST_AA_MODE, prefs.getBoolean(PREF_QUEST_SPATIAL_AA, false) ? 1 : 0);
+        return mode == 1 ? 1 : 0; // Retired SMAA preference becomes Off.
+    }
+
     static int getSimHz(android.content.Context ctx) {
         int hz = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getInt(PREF_SIM_HZ, SIM_HZ_RETAIL);
+            .getInt(PREF_SIM_HZ, BuildConfig.QUEST_VR ? SIM_HZ_CROSSPLAY : SIM_HZ_RETAIL);
         return hz == SIM_HZ_CROSSPLAY ? SIM_HZ_CROSSPLAY : SIM_HZ_RETAIL;
     }
 
@@ -105,6 +195,19 @@ public class SetupActivity extends Activity {
         ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
             .putInt(PREF_SIM_HZ, hz == SIM_HZ_CROSSPLAY ? SIM_HZ_CROSSPLAY : SIM_HZ_RETAIL)
             .apply();
+    }
+    // GeneralsX @feature Codex 09/10/2026 Enable the original PC marker by default
+    // only for Quest's private imported folder. A deliberate Off choice persists.
+    static final String PREF_QUEST_PC_COMPAT = "quest_pc_compat";
+    static void prepareQuestPcCompatibility(android.content.Context ctx, String gamePath) {
+        if (!BuildConfig.QUEST_VR || gamePath == null) return;
+        boolean enabled = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean(PREF_QUEST_PC_COMPAT, true);
+        try {
+            QuestPcCompatibility.ensureDefault(true, enabled, new File(gamePath));
+        } catch (java.io.IOException error) {
+            android.util.Log.w("QuestVR", "Could not prepare PC compatibility marker", error);
+        }
     }
     // GeneralsX @feature Android port 06/09/2026 Optional folder holding the
     // BASE Generals archives, for copies that keep them somewhere the engine
@@ -369,7 +472,7 @@ public class SetupActivity extends Activity {
                 buildSimRateSection(page);
                 // GeneralsX @tweak Android port 02/10/2026 The upscaler lives in the GLES translator
                 // (plain GLES and GLES on ANGLE); under Vulkan it does nothing, so it is not offered.
-                if (!RENDER_BACKEND_VULKAN.equals(getRenderBackendChoice())) {
+                if (!BuildConfig.QUEST_VR && !RENDER_BACKEND_VULKAN.equals(getRenderBackendChoice())) {
                     buildRenderScaleSection(page);
                 }
                 buildRenderBackendSection(page);
@@ -504,13 +607,20 @@ public class SetupActivity extends Activity {
             : getString(R.string.setup_updates_never);
         String status = getString(R.string.setup_updates_status, engine, when);
         final boolean newerData = UpdateManager.datapackNewerAvailable(this);
+        // GeneralsX @bugfix Codex 30/09/2026 A Quest profile migration also
+        // needs the data action when the installed release is already latest.
+        final boolean questDataRefresh = BuildConfig.QUEST_VR
+            && UpdateManager.datapackUpdateWanted(this);
         if (newerData) {
             status += "\n" + getString(R.string.setup_updates_datapack_line_new,
                 UpdateManager.datapackLatestSeen(this));
+        } else if (questDataRefresh) {
+            status += "\n" + getString(R.string.online_datapacks_update_for_crc,
+                DataPackInstaller.installedVersion(this));
         }
         updatesStatusView.setText(status);
         if (updatesOpenOnlineButton != null) {
-            updatesOpenOnlineButton.setVisibility(newerData ? View.VISIBLE : View.GONE);
+            updatesOpenOnlineButton.setVisibility(newerData || questDataRefresh ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -567,12 +677,14 @@ public class SetupActivity extends Activity {
         UiKit.chip(about, R.drawable.ic_gzh_check, versionLabel(),
             R.color.gzh_primary, R.color.gzh_surface_container_high);
 
-        buildSupportSection(page);
+        if (!BuildConfig.QUEST_VR) buildSupportSection(page); // Preserve upstream phone ordering.
 
         LinearLayout help = UiKit.card(page);
         UiKit.sectionHeader(help, R.drawable.ic_gzh_doc,
             getString(R.string.setup_card_how_it_works), false);
         UiKit.supporting(help, getString(R.string.setup_how_it_works_body));
+        // GeneralsX @tweak Codex 09/10/2026 Keep MYSOREZ support below usage instructions.
+        if (BuildConfig.QUEST_VR) buildSupportSection(page);
     }
 
     // GeneralsX @feature Android port 03/10/2026 README "Support the project", in the launcher.
@@ -585,7 +697,10 @@ public class SetupActivity extends Activity {
             return;
         }
         LinearLayout card = UiKit.card(page);
-        UiKit.sectionHeader(card, R.drawable.ic_gzh_heart, support.title, false);
+        // GeneralsX @tweak Codex 09/10/2026 Attribute published donation destinations to the Android base.
+        UiKit.sectionHeader(card, R.drawable.ic_gzh_heart, BuildConfig.QUEST_VR
+            ? getString(R.string.quest_support_title) : support.title, false);
+        if (BuildConfig.QUEST_VR) UiKit.supporting(card, getString(R.string.quest_support_attribution));
         if (!support.body.isEmpty()) {
             UiKit.supporting(card, support.body);
         }
@@ -1399,6 +1514,54 @@ public class SetupActivity extends Activity {
     }
 
     private void buildRenderBackendSection(LinearLayout root) {
+        if (BuildConfig.QUEST_VR) {
+            UiKit.supporting(root, "Quest VR uses the headset's Vulkan graphics driver.");
+            LinearLayout content = UiKit.card(root);
+            UiKit.sectionHeader(content, R.drawable.ic_gzh_display, getString(R.string.quest_spatial_aa), false);
+            UiKit.segmented(content, new CharSequence[] {getString(R.string.quest_aa_off),
+                getString(R.string.quest_aa_gentle)}, getQuestAAMode(this), index ->
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putInt(PREF_QUEST_AA_MODE, index).putBoolean(PREF_QUEST_SPATIAL_AA, index == 1).apply());
+            UiKit.supporting(content, getString(R.string.quest_spatial_aa_desc));
+            LinearLayout resolution = UiKit.card(root);
+            UiKit.sectionHeader(resolution, R.drawable.ic_gzh_display, getString(R.string.quest_render_scale), false);
+            int scale = getQuestRenderScale(this);
+            UiKit.segmented(resolution, new String[]{getString(R.string.quest_terrain_original), "1.25×", "1.5×"},
+                scale == 1250 ? 1 : scale == 1500 ? 2 : 0, index ->
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                        .putInt(PREF_QUEST_RENDER_SCALE, index == 1 ? 1250 : index == 2 ? 1500 : 1000).apply());
+            UiKit.supporting(resolution, getString(R.string.quest_render_scale_desc));
+            // GeneralsX @feature Codex 07/10/2026 One integrated tree-only contour test; retire ineffective earlier switches.
+            LinearLayout treeContours = UiKit.card(root);
+            UiKit.sectionHeader(treeContours, R.drawable.ic_gzh_display, getString(R.string.quest_tree_contours), false);
+            UiKit.segmented(treeContours, new String[]{getString(R.string.quest_terrain_original), getString(R.string.quest_tree_contours_on)},
+                getQuestTreeContours(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_QUEST_TREE_CONTOURS, index == 1).apply());
+            UiKit.supporting(treeContours, getString(R.string.quest_tree_contours_desc));
+            // GeneralsX @feature Codex 09/10/2026 Shadow drawing independent of static game detail level.
+            LinearLayout shadows = UiKit.card(root);
+            UiKit.sectionHeader(shadows, R.drawable.ic_gzh_display, getString(R.string.quest_shadows), false);
+            UiKit.segmented(shadows, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
+                getQuestShadows(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_QUEST_SHADOWS, index == 1).apply());
+            UiKit.supporting(shadows, getString(R.string.quest_shadows_desc));
+            UiKit.supporting(root, getString(R.string.quest_automatic_fixes));
+            int[] titles = {R.string.quest_perf_audio, R.string.quest_perf_tracks, R.string.quest_perf_terrain,
+                R.string.quest_perf_trees, R.string.quest_perf_shadows, R.string.quest_perf_smaa, R.string.quest_perf_metrics, R.string.quest_terrain_batching};
+            int[] descriptions = {R.string.quest_perf_audio_desc, R.string.quest_perf_tracks_desc, R.string.quest_perf_terrain_desc,
+                R.string.quest_perf_trees_desc, R.string.quest_perf_shadows_desc, R.string.quest_perf_smaa_desc, R.string.quest_perf_metrics_desc, R.string.quest_terrain_batching_desc};
+            for (int i = 0; i < QUEST_PERF_KEYS.length; ++i) {
+                if (i != 6 && i != 7) continue; // Preserve legacy indices; batching remains independently selectable.
+                final int option = i;
+                LinearLayout trial = UiKit.card(root);
+                UiKit.sectionHeader(trial, R.drawable.ic_gzh_display, getString(titles[i]), false);
+                UiKit.segmented(trial, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
+                    getQuestPerformanceChoice(this, i) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                        .putBoolean(QUEST_PERF_KEYS[option], index == 1).apply());
+                UiKit.supporting(trial, getString(descriptions[i]));
+            }
+            return;
+        }
         LinearLayout content = UiKit.card(root);
         renderBackendStatusView = UiKit.sectionHeader(content, R.drawable.ic_gzh_display,
             getString(R.string.setup_card_render_backend), true);
@@ -1490,6 +1653,7 @@ public class SetupActivity extends Activity {
     private TextView customDriverStatusView;
 
     private void buildCustomDriverSection(LinearLayout root) {
+        if (BuildConfig.QUEST_VR) return;
         LinearLayout content = UiKit.card(root);
         UiKit.sectionHeader(content, R.drawable.ic_gzh_chip,
             getString(R.string.setup_card_vulkan_driver), false);
@@ -1523,6 +1687,7 @@ public class SetupActivity extends Activity {
     // onClearCustomDriver() so "reset" actually restores the recommended
     // state instead of just going blank.
     private void applyRecommendedDriverIfNeeded() {
+        if (BuildConfig.QUEST_VR) return; // Use OpenXR runtime's Vulkan driver.
         try {
             if (new File(getFilesDir(), CUSTOM_DRIVER_CFG_NAME).isFile()) {
                 return;  // already configured (auto or user) -- leave it alone
@@ -2637,6 +2802,12 @@ public class SetupActivity extends Activity {
         SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String path = prefs.getString(PREF_GAME_PATH, null);
         if (path != null) {
+            if (BuildConfig.QUEST_VR) {
+                try {
+                    String privateRoot = new File(ctx.getFilesDir(), "Imported").getCanonicalPath() + File.separator;
+                    if (!new File(path).getCanonicalPath().startsWith(privateRoot)) return null;
+                } catch (java.io.IOException error) { return null; }
+            }
             return path;
         }
 
@@ -2660,6 +2831,7 @@ public class SetupActivity extends Activity {
     }
 
     private static File externalMarkerFile() {
+        if (BuildConfig.QUEST_VR) return null; // Never recover or overwrite another app's data path.
         File root = Environment.getExternalStorageDirectory();
         return root != null ? new File(root, EXTERNAL_MARKER_NAME) : null;
     }
@@ -3026,6 +3198,10 @@ public class SetupActivity extends Activity {
     private static final int REQUEST_LEGACY_STORAGE_PERMISSION = 1003;
 
     private void onSelectGameFolder() {
+        if (BuildConfig.QUEST_VR) {
+            startActivity(new Intent(this, QuestImportActivity.class));
+            return;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
                 Toast.makeText(this, R.string.setup_toast_grant_all_files, Toast.LENGTH_LONG).show();
@@ -3057,6 +3233,10 @@ public class SetupActivity extends Activity {
     // that one validates what it is given as a Zero Hour folder, and this one
     // must accept the opposite -- a folder with base archives and no *ZH.big.
     private void onSelectBaseGeneralsFolder() {
+        if (BuildConfig.QUEST_VR) {
+            startActivity(new Intent(this, QuestImportActivity.class));
+            return;
+        }
         startActivityForResult(new Intent(this, FolderPickerActivity.class), REQUEST_PICK_BASE_GENERALS);
     }
 
@@ -3361,6 +3541,29 @@ public class SetupActivity extends Activity {
     private boolean pendingLaunchAfterRotation = false;
 
     private void onLaunchGame() {
+        if (BuildConfig.QUEST_VR) {
+            // GeneralsX @performance Codex 30/09/2026 Replay checks leave
+            // persistent per-frame diagnostics in the private imported root.
+            // Normal Quest play must not inherit that expensive capture mode.
+            // ReplayCheckActivity recreates these markers for its own launches;
+            // ordinary logs, replay recording and actual online CRCs stay on.
+            String gamePath = getSavedGamePath(); // Validated app-private Quest root.
+            if (gamePath != null) {
+                for (String name : new String[] { "gx_net_trace.txt", "gx_crc_every_frame.txt" }) {
+                    File marker = new File(gamePath, name);
+                    if (marker.isFile() && !marker.delete()) {
+                        android.util.Log.w("QuestVR", "Could not reset replay diagnostic marker " + name);
+                    }
+                }
+            }
+            // Quest presents Setup in a floating window whose reported orientation
+            // may never become landscape. The game Activity owns its own
+            // landscape window and OpenXR swapchain, so launch it directly.
+            pendingLaunchAfterRotation = false;
+            android.util.Log.i("QuestVR", "Launching game Activity from Setup");
+            startActivity(new Intent(this, GeneralsZHActivity.class));
+            return;
+        }
         if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
             startActivity(new Intent(this, GeneralsZHActivity.class));
             return;

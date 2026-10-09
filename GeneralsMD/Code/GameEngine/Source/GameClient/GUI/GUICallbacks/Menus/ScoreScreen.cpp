@@ -1,3 +1,6 @@
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestCampaign.h"
+#endif
 /*
 **	Command & Conquer Generals Zero Hour(tm)
 **	Copyright 2025 Electronic Arts Inc.
@@ -849,10 +852,16 @@ void PlayMovieAndBlock(AsciiString movieTitle)
 	// TheSuperHackers @bugfix Originally this movie render loop stopped rendering when the game window was inactive.
 	// This either skipped the movie or caused decompression artifacts. Now the video just keeps playing until it done.
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	QuestCampaign::BlockingMovieScope questMovie;
+#endif
 	GameWindow *movieWindow = s_blankLayout->getFirstWindow();
 	TheWritableGlobalData->m_loadScreenRender = TRUE;
 	while (videoStream->frameIndex() < videoStream->frameCount() - 1)
 	{
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+		if (QuestCampaign::PollMovieAbort()) break;
+#endif
 		// TheSuperHackers @feature User can now skip video by pressing ESC
 		if (TheKeyboard)
 		{

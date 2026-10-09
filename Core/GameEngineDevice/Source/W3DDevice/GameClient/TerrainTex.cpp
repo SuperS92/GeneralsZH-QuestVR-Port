@@ -53,6 +53,10 @@
 #include "Common/GlobalData.h"
 #include "WW3D2/dx8wrapper.h"
 #include "d3dx8tex.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestTerrainDetailTest.h"
+#include "VRDevice/QuestTerrainMipFilter.h"
+#endif
 
 /******************************************************************************
 						TerrainTextureClass
@@ -193,9 +197,25 @@ int TerrainTextureClass::update(WorldHeightMap *htMap)
 		}
 
 	}
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	// GeneralsX @feature Codex 02/10/2026 Optional upload-only terrain pattern test.
+	QuestXR::ApplyTerrainDetailTest(locked_rect.pBits, locked_rect.Pitch,
+		surface_desc.Width, surface_desc.Height, surface_desc.Format);
+#endif
 	surface_level->UnlockRect();
 	surface_level->Release();
 	DX8_ErrorCode(D3DXFilterTexture(Peek_D3D_Texture(), nullptr, 0, D3DX_FILTER_BOX));
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	// GeneralsX @feature Codex 02/10/2026 Filter each reduced material separately.
+	if (QuestXR::TerrainMipFilterMode()) for (Int i = 0; i < htMap->m_numTextureClasses; ++i) {
+		const ICoord2D origin = htMap->m_textureClasses[i].positionInTexture;
+		const Int size = htMap->m_textureClasses[i].width * TILE_PIXEL_EXTENT;
+		if (origin.x <= 0 || origin.y <= 0 || size <= 0) continue;
+		QuestXR::ApplyTerrainMipFilter(static_cast<IDirect3DTexture8 *>(Peek_Diagnostic_D3D_Texture()),
+			{static_cast<uint32_t>(origin.x), static_cast<uint32_t>(origin.y),
+			 static_cast<uint32_t>(size), static_cast<uint32_t>(size), 4, true});
+	}
+#endif
 	if (WW3D::Get_Texture_Reduction()) {
 		Peek_D3D_Texture()->SetLOD(WW3D::Get_Texture_Reduction());
 	}
@@ -423,9 +443,19 @@ Bool TerrainTextureClass::updateFlat(WorldHeightMap *htMap, Int xCell, Int yCell
 		}
 	}
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	// GeneralsX @feature Codex 02/10/2026 Optional upload-only terrain pattern test.
+	QuestXR::ApplyTerrainDetailTest(locked_rect.pBits, locked_rect.Pitch,
+		surface_desc.Width, surface_desc.Height, surface_desc.Format);
+#endif
 	surface_level->UnlockRect();
 	surface_level->Release();
 	DX8_ErrorCode(D3DXFilterTexture(Peek_D3D_Texture(), nullptr, 0, D3DX_FILTER_BOX));
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	// GeneralsX @feature Codex 02/10/2026 Filter reduced terrain RGB; level zero stays sharp.
+	QuestXR::ApplyTerrainMipFilter(static_cast<IDirect3DTexture8 *>(Peek_Diagnostic_D3D_Texture()),
+		{0, 0, surface_desc.Width, surface_desc.Height, 0, false});
+#endif
 	return(surface_desc.Height);
 }
 
@@ -835,9 +865,25 @@ int AlphaEdgeTextureClass::update(WorldHeightMap *htMap)
 #endif
 #endif
 	}
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	// GeneralsX @feature Codex 02/10/2026 Optional upload-only terrain pattern test.
+	QuestXR::ApplyTerrainDetailTest(locked_rect.pBits, locked_rect.Pitch,
+		surface_desc.Width, surface_desc.Height, surface_desc.Format);
+#endif
 	surface_level->UnlockRect();
 	surface_level->Release();
 	DX8_ErrorCode(D3DXFilterTexture(Peek_D3D_Texture(), nullptr, 0, D3DX_FILTER_BOX));
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	// GeneralsX @feature Codex 02/10/2026 Filter each reduced material separately.
+	if (QuestXR::TerrainMipFilterMode()) for (Int i = 0; i < htMap->m_numEdgeTextureClasses; ++i) {
+		const ICoord2D origin = htMap->m_edgeTextureClasses[i].positionInTexture;
+		const Int size = htMap->m_edgeTextureClasses[i].width * TILE_PIXEL_EXTENT;
+		if (origin.x <= 0 || origin.y <= 0 || size <= 0) continue;
+		QuestXR::ApplyTerrainMipFilter(static_cast<IDirect3DTexture8 *>(Peek_Diagnostic_D3D_Texture()),
+			{static_cast<uint32_t>(origin.x), static_cast<uint32_t>(origin.y),
+			 static_cast<uint32_t>(size), static_cast<uint32_t>(size), 4, true});
+	}
+#endif
 	return(surface_desc.Height);
 }
 

@@ -365,3 +365,17 @@ printf "%s" "$body" | rg '\\n' && echo "HAS_LITERAL_BACKSLASH_N=YES" || echo "HA
 | `scripts.instructions.md` | `scripts/**` | Script organization and naming |
 
 Update this table when instruction files are added, removed, or renamed.
+
+
+## Quest fork constraints
+
+- Read docs/WORKDIR/quest/README.md and PATCH_LEDGER.json before Quest changes.
+- Keep the Quest layer optional. Preserve ordinary Android behavior and the
+  selected MYSOREZ networking, logic, numeric/compiler profile and CRC checks.
+- The sole earlier Quest implementation donor is offline v0.44, commit
+  176a7ce77b615fb8681f8c250625fd3fb5acb4b9. Later donor work is excluded.
+- Keep each upstream edit in the ledger. Merge reviewed upstream releases in a
+  candidate branch; promotion and publication require maintainer approval.
+- Do not upload private evidence, accounts, game files, signing keys or local
+  paths. Only publish the explicitly reviewed ref and scanned release assets.
+- Compilation does not certify crossplay. Keep the public test scope accurate.
