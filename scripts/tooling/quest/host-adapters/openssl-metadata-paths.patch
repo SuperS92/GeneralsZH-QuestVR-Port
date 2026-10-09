@@ -1,0 +1,12 @@
+--- a/util/mkbuildinf.pl
++++ b/util/mkbuildinf.pl
+@@ -11,6 +11,9 @@
+ 
+ my $platform = pop @ARGV;
+ my $cflags = join(' ', @ARGV);
++# Prefix-map source paths are private build inputs. Omit those options only
++# from informational metadata; actual compiler flags remain unchanged.
++$cflags =~ s/(?:^|\s)-f(?:file|macro|debug)-prefix-map=\S+//g;
+ $cflags =~ s(\\)(\\\\)g;
+ $cflags = "compiler: $cflags";
+ 

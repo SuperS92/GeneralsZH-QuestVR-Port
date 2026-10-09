@@ -13,7 +13,8 @@ import tarfile
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 ADAPTERS = pathlib.Path(__file__).with_name('host-adapters')
 PORTS = {'ffmpeg': '3eec7480c1d2f5b777715b974c2935e5a57b06df',
-         'protobuf': '53c97b927087d1919f2a7ef6c34e4caf1a00cdf9'}
+         'protobuf': '53c97b927087d1919f2a7ef6c34e4caf1a00cdf9',
+         'openssl': 'd740be74dc7940c2b88e69db0b2d181024e1028c'}
 
 
 def main():
@@ -48,6 +49,7 @@ def main():
             subprocess.run(command + [str(patch)], check=True)
         evidence[name] = {'portTree': tree, 'patchSha256': hashlib.sha256(patch.read_bytes()).hexdigest()}
     shutil.copyfile(ADAPTERS / 'quest-mingw-protoc.patch', overlay / 'protobuf/quest-mingw-protoc.patch')
+    shutil.copyfile(ADAPTERS / 'openssl-metadata-paths.patch', overlay / 'openssl/openssl-metadata-paths.patch')
     binary = overlay / 'bin'
     binary.mkdir(exist_ok=True)
     shutil.copyfile(ADAPTERS / 'scoped-mkdir.py', binary / 'mkdir.py')

@@ -1,0 +1,10 @@
+--- a/portfile.cmake
++++ b/portfile.cmake
+@@ -13,6 +13,7 @@
+     REF "openssl-${VERSION}"
+     SHA512 c66ac5bb4ba90cb62176e39dad1534963fc84fac3db9774d1ab4999ec3c4f796c63e13036c1f8b36f3077d7a1ee0db54d677de3dae32926c14af128cc3993e14
+     PATCHES
++        openssl-metadata-paths.patch
+         cmake-config.patch
+         command-line-length.patch
+         script-prefix.patch

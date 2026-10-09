@@ -93,6 +93,9 @@ def main():
             for spelling in (old.replace('\\', '/'), old.replace('/', '\\')):
                 privacy_flags.append('-ffile-prefix-map=' + spelling + '=' + new)
         privacy_flags.append('-fdebug-compilation-dir=/build')
+        # UBSan source locations do not follow Clang's file-prefix maps.
+        # Keep the sanitizer and its recovery behavior, reporting basenames only.
+        privacy_flags.append('-fsanitize-undefined-strip-path-components=-1')
         command += ['-DCMAKE_PROJECT_INCLUDE=' + str(ROOT / 'scripts/tooling/quest/public-path-map.cmake'),
                     '-DQUEST_PUBLIC_PATH_FLAGS=' + ';'.join(privacy_flags)]
     if args.profile == 'quest':
