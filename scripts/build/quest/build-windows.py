@@ -93,8 +93,8 @@ def main():
             for spelling in (old.replace('\\', '/'), old.replace('/', '\\')):
                 privacy_flags.append('-ffile-prefix-map=' + spelling + '=' + new)
         privacy_flags.append('-fdebug-compilation-dir=/build')
-        command += ['-DCMAKE_C_FLAGS_INIT=' + ' '.join(privacy_flags),
-                    '-DCMAKE_CXX_FLAGS_INIT=' + ' '.join(privacy_flags)]
+        command += ['-DCMAKE_PROJECT_INCLUDE=' + str(ROOT / 'scripts/tooling/quest/public-path-map.cmake'),
+                    '-DQUEST_PUBLIC_PATH_FLAGS=' + ';'.join(privacy_flags)]
     if args.profile == 'quest':
         command += ['-DSAGE_USE_OPENXR=ON',
                     '-DQUEST_OPENXR_ROOT=' + str(dependency_root / 'work/dependencies/openxr'),
@@ -126,6 +126,13 @@ def main():
     manifest = evidence / (prefix + '.json')
     manifest.write_text(json.dumps(record, indent=2), encoding='utf-8')
     run(command, source, evidence / (prefix + '-configure.log'))
+    if args.public_build:
+        compile_records = json.loads((build / 'compile_commands.json').read_text(encoding='utf-8'))
+        missing = [entry for entry in compile_records
+                   if entry['file'].lower().endswith(('.c', '.cc', '.cpp', '.cxx'))
+                   and any(flag not in entry['command'] for flag in privacy_flags if '\\' not in flag)]
+        if missing: raise SystemExit('Public diagnostic path mapping is missing from actual compiler commands')
+        record['actualCompilerPrivacyFlags'] = 'PASS'
     # Upstream's Linux/macOS cross template lacks Windows executable suffixes.
     # Adapt only this generated artifact for the pristine control source.
     if os.name == 'nt':
