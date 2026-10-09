@@ -1,21 +1,24 @@
 # Generals Zero Hour — Quest VR
 
-A standalone Meta Quest 3 port of **Command & Conquer: Generals – Zero Hour**, based on [MYSOREZ's Android port](https://github.com/MYSOREZ/GeneralsZH-Android-Port). The game runs on the headset with OpenXR and Touch controllers.
+A standalone Meta Quest 3 port of **Command & Conquer: Generals – Zero Hour**, based on [MYSOREZ's Android port](https://github.com/MYSOREZ/GeneralsZH-Android-Port). 
+The game runs on the headset with OpenXR and Touch controllers.
 
 Play above the battlefield, point to select units and give orders, build your base, and change your scale to get closer to the action. No gaming PC or Quest Link is needed to run it.
 
-**Early release.** The main focus is skirmish and online play against PC players through [GeneralsOnline](https://www.playgenerals.online/).
+**Early release.** I was working on this for myself for quite some time, quite a few attempts and code optimizations were needed to get it to this playable state where it is now. 
+If you like what I came up with and want to support me feel free to buy me a Coffee [Ko-Fi](https://ko-fi.com/supers92). 
+Until now it was only ever testet on my own Quest 3 device. Also the main focus for me was skirmish and online play against PC players through [GeneralsOnline](https://www.playgenerals.online/).
 
 ## Tested so far
 
 | Mode | Current experience |
 | --- | --- |
 | Skirmish | Works well in my tests |
-| Quest ↔ PC | Completed matches through GeneralsOnline, hosting from either side |
+| Multiplayer Quest ↔ PC | Multiple completed matches through GeneralsOnline, hosting from either side |
 | Campaign | USA and China briefly tested; videos, scripted camera sequences and the transition to VR gameplay work |
-| Quest ↔ Android / Quest ↔ Quest | Not tested yet |
+| Multiplayer Quest ↔ Android / Quest ↔ Quest | Not tested yet |
 
-Full campaigns and every multiplayer setup have not been tested. Large battles and missions can have frame drops.
+Full campaigns and every multiplayer setup have not been tested. Large battles and missions can have frame drops. I am still testing ways to get the Framerate up. For now it is possible to turn down the resolution to 1x in the settings to get better FPS.
 
 ## Install
 
@@ -64,7 +67,7 @@ See [third-party credits](CREDITS.md) for libraries and licenses. The engine's [
 
 ## Optional support
 
-If you'd like to support my work, [GitHub Sponsors](https://github.com/sponsors/SuperS92) is planned with three monthly tiers: **Supporter $5**, **Fan $10**, and **Sponsor $25**. Support is completely voluntary; the game and its updates stay available to everyone. Sponsors will be set up after the first release.
+If you'd like to support my work buy me a coffee [Ko-Fi](https://ko-fi.com/supers92). 
 
 ## Development
 
