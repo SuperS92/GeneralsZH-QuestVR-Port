@@ -10,6 +10,8 @@ Earlier platform work also comes from [ammaarreshi/Generals-Mac-iOS-iPad](https:
 
 Terrain batching was informed by [Cesarus85/Generals-Zero-Hour-XR](https://github.com/Cesarus85/Generals-Zero-Hour-XR).
 
+Developed with assistance from OpenAI Codex.
+
 ## Runtime and source dependencies
 
 | Project | Use | License / notices |
