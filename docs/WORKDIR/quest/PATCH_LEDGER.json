@@ -311,6 +311,22 @@
       "risk": "documentation only",
       "owningTest": "local Markdown link check",
       "removalCondition": "Upstream reorganizes tutorials"
+    },
+    {
+      "path": "android/app/src/main/java/com/generalsx/zerohour/QuestReleasePolicy.java",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only full signed APK updater from the maintainer release feed; phone engine updates and online data remain separate",
+      "risk": "User-confirmed app installation; package/version/signer/hash/size and HTTPS origin checks",
+      "owningTest": "Release policy rejection fixtures; launcher compilation; headset installer/update gate",
+      "removalCondition": "Upstream supplies an equivalent flavor-specific APK updater"
+    },
+    {
+      "path": "android/app/src/main/java/com/generalsx/zerohour/QuestApkUpdater.java",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only full signed APK updater from the maintainer release feed; phone engine updates and online data remain separate",
+      "risk": "User-confirmed app installation; package/version/signer/hash/size and HTTPS origin checks",
+      "owningTest": "Release policy rejection fixtures; launcher compilation; headset installer/update gate",
+      "removalCondition": "Upstream supplies an equivalent flavor-specific APK updater"
     }
   ],
   "followUpUpstreamEdits": [

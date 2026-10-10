@@ -56,8 +56,16 @@
     <string name="quest_shadows">Schatten</string>
     <string name="quest_shadows_desc">Zeigt Schatten von Gebäuden und Einheiten. Standardmäßig aus; kann FPS kosten. Die automatische Qualitätsregelung kann Schatten bei hoher Last zeitweise abschalten. Gilt ab dem nächsten Spielstart.</string>
     <string name="quest_automatic_fixes">Randschutz, Boden-Fernfilterung, Straßen-Mipmaps, Audioladen und die Upload-Optimierungen für Fahrzeugspuren und Bäume sind automatisch aktiv.</string>
-    <string name="quest_support_title">MYSOREZs Android-Unterbau unterstützen</string>
-    <string name="quest_support_attribution">Diese Links unterstützen MYSOREZs GeneralsZH-Android-Projekt, auf dem dieser Quest-VR-Port aufbaut. Sie unterstützen weder den Betreiber dieses Quest-VR-Ports noch diesen Quest-VR-Ableger.</string>
+    <string name="quest_support_title">Quest-VR-Projekt unterstützen</string>
+    <string name="quest_support_attribution">Wenn dir dieser Quest-VR-Port gefällt, kannst du SuperS92 auf Ko-Fi einen Kaffee spendieren. Unterstützung ist völlig freiwillig.</string>
     <string name="quest_terrain_batching">Gelände bündeln (experimentell)</string>
     <string name="quest_terrain_batching_desc">Zeichnet unveränderte Geländeabschnitte mit weniger Grafikbefehlen. Standardmäßig Aus. Dieselbe Szene mit aktivierten Performance-Messwerten vergleichen; nach Änderungen Spiel und Launcher vollständig schließen. Online-Kompatibilität erneut prüfen.</string>
+
+    <string name="setup_button_select_game_folder">Zero Hour Ordner auswählen</string>
+    <string name="setup_button_select_base_generals">Generals Basis Ordner auswählen</string>
+    <string name="setup_button_clear_game_folder">Zero Hour Ordner zurücksetzen</string>
+    <string name="setup_button_clear_base_generals">Generals Basis Ordner zurücksetzen</string>
+    <string name="setup_toast_base_generals_saved">Generals Basis Ordner: %1$s</string>
+    <string name="setup_toast_base_generals_cleared">Generals Basis Ordner zurückgesetzt</string>
+    <string name="setup_how_it_works_body">1. Kopiere deine eigenen Generals- und Zero-Hour-Spieldaten auf die Quest.\n\n2. Wähle „Zero Hour Ordner auswählen“ und importiere den Zero-Hour-Ordner. Wähle danach „Generals Basis Ordner auswählen“ und importiere den Generals-Ordner.\n\n3. „Spiel starten“ öffnet das Spiel. Die VR-Steuerung ist im Projekt erklärt.\n\n4. „Logs anzeigen“ hilft bei Fehlern. Prüfe Logs vor dem öffentlichen Teilen auf persönliche Informationen.</string>
 </resources>

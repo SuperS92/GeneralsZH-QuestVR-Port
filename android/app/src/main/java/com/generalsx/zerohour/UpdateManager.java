@@ -278,7 +278,8 @@ final class UpdateManager {
                 r.configUpdated = writeRemoteConfig(ctx, config);
             }
 
-            r.supportUpdated = applySupport(ctx, manifest.optJSONObject("support"));
+            if (!BuildConfig.QUEST_VR)
+                r.supportUpdated = applySupport(ctx, manifest.optJSONObject("support"));
 
             JSONObject engine = manifest.optJSONObject("engine");
             if (engine != null && withEngine) {

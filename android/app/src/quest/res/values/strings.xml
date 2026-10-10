@@ -56,8 +56,16 @@
     <string name="quest_shadows">Shadows</string>
     <string name="quest_shadows_desc">Draws building and unit shadows. Default off; may reduce FPS. Automatic quality reduction can temporarily suppress shadows under load. Applies on the next game start.</string>
     <string name="quest_automatic_fixes">Edge guard, distant ground filtering, road mipmaps, audio loading and vehicle/tree upload optimizations are applied automatically.</string>
-    <string name="quest_support_title">Support MYSOREZ’s Android base</string>
-    <string name="quest_support_attribution">These links support MYSOREZ’s GeneralsZH Android project, which this Quest VR port is based on. They do not support the Quest VR maintainer or this Quest VR derivative.</string>
+    <string name="quest_support_title">Support this Quest VR project</string>
+    <string name="quest_support_attribution">If you like this Quest VR port, you can buy SuperS92 a coffee on Ko-Fi. Support is entirely optional.</string>
     <string name="quest_terrain_batching">Terrain batching (experimental)</string>
     <string name="quest_terrain_batching_desc">Draws unchanged ground patches in fewer submissions. Default Off. Compare the same scene with performance metrics enabled; fully close the game and launcher after changing. Online compatibility must be retested.</string>
+
+    <string name="setup_button_select_game_folder">Select Zero Hour folder</string>
+    <string name="setup_button_select_base_generals">Select Generals base folder</string>
+    <string name="setup_button_clear_game_folder">Reset Zero Hour folder</string>
+    <string name="setup_button_clear_base_generals">Reset Generals base folder</string>
+    <string name="setup_toast_base_generals_saved">Generals base folder: %1$s</string>
+    <string name="setup_toast_base_generals_cleared">Generals base folder reset</string>
+    <string name="setup_how_it_works_body">1. Copy your own Generals and Zero Hour game files to the Quest.\n\n2. Choose “Select Zero Hour folder” and import the Zero Hour folder. Then choose “Select Generals base folder” and import the Generals folder.\n\n3. “Play” starts the game. See the project for VR controls.\n\n4. “View logs” helps with problems. Check logs for personal information before sharing them publicly.</string>
 </resources>

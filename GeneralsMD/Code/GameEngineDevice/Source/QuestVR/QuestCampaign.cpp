@@ -7,6 +7,8 @@
 #include "GameClient/InGameUI.h"
 #include "GameClient/Display.h"
 #include <memory>
+#include <cstdlib>
+#include <cstring>
 
 namespace QuestCampaign
 {
@@ -25,6 +27,12 @@ bool IsBlockingMovie() { return lease != nullptr; }
 bool IsFlatSequence()
 {
     if (IsBlockingMovie()) return true; // scope exists only in campaign movie paths
+    static const bool flatShell = [] {
+        const char *value = std::getenv("GX_QUEST_FLAT_INTRO");
+        return value && std::strcmp(value, "1") == 0;
+    }();
+    if (FlatShell(flatShell, TheGameLogic && TheGameLogic->getGameMode() == GAME_SHELL))
+        return true;
     return FlatSequence(TheGameLogic && TheGameLogic->getGameMode() == GAME_SINGLE_PLAYER,
         TheTacticalView && TheTacticalView->isDoingScriptedCamera(),
         TheDisplay && (TheDisplay->isLetterBoxed() || TheDisplay->isLetterBoxFading()),

@@ -107,6 +107,15 @@ public class SetupActivity extends Activity {
     static int getQuestTerrainMipFilter(android.content.Context ctx) { return 0; }
     static final String PREF_QUEST_TEXTURE_FILTER = "quest_texture_filter";
     static final String PREF_QUEST_RENDER_SCALE = "quest_render_scale";
+    // GeneralsX @feature Codex 10/10/2026 Independent presentation trials; restart to apply.
+    static final String PREF_QUEST_FIXED_SCREEN = "quest_fixed_screen";
+    static final String PREF_QUEST_FLAT_INTRO = "quest_flat_intro";
+    static boolean getQuestFixedScreen(android.content.Context ctx) {
+        return ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(PREF_QUEST_FIXED_SCREEN, false);
+    }
+    static boolean getQuestFlatIntro(android.content.Context ctx) {
+        return ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(PREF_QUEST_FLAT_INTRO, false);
+    }
     // GeneralsX @feature Codex 02/10/2026 Independent default-off object texture comparisons.
     static final String PREF_QUEST_ROAD_MIPS = "quest_road_mips";
     static final String PREF_QUEST_CUTOUT_MIPS = "quest_cutout_mips";
@@ -516,6 +525,8 @@ public class SetupActivity extends Activity {
         statusText = null;
         onlineStatusView = null;
         updatesStatusView = null;
+        questApkStatusView = null;
+        questApkUpdateButton = null;
         gameLanguageStatusView = null;
         renderBackendStatusView = null;
         customDriverStatusView = null;
@@ -572,11 +583,131 @@ public class SetupActivity extends Activity {
     private boolean updateCheckRunning;
     private static boolean sAutoUpdateCheckedThisProcess;
 
+    // GeneralsX @feature Codex 10/10/2026 Release checks never download or install silently.
+    private TextView questApkStatusView;
+    private Button questApkUpdateButton;
+    private QuestApkUpdater.Release questRelease;
+    private File questUpdateApk;
+    private boolean questApkDownloadRunning;
+    private String questApkStatus;
+
+    private void setQuestApkStatus(String status) {
+        questApkStatus = status;
+        if (questApkStatusView != null) questApkStatusView.setText(status);
+        if (questApkUpdateButton != null) {
+            questApkUpdateButton.setVisibility(questRelease == null ? View.GONE : View.VISIBLE);
+            questApkUpdateButton.setEnabled(!questApkDownloadRunning && !updateCheckRunning);
+            questApkUpdateButton.setText(questUpdateApk == null
+                ? R.string.quest_apk_download : R.string.quest_apk_install);
+        }
+    }
+
+    private void runQuestUpdateCheck(boolean userAsked) {
+        if (updateCheckRunning || questApkDownloadRunning) return;
+        updateCheckRunning = true;
+        setQuestApkStatus(getString(R.string.setup_updates_checking));
+        new Thread(() -> {
+            android.content.Context app = getApplicationContext();
+            // Keep inherited signed network configuration independent of the APK feed.
+            UpdateManager.Result network = UpdateManager.check(app, false);
+            QuestApkUpdater.Release offered = null;
+            String failure = null;
+            try { offered = QuestApkUpdater.check(); }
+            catch (Exception error) { failure = error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName(); }
+            final QuestApkUpdater.Release release = offered;
+            final String error = failure;
+            runOnUiThread(() -> {
+                updateCheckRunning = false;
+                if (isFinishing() || isDestroyed()) return;
+                refreshUpdatesStatus();
+                if (error != null) {
+                    setQuestApkStatus(getString(R.string.setup_updates_failed, error));
+                    return;
+                }
+                questUpdateApk = null;
+                try {
+                    questRelease = release != null
+                        && QuestReleasePolicy.compareVersions(release.version, BuildConfig.VERSION_NAME) > 0
+                        ? release : null;
+                } catch (IllegalArgumentException invalid) {
+                    questRelease = null;
+                    setQuestApkStatus(getString(R.string.setup_updates_failed, invalid.getMessage()));
+                    return;
+                }
+                setQuestApkStatus(questRelease == null ? getString(R.string.quest_apk_current)
+                    : getString(R.string.quest_apk_available, questRelease.version));
+                if (userAsked && !network.ok)
+                    toast(getString(R.string.quest_network_check_failed));
+                else if (userAsked && network.datapackAvailable != null)
+                    toast(getString(R.string.setup_updates_datapack_available, network.datapackAvailable));
+            });
+        }, "quest-release-check").start();
+    }
+
+    private void onQuestApkUpdate() {
+        if (!BuildConfig.QUEST_VR || questRelease == null || questApkDownloadRunning || updateCheckRunning) return;
+        if (questUpdateApk != null && !getPackageManager().canRequestPackageInstalls()) {
+            try {
+                startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:" + getPackageName())));
+                setQuestApkStatus(getString(R.string.quest_apk_allow_install));
+            } catch (android.content.ActivityNotFoundException unavailable) {
+                setQuestApkStatus(getString(R.string.quest_apk_installer_unavailable));
+            }
+            return;
+        }
+        final QuestApkUpdater.Release release = questRelease;
+        final File ready = questUpdateApk;
+        questApkDownloadRunning = true;
+        setQuestApkStatus(getString(R.string.quest_apk_progress, 0));
+        new Thread(() -> {
+            File result = null; String failure = null;
+            try {
+                if (ready != null) {
+                    QuestApkUpdater.verify(getApplicationContext(), ready, release);
+                    result = ready;
+                } else {
+                    result = QuestApkUpdater.download(getApplicationContext(), release, (bytes, total) ->
+                        runOnUiThread(() -> {
+                            if (!isFinishing() && !isDestroyed())
+                                setQuestApkStatus(getString(R.string.quest_apk_progress, (int)(bytes * 100 / total)));
+                        }));
+                }
+            } catch (Exception error) { failure = error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName(); }
+            final File apk = result;
+            final String error = failure;
+            runOnUiThread(() -> {
+                questApkDownloadRunning = false;
+                if (isFinishing() || isDestroyed()) return;
+                if (error != null || apk == null) {
+                    questUpdateApk = null;
+                    setQuestApkStatus(getString(R.string.setup_updates_failed, error));
+                    return;
+                }
+                questUpdateApk = apk;
+                setQuestApkStatus(getString(R.string.quest_apk_ready));
+                if (ready != null) {
+                    try {
+                        Uri uri = androidx.core.content.FileProvider.getUriForFile(this,
+                            getPackageName() + ".fileprovider", apk);
+                        Intent install = new Intent(Intent.ACTION_VIEW)
+                            .setDataAndType(uri, "application/vnd.android.package-archive")
+                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        startActivity(install); // Android owns the installation confirmation.
+                    } catch (android.content.ActivityNotFoundException | IllegalArgumentException unavailable) {
+                        setQuestApkStatus(getString(R.string.quest_apk_installer_unavailable));
+                    }
+                }
+            });
+        }, "quest-apk-download").start();
+    }
+
     private void buildUpdatesSection(LinearLayout root) {
         LinearLayout content = UiKit.card(root);
         UiKit.sectionHeader(content, R.drawable.ic_gzh_refresh,
             getString(R.string.setup_card_updates), false);
-        UiKit.supporting(content, getString(R.string.setup_updates_help));
+        UiKit.supporting(content, getString(BuildConfig.QUEST_VR
+            ? R.string.quest_updates_help : R.string.setup_updates_help));
         updatesStatusView = UiKit.body(content, null);
         UiKit.button(content, UiKit.BTN_TONAL, R.drawable.ic_gzh_download,
             getString(R.string.setup_button_check_updates), () -> runUpdateCheck(true));
@@ -589,6 +720,14 @@ public class SetupActivity extends Activity {
             getString(R.string.setup_switch_auto_updates), getString(R.string.setup_switch_auto_updates_desc));
         auto.setChecked(UpdateManager.isAutoCheckEnabled(this));
         auto.setOnCheckedChangeListener((button, checked) -> UpdateManager.setAutoCheckEnabled(this, checked));
+        if (BuildConfig.QUEST_VR) {
+            questApkStatusView = UiKit.body(content, questApkStatus);
+            questApkUpdateButton = UiKit.button(content, UiKit.BTN_PRIMARY, R.drawable.ic_gzh_download,
+                getString(questUpdateApk != null ? R.string.quest_apk_install : R.string.quest_apk_download),
+                this::onQuestApkUpdate);
+            questApkUpdateButton.setVisibility(questRelease == null ? View.GONE : View.VISIBLE);
+            questApkUpdateButton.setEnabled(!questApkDownloadRunning);
+        }
         refreshUpdatesStatus();
     }
 
@@ -605,7 +744,9 @@ public class SetupActivity extends Activity {
             ? android.text.format.DateFormat.getDateFormat(this).format(new java.util.Date(last)) + " "
               + android.text.format.DateFormat.getTimeFormat(this).format(new java.util.Date(last))
             : getString(R.string.setup_updates_never);
-        String status = getString(R.string.setup_updates_status, engine, when);
+        String status = BuildConfig.QUEST_VR
+            ? getString(R.string.quest_updates_status, BuildConfig.VERSION_NAME, when)
+            : getString(R.string.setup_updates_status, engine, when);
         final boolean newerData = UpdateManager.datapackNewerAvailable(this);
         // GeneralsX @bugfix Codex 30/09/2026 A Quest profile migration also
         // needs the data action when the installed release is already latest.
@@ -626,6 +767,7 @@ public class SetupActivity extends Activity {
 
     /** @param userAsked true for the button (always report), false for the silent start-up check. */
     private void runUpdateCheck(boolean userAsked) {
+        if (BuildConfig.QUEST_VR) { runQuestUpdateCheck(userAsked); return; }
         if (updateCheckRunning) {
             return;
         }
@@ -677,14 +819,12 @@ public class SetupActivity extends Activity {
         UiKit.chip(about, R.drawable.ic_gzh_check, versionLabel(),
             R.color.gzh_primary, R.color.gzh_surface_container_high);
 
-        if (!BuildConfig.QUEST_VR) buildSupportSection(page); // Preserve upstream phone ordering.
+        buildSupportSection(page);
 
         LinearLayout help = UiKit.card(page);
         UiKit.sectionHeader(help, R.drawable.ic_gzh_doc,
             getString(R.string.setup_card_how_it_works), false);
         UiKit.supporting(help, getString(R.string.setup_how_it_works_body));
-        // GeneralsX @tweak Codex 09/10/2026 Keep MYSOREZ support below usage instructions.
-        if (BuildConfig.QUEST_VR) buildSupportSection(page);
     }
 
     // GeneralsX @feature Android port 03/10/2026 README "Support the project", in the launcher.
@@ -692,6 +832,15 @@ public class SetupActivity extends Activity {
     // and nothing here should stand between a player and the Play button. Text, languages and
     // entries all come from the published support.json (SupportLinks), none from this APK.
     private void buildSupportSection(LinearLayout page) {
+        // GeneralsX @tweak Codex 10/10/2026 Quest donations belong to this fork's maintainer.
+        if (BuildConfig.QUEST_VR) {
+            LinearLayout card = UiKit.card(page);
+            UiKit.sectionHeader(card, R.drawable.ic_gzh_heart, getString(R.string.quest_support_title), false);
+            UiKit.supporting(card, getString(R.string.quest_support_attribution));
+            UiKit.listRow(card, R.drawable.ic_gzh_globe, "Ko-Fi", "ko-fi.com/supers92",
+                () -> openSupportLink("https://ko-fi.com/supers92"));
+            return;
+        }
         SupportLinks support = SupportLinks.load(this);
         if (support == null) {
             return;
@@ -1546,6 +1695,21 @@ public class SetupActivity extends Activity {
                     .putBoolean(PREF_QUEST_SHADOWS, index == 1).apply());
             UiKit.supporting(shadows, getString(R.string.quest_shadows_desc));
             UiKit.supporting(root, getString(R.string.quest_automatic_fixes));
+            LinearLayout screens = UiKit.card(root);
+            UiKit.sectionHeader(screens, R.drawable.ic_gzh_display,
+                getString(R.string.quest_screens_title), false);
+            SwitchCompat fixedScreen = UiKit.switchRow(screens, getString(R.string.quest_fixed_screen),
+                getString(R.string.quest_fixed_screen_desc));
+            fixedScreen.setChecked(getQuestFixedScreen(this));
+            fixedScreen.setOnCheckedChangeListener((button, checked) ->
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_QUEST_FIXED_SCREEN, checked).apply());
+            SwitchCompat flatIntro = UiKit.switchRow(screens, getString(R.string.quest_flat_intro),
+                getString(R.string.quest_flat_intro_desc));
+            flatIntro.setChecked(getQuestFlatIntro(this));
+            flatIntro.setOnCheckedChangeListener((button, checked) ->
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_QUEST_FLAT_INTRO, checked).apply());
             int[] titles = {R.string.quest_perf_audio, R.string.quest_perf_tracks, R.string.quest_perf_terrain,
                 R.string.quest_perf_trees, R.string.quest_perf_shadows, R.string.quest_perf_smaa, R.string.quest_perf_metrics, R.string.quest_terrain_batching};
             int[] descriptions = {R.string.quest_perf_audio_desc, R.string.quest_perf_tracks_desc, R.string.quest_perf_terrain_desc,

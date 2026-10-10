@@ -139,6 +139,10 @@ private:
 	bool m_eyeRenderingComplete = false;
 	bool m_menuRenderingComplete = false;
 	bool m_recenterRequested = false;
+	// GeneralsX @feature Codex 10/10/2026 Optional room-fixed front-end screen.
+	bool m_fixedFrontend = false;
+	bool m_frontendAnchorValid = false;
+	XrPosef m_frontendAnchor{};
 	int64_t m_menuButtonDownNs = 0;
 	bool m_menuButtonLongFired = false;
 	uint32_t m_menuPresentation = QUEST_XR_MENU_HIDDEN;

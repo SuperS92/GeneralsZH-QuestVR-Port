@@ -355,8 +355,26 @@
     <string name="quest_shadows">Schatten</string>
     <string name="quest_shadows_desc">Zeigt Schatten von Gebäuden und Einheiten. Standardmäßig an; kann FPS kosten. Die automatische Qualitätsregelung kann Schatten bei hoher Last zeitweise abschalten. Gilt ab dem nächsten Spielstart.</string>
     <string name="quest_automatic_fixes">Randschutz, Boden-Fernfilterung, Straßen-Mipmaps, Audioladen und die Upload-Optimierungen für Fahrzeugspuren und Bäume sind automatisch aktiv.</string>
-    <string name="quest_support_title">MYSOREZs Android-Unterbau unterstützen</string>
-    <string name="quest_support_attribution">Diese Links unterstützen MYSOREZs GeneralsZH-Android-Projekt, auf dem dieser Quest-VR-Port aufbaut. Sie unterstützen weder den Betreiber dieses Quest-VR-Ports noch diesen Quest-VR-Ableger.</string>
+    <string name="quest_support_title">Quest-VR-Projekt unterstützen</string>
+    <string name="quest_support_attribution">Wenn dir dieser Quest-VR-Port gefällt, kannst du SuperS92 auf Ko-Fi einen Kaffee spendieren. Unterstützung ist völlig freiwillig.</string>
     <string name="quest_terrain_batching">Gelände bündeln (experimentell)</string>
     <string name="quest_terrain_batching_desc">Bündelt Grafikbefehle für das Gelände. Standardmäßig an. Für Vergleiche kannst du es ausschalten. Gilt nach vollständigem Schließen von Spiel und Launcher und erneutem Start.</string>
+
+    <!-- Quest release updates and flat-screen trials -->
+    <string name="quest_updates_help">Quest-App-Updates kommen von SuperS92/GeneralsZH-QuestVR-Port. Hier herunterladen und die Installation im Headset bestätigen. Spieldaten und Einstellungen bleiben erhalten. Signierte Netzwerkeinstellungen kommen weiterhin vom Android-Unterbau; Online-Spieldaten aktualisierst du unter GeneralsOnline-Konto.</string>
+    <string name="quest_updates_status">Quest-App: %1$s · Netzwerkeinstellungen zuletzt geprüft: %2$s</string>
+    <string name="quest_apk_current">Die Quest-App ist aktuell.</string>
+    <string name="quest_apk_available">Quest-App %1$s ist verfügbar.</string>
+    <string name="quest_apk_download">Quest-App-Update herunterladen</string>
+    <string name="quest_apk_install">Quest-App-Update installieren</string>
+    <string name="quest_apk_progress">Quest-APK herunterladen / prüfen: %1$d%%</string>
+    <string name="quest_apk_ready">Download geprüft. Spiel schließen und Quest-App-Update installieren wählen. Android fragt nach deiner Bestätigung; Spieldaten und Einstellungen bleiben erhalten.</string>
+    <string name="quest_apk_allow_install">App-Installationen aus diesem Launcher erlauben, dann zurückkehren und erneut Quest-App-Update installieren wählen.</string>
+    <string name="quest_apk_installer_unavailable">Der Android-Installer oder seine Berechtigungseinstellungen konnten nicht geöffnet werden. Die geprüfte APK bleibt zwischengespeichert. Alternativ kannst du den Release mit SideQuest oder ADB installieren.</string>
+    <string name="quest_network_check_failed">Quest-Release geprüft. Netzwerkeinstellungen konnten nicht aktualisiert werden; die letzten geprüften Einstellungen bleiben aktiv.</string>
+    <string name="quest_screens_title">Flache Bildschirme (experimentell)</string>
+    <string name="quest_fixed_screen">Videos und Menüs fest platzieren</string>
+    <string name="quest_fixed_screen_desc">Intro-Videos, Menüs und Kampagnenbildschirme bleiben an einer festen Position und folgen nicht deinem Kopf. Das Handgelenk-HUD bleibt erhalten. Linken Menüknopf zum Zentrieren drücken. Nach Änderungen Spiel und Launcher vollständig schließen.</string>
+    <string name="quest_flat_intro">3D-Intro auf flachem Bildschirm</string>
+    <string name="quest_flat_intro_desc">Zeigt die Hauptmenüszene und ihr 3D-Intro mit der ursprünglichen Spielkamera auf dem flachen Bildschirm. Matches bleiben in Stereo-VR. Nach Änderungen Spiel und Launcher vollständig schließen.</string>
 </resources>

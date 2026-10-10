@@ -136,7 +136,8 @@ XrVector3f rotateVector(const XrQuaternionf &q, const XrVector3f &v)
 
 MenuGeometry getMenuGeometry(uint32_t presentation, float menuCropTop,
 	uint32_t menuWidth, uint32_t menuHeight,
-	const std::array<QuestXRControllerState, 2> &controllers)
+	const std::array<QuestXRControllerState, 2> &controllers,
+	const XrPosef *frontendAnchor = nullptr)
 {
 	MenuGeometry geometry{};
 	geometry.pose.orientation.w = 1.0f;
@@ -184,6 +185,10 @@ MenuGeometry getMenuGeometry(uint32_t presentation, float menuCropTop,
 	geometry.width = kMenuWidthMeters;
 	geometry.cropTop = 0.0f;
 	geometry.pose.position.z = -kMenuDistanceMeters;
+	if (presentation == QUEST_XR_MENU_FRONTEND && frontendAnchor != nullptr) {
+		geometry.pose = *frontendAnchor;
+		geometry.viewLocked = false;
+	}
 	return geometry;
 }
 
@@ -312,6 +317,8 @@ bool Bootstrap::initialize()
 		return true;
 	}
 	shutdown();
+	const char *fixedScreen = std::getenv("GX_QUEST_FIXED_SCREEN");
+	m_fixedFrontend = fixedScreen && std::strcmp(fixedScreen, "1") == 0;
 
 	if (!initializeLoader() || !createInstance() || !selectSystemAndViews() || !queryVulkanRequirements()) {
 		shutdown();
@@ -1215,10 +1222,12 @@ bool Bootstrap::syncActions()
 			if (m_menuPresentation != QUEST_XR_MENU_HIDDEN
 				&& m_menuWidth != 0 && m_menuHeight != 0) {
 				const MenuGeometry geometry = getMenuGeometry(m_menuPresentation,
-					m_menuCropTop, m_menuWidth, m_menuHeight, m_controllers);
+					m_menuCropTop, m_menuWidth, m_menuHeight, m_controllers,
+					m_fixedFrontend && m_frontendAnchorValid ? &m_frontendAnchor : nullptr);
 				// A hand never points at the panel it is holding. Only the right
 				// controller can operate the left-wrist HUD.
-				const bool ownsWristPanel = !geometry.viewLocked && hand == 0;
+				const bool ownsWristPanel = m_menuPresentation == QUEST_XR_MENU_HUD
+					&& !geometry.viewLocked && hand == 0;
 				const XrPosef *rayPose = geometry.viewLocked && viewPoseValid
 					? &viewLocation.pose : nullptr;
 				XrPosef gameRayPose{};
@@ -1332,6 +1341,7 @@ bool Bootstrap::recenterGameSpace()
 		xrDestroySpace(m_gameSpace);
 	}
 	m_gameSpace = replacement;
+	m_frontendAnchorValid = false;
 	__android_log_print(ANDROID_LOG_INFO, kLogTag, "OpenXR game space recentered");
 	return true;
 }
@@ -1540,18 +1550,15 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 			}
 		}
 	} else {
-		// Deliberately obvious fallback while menus/UI capture are not integrated.
-		// It proves stereo layer selection without pretending to be game rendering.
-		constexpr std::array<VkClearColorValue, 2> eyeColors = {{
-			{{0.03f, 0.12f, 0.32f, 1.0f}},
-			{{0.18f, 0.04f, 0.24f, 1.0f}},
-		}};
+		// GeneralsX @bugfix Codex 10/10/2026 A flat-screen background must match
+		// between eyes. Remove the old blue/purple compositor diagnostic colors.
+		constexpr VkClearColorValue background = {{0.0f, 0.0f, 0.0f, 1.0f}};
 		for (uint32_t eye = 0; eye < m_viewCount; ++eye) {
 			VkImageSubresourceRange layer = allLayers;
 			layer.baseArrayLayer = eye;
 			layer.layerCount = 1;
 			vkCmdClearColorImage(commandBuffer, m_swapchainImages[imageIndex],
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &eyeColors[eye], 1, &layer);
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &background, 1, &layer);
 		}
 	}
 
@@ -1756,6 +1763,21 @@ bool Bootstrap::beginFrame()
 	if (XR_FAILED(result)) {
 		logResult("xrLocateViews", result);
 	}
+	// GeneralsX @feature Codex 10/10/2026 Capture once in the same game space
+	// used by compositor and rays. Head movement never updates this anchor.
+	if (m_fixedFrontend && !m_frontendAnchorValid && m_viewsValid) {
+		XrSpaceLocation head{XR_TYPE_SPACE_LOCATION};
+		if (XR_SUCCEEDED(xrLocateSpace(m_viewSpace, m_gameSpace, m_predictedDisplayTime, &head))
+			&& (head.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0
+			&& (head.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0) {
+			m_frontendAnchor.orientation = yawOnly(head.pose.orientation);
+			const XrVector3f offset = rotateVector(m_frontendAnchor.orientation,
+				{0.0f, 0.0f, -kMenuDistanceMeters});
+			m_frontendAnchor.position = {head.pose.position.x + offset.x,
+				head.pose.position.y + offset.y, head.pose.position.z + offset.z};
+			m_frontendAnchorValid = true;
+		}
+	}
 	if (!syncActions()) {
 		// Controller loss must not stall head tracking or rendering. Runtime errors
 		// clear the adapter snapshot; reconnecting can recover on a later sync.
@@ -1862,7 +1884,8 @@ bool Bootstrap::endFrame()
 
 			if (menuWaited && m_menuRenderingComplete) {
 				const MenuGeometry geometry = getMenuGeometry(m_menuPresentation,
-					m_menuCropTop, m_menuWidth, m_menuHeight, m_controllers);
+					m_menuCropTop, m_menuWidth, m_menuHeight, m_controllers,
+					m_fixedFrontend && m_frontendAnchorValid ? &m_frontendAnchor : nullptr);
 				const int32_t cropTop = static_cast<int32_t>(std::lround(
 					static_cast<float>(m_menuHeight) * geometry.cropTop));
 				const int32_t cropHeight = static_cast<int32_t>(m_menuHeight) - cropTop;
@@ -2080,6 +2103,8 @@ bool Bootstrap::getControllerState(uint32_t hand, QuestXRControllerState &state)
 
 void Bootstrap::setMenuPresentation(uint32_t presentation)
 {
+	if (presentation == QUEST_XR_MENU_FRONTEND && m_menuPresentation != presentation)
+		m_frontendAnchorValid = false; // returning from play places the screen in front again
 	m_menuPresentation = presentation == QUEST_XR_MENU_FRONTEND
 		|| presentation == QUEST_XR_MENU_HUD
 		? presentation : QUEST_XR_MENU_HIDDEN;
@@ -2217,6 +2242,7 @@ void Bootstrap::detachGraphics()
 	m_menuRenderingComplete = false;
 	m_menuPresentation = QUEST_XR_MENU_HIDDEN;
 	m_recenterRequested = false;
+	m_frontendAnchorValid = false;
 	m_menuButtonDownNs = 0;
 	m_menuButtonLongFired = false;
 	m_predictedDisplayTime = 0;

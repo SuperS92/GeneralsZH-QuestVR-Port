@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
     <uses-permission android:name="org.khronos.openxr.permission.OPENXR_SYSTEM" />
     <uses-permission android:name="org.khronos.openxr.permission.OPENXR" />
+    <!-- GeneralsX @feature Codex 10/10/2026 User-confirmed updates of this signed APK. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application android:name="com.generalsx.zerohour.QuestPlatform" android:allowBackup="false" tools:replace="android:allowBackup">
         <meta-data android:name="com.oculus.supportedDevices" android:value="quest3|quest3s" />
         <activity android:name=".SetupActivity">

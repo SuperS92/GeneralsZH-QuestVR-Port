@@ -18,6 +18,9 @@ struct Runtime
 };
 int main()
 {
+    assert(!QuestCampaign::FlatShell(false, true));
+    assert(!QuestCampaign::FlatShell(true, false)); // matches/replays are never shell
+    assert(QuestCampaign::FlatShell(true, true));
     // Every cue combination is excluded outside campaign, including a disabled
     // multiplayer victory UI, scripted shell camera and replay cinematic.
     for (unsigned cues=0; cues<16; ++cues) {

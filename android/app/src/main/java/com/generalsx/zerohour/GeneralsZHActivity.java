@@ -447,6 +447,8 @@ public class GeneralsZHActivity extends SDLActivity {
                 // GeneralsX @feature Codex 07/10/2026 Apply stereo wind comparison before native loading.
                 android.system.Os.setenv("GX_QUEST_TREE_WIND_PAIR", SetupActivity.getQuestTreeWindPair(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_TREE_CONTOURS", SetupActivity.getQuestTreeContours(this) ? "1" : "0", true);
+                android.system.Os.setenv("GX_QUEST_FIXED_SCREEN", SetupActivity.getQuestFixedScreen(this) ? "1" : "0", true);
+                android.system.Os.setenv("GX_QUEST_FLAT_INTRO", SetupActivity.getQuestFlatIntro(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_SHADOWS", SetupActivity.getQuestShadows(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_FENCE_CONTOURS", SetupActivity.getQuestFenceContours(this) ? "1" : "0", true);
                 // GeneralsX @performance Codex 05/10/2026 Apply each independent A/B switch before native loading.

@@ -3,6 +3,8 @@
 
 namespace QuestCampaign
 {
+// GeneralsX @feature Codex 10/10/2026 Optional shell scene uses its original camera.
+inline bool FlatShell(bool requested, bool shell) { return requested && shell; }
 inline bool FlatSequence(bool campaign, bool scriptedCamera, bool letterbox,
     bool inputDisabled, bool movie)
 {
