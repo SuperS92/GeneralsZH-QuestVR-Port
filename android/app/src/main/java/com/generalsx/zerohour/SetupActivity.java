@@ -410,11 +410,11 @@ public class SetupActivity extends Activity {
     private View buildBottomNav() {
         if (BuildConfig.QUEST_VR) {
             questNavigation = new QuestLauncherNavigation(this,
-                new int[]{TAB_HOME, TAB_GRAPHICS, TAB_INTERFACE, TAB_TOOLS, TAB_HELP, TAB_ONLINE},
-                new int[]{R.string.nav_tab_home, R.string.nav_tab_graphics, R.string.nav_tab_interface,
-                    R.string.nav_tab_tools, R.string.nav_tab_help, R.string.nav_tab_online},
+                new int[]{TAB_HOME, TAB_GRAPHICS, TAB_ONLINE, TAB_INTERFACE, TAB_TOOLS, TAB_HELP},
+                new int[]{R.string.nav_tab_home, R.string.nav_tab_graphics, R.string.nav_tab_online,
+                    R.string.nav_tab_interface, R.string.nav_tab_tools, R.string.nav_tab_help},
                 new int[]{R.drawable.ic_gzh_home, R.drawable.ic_gzh_display, R.drawable.ic_gzh_globe,
-                    R.drawable.ic_gzh_wrench, R.drawable.ic_gzh_info, R.drawable.ic_gzh_globe},
+                    R.drawable.ic_gzh_globe, R.drawable.ic_gzh_wrench, R.drawable.ic_gzh_info},
                 currentTab, TAB_ONLINE, tab -> {
                     if (tab == TAB_ONLINE) startActivity(new Intent(this, GeneralsOnlineActivity.class));
                     else showTab(tab);
