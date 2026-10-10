@@ -2,7 +2,8 @@
 
 The optional OpenXR layer builds on MYSOREZ v1.4.0. Start with
 [architecture](ARCHITECTURE.md), [build instructions](BUILD_RELEASE.md),
-[upstream updates](UPSTREAM_SYNC.md), and the [patch ledger](PATCH_LEDGER.json).
+[upstream updates](UPSTREAM_SYNC.md), [launcher APK updates](APK_UPDATES.md),
+and the [patch ledger](PATCH_LEDGER.json).
 
 [UPSTREAM_PIN.json](UPSTREAM_PIN.json) records the engine and dependency commits.
 [OFFLINE_IMPORTS.json](OFFLINE_IMPORTS.json) records the sole permitted offline
