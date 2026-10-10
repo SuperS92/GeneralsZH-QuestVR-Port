@@ -4234,12 +4234,17 @@ void InGameUI::postWindowDraw()
 		drawNetworkLatency(hudOffsetX, hudOffsetY);
 	}
 
-	if (m_renderFpsPointSize > 0)
+	// GeneralsX @tweak Codex 10/10/2026 Hide front-end corner stats; retain match and wrist FPS.
+	Bool showCornerStats = TRUE;
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	showCornerStats = !TheGameLogic->isInShellGame();
+#endif
+	if (showCornerStats && m_renderFpsPointSize > 0)
 	{
 		drawRenderFps(hudOffsetX, hudOffsetY);
 	}
 
-	if (m_systemTimePointSize > 0)
+	if (showCornerStats && m_systemTimePointSize > 0)
 	{
 		drawSystemTime(hudOffsetX, hudOffsetY);
 	}

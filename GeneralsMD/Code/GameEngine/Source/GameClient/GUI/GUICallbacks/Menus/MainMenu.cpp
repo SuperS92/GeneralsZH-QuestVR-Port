@@ -510,7 +510,10 @@ static void initLabelVersion()
 	NameKeyType versionID = TheNameKeyGenerator->nameToKey( "MainMenu.wnd:LabelVersion" );
 	GameWindow *labelVersion = TheWindowManager->winGetWindowFromId( nullptr, versionID );
 	UnicodeString creditText;
-#if defined(__ANDROID__)
+// GeneralsX @tweak Codex 10/10/2026 Quest identity; retain the ordinary Android watermark.
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	creditText.translate("Generals VR for Quest - C&C Generals Zero Hour");
+#elif defined(__ANDROID__)
 	creditText.translate("GeneralsX for Android - C&C Generals Zero Hour");
 #else
 	creditText.translate("GeneralsX - Multiplatform C&C Generals");

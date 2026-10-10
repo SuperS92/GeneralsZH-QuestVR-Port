@@ -107,14 +107,15 @@ public class SetupActivity extends Activity {
     static int getQuestTerrainMipFilter(android.content.Context ctx) { return 0; }
     static final String PREF_QUEST_TEXTURE_FILTER = "quest_texture_filter";
     static final String PREF_QUEST_RENDER_SCALE = "quest_render_scale";
-    // GeneralsX @feature Codex 10/10/2026 Independent presentation trials; restart to apply.
-    static final String PREF_QUEST_FIXED_SCREEN = "quest_fixed_screen";
-    static final String PREF_QUEST_FLAT_INTRO = "quest_flat_intro";
+    // GeneralsX @tweak Codex 10/10/2026 Accepted flat-screen presentation, default on.
+    // A new preference retires the two trial keys without inheriting their default-off state.
+    static final String PREF_QUEST_FLAT_SCREENS = "quest_flat_screens";
     static boolean getQuestFixedScreen(android.content.Context ctx) {
-        return ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(PREF_QUEST_FIXED_SCREEN, false);
+        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean(PREF_QUEST_FLAT_SCREENS, true);
     }
     static boolean getQuestFlatIntro(android.content.Context ctx) {
-        return ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(PREF_QUEST_FLAT_INTRO, false);
+        return getQuestFixedScreen(ctx);
     }
     // GeneralsX @feature Codex 02/10/2026 Independent default-off object texture comparisons.
     static final String PREF_QUEST_ROAD_MIPS = "quest_road_mips";
@@ -371,6 +372,8 @@ public class SetupActivity extends Activity {
     private static final int TAB_TOOLS = 4;
     private static final int TAB_HELP = 5;
 
+    private static final int TAB_ONLINE = 6;
+    private QuestLauncherNavigation questNavigation;
     private int currentTab = TAB_HOME;
     private FrameLayout contentHost;
     private TextView appBarTitle;
@@ -403,7 +406,21 @@ public class SetupActivity extends Activity {
         }
     }
 
-    private BottomNavigationView buildBottomNav() {
+    // GeneralsX @feature Codex 10/10/2026 Direct Online shortcut beside the five launcher pages.
+    private View buildBottomNav() {
+        if (BuildConfig.QUEST_VR) {
+            questNavigation = new QuestLauncherNavigation(this,
+                new int[]{TAB_HOME, TAB_GRAPHICS, TAB_INTERFACE, TAB_TOOLS, TAB_HELP, TAB_ONLINE},
+                new int[]{R.string.nav_tab_home, R.string.nav_tab_graphics, R.string.nav_tab_interface,
+                    R.string.nav_tab_tools, R.string.nav_tab_help, R.string.nav_tab_online},
+                new int[]{R.drawable.ic_gzh_home, R.drawable.ic_gzh_display, R.drawable.ic_gzh_globe,
+                    R.drawable.ic_gzh_wrench, R.drawable.ic_gzh_info, R.drawable.ic_gzh_globe},
+                currentTab, TAB_ONLINE, tab -> {
+                    if (tab == TAB_ONLINE) startActivity(new Intent(this, GeneralsOnlineActivity.class));
+                    else showTab(tab);
+                });
+            return questNavigation;
+        }
         BottomNavigationView nav = new BottomNavigationView(this);
 
         // Keep the tab order left-to-right in every language, Arabic and Farsi
@@ -466,6 +483,7 @@ public class SetupActivity extends Activity {
      */
     private void showTab(int tab) {
         currentTab = tab;
+        if (questNavigation != null) questNavigation.select(tab);
         if (contentHost == null) {
             return;  // the plain-widget fallback UI is up; there are no tabs
         }
@@ -1703,13 +1721,7 @@ public class SetupActivity extends Activity {
             fixedScreen.setChecked(getQuestFixedScreen(this));
             fixedScreen.setOnCheckedChangeListener((button, checked) ->
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putBoolean(PREF_QUEST_FIXED_SCREEN, checked).apply());
-            SwitchCompat flatIntro = UiKit.switchRow(screens, getString(R.string.quest_flat_intro),
-                getString(R.string.quest_flat_intro_desc));
-            flatIntro.setChecked(getQuestFlatIntro(this));
-            flatIntro.setOnCheckedChangeListener((button, checked) ->
-                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putBoolean(PREF_QUEST_FLAT_INTRO, checked).apply());
+                    .putBoolean(PREF_QUEST_FLAT_SCREENS, checked).apply());
             int[] titles = {R.string.quest_perf_audio, R.string.quest_perf_tracks, R.string.quest_perf_terrain,
                 R.string.quest_perf_trees, R.string.quest_perf_shadows, R.string.quest_perf_smaa, R.string.quest_perf_metrics, R.string.quest_terrain_batching};
             int[] descriptions = {R.string.quest_perf_audio_desc, R.string.quest_perf_tracks_desc, R.string.quest_perf_terrain_desc,

@@ -68,4 +68,10 @@
     <string name="setup_toast_base_generals_saved">Generals Basis Ordner: %1$s</string>
     <string name="setup_toast_base_generals_cleared">Generals Basis Ordner zurückgesetzt</string>
     <string name="setup_how_it_works_body">1. Kopiere deine eigenen Generals- und Zero-Hour-Spieldaten auf die Quest.\n\n2. Wähle „Zero Hour Ordner auswählen“ und importiere den Zero-Hour-Ordner. Wähle danach „Generals Basis Ordner auswählen“ und importiere den Generals-Ordner.\n\n3. „Spiel starten“ öffnet das Spiel. Die VR-Steuerung ist im Projekt erklärt.\n\n4. „Logs anzeigen“ hilft bei Fehlern. Prüfe Logs vor dem öffentlichen Teilen auf persönliche Informationen.</string>
+    <string name="setup_button_online_account">GeneralsOnline Einstellungen</string>
+    <string name="online_window_title">GeneralsOnline Einstellungen</string>
+    <string name="quest_screens_title">Bildschirmdarstellung</string>
+    <string name="quest_fixed_screen">Flache Bildschirme</string>
+    <string name="quest_fixed_screen_desc">Videos, Menüs und das 3D-Intro erscheinen auf einem festen flachen Bildschirm mit der ursprünglichen Spielkamera. Matches bleiben in Stereo-VR. Linken Menüknopf zum Zentrieren drücken. Nach Änderungen Spiel und Launcher vollständig schließen.</string>
+    <string name="quest_updates_help">Quest-App-Updates kommen von SuperS92/GeneralsZH-QuestVR-Port. Hier herunterladen und die Installation im Headset bestätigen. Spieldaten und Einstellungen bleiben erhalten. Signierte Netzwerkeinstellungen kommen weiterhin vom Android-Unterbau; Online-Spieldaten aktualisierst du unter GeneralsOnline Einstellungen.</string>
 </resources>

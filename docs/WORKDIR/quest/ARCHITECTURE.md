@@ -76,3 +76,11 @@ GPU timing, sustained thermal behavior and tracking stalls. No 60/72 FPS claim
 is made. Campaign movies and scripted camera scenes use a flat presentation; gameplay
 returns to stereo. Left-handed options and complete PCVR settings parity remain
 outside the tested feature set.
+
+## Front-end screens and navigation
+
+One default-on Quest preference fixes front-end screens in the room and uses
+the original camera for the main-menu scene and its 3D intro. The left menu
+button recenters the screen; matches return to stereo. Retired trial preferences
+are ignored. Online opens the existing GeneralsOnline settings activity from
+the Quest navigation, retaining the previous launcher page on return.

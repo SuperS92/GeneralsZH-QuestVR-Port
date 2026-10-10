@@ -377,4 +377,5 @@
     <string name="quest_fixed_screen_desc">Intro-Videos, Menüs und Kampagnenbildschirme bleiben an einer festen Position und folgen nicht deinem Kopf. Das Handgelenk-HUD bleibt erhalten. Linken Menüknopf zum Zentrieren drücken. Nach Änderungen Spiel und Launcher vollständig schließen.</string>
     <string name="quest_flat_intro">3D-Intro auf flachem Bildschirm</string>
     <string name="quest_flat_intro_desc">Zeigt die Hauptmenüszene und ihr 3D-Intro mit der ursprünglichen Spielkamera auf dem flachen Bildschirm. Matches bleiben in Stereo-VR. Nach Änderungen Spiel und Launcher vollständig schließen.</string>
+    <string name="nav_tab_online">Online</string>
 </resources>

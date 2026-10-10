@@ -75,7 +75,7 @@
     {
       "path": "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Spatial world-coordinate override; current placement validation and messages",
+      "purpose": "Spatial world-coordinate override; current placement validation and messages; suppress FPS and clock drawing in the Quest shell only",
       "risk": "input/command generation",
       "owningTest": "native syntax; legal/illegal placements and CRC replay gates",
       "removalCondition": "Upstream provides equivalent optional platform support"
@@ -179,7 +179,7 @@
     {
       "path": "android/app/src/main/java/com/generalsx/zerohour/SetupActivity.java",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Quest guards for private import/storage, driver choice and engine updates; show Quest PC-profile migration data action even without a newer package version; clear only ReplayCheck diagnostic markers on normal private Quest launches; default-off Off/Gentle/SMAA choice and old opt-in migration",
+      "purpose": "Quest guards for private import/storage, driver choice and engine updates; show Quest PC-profile migration data action even without a newer package version; clear only ReplayCheck diagnostic markers on normal private Quest launches; default-off Off/Gentle/SMAA choice and old opt-in migration; merged default-on flat-screen preference and direct six-item Quest navigation",
       "risk": "Android app isolation",
       "owningTest": "Java compile and merged manifest; import/relaunch hardware gate; normal-play versus replay detailed trace lifecycle hardware gate",
       "removalCondition": "Upstream provides equivalent optional platform support"
@@ -327,6 +327,30 @@
       "risk": "User-confirmed app installation; package/version/signer/hash/size and HTTPS origin checks",
       "owningTest": "Release policy rejection fixtures; launcher compilation; headset installer/update gate",
       "removalCondition": "Upstream supplies an equivalent flavor-specific APK updater"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/MainMenu.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only main-menu watermark",
+      "risk": "presentation only",
+      "owningTest": "30/60-Hz native builds; headset menu check",
+      "removalCondition": "Upstream supplies optional Quest presentation"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/GUI/GUICallbacks/W3DMainMenu.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only legacy clock suppression and fallback watermark",
+      "risk": "presentation only",
+      "owningTest": "30/60-Hz native builds; headset menu check",
+      "removalCondition": "Upstream supplies optional Quest presentation"
+    },
+    {
+      "path": "android/app/src/main/java/com/generalsx/zerohour/QuestLauncherNavigation.java",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Owned Quest navigation helper using existing icons and theme; six items without changing the five-item phone bar",
+      "risk": "launcher presentation only",
+      "owningTest": "Quest/phone Java compilation; headset navigation and return check",
+      "removalCondition": "Upstream supplies six-destination navigation"
     }
   ],
   "followUpUpstreamEdits": [

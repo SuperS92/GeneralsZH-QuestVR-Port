@@ -68,4 +68,10 @@
     <string name="setup_toast_base_generals_saved">Generals base folder: %1$s</string>
     <string name="setup_toast_base_generals_cleared">Generals base folder reset</string>
     <string name="setup_how_it_works_body">1. Copy your own Generals and Zero Hour game files to the Quest.\n\n2. Choose “Select Zero Hour folder” and import the Zero Hour folder. Then choose “Select Generals base folder” and import the Generals folder.\n\n3. “Play” starts the game. See the project for VR controls.\n\n4. “View logs” helps with problems. Check logs for personal information before sharing them publicly.</string>
+    <string name="setup_button_online_account">GeneralsOnline Settings</string>
+    <string name="online_window_title">GeneralsOnline Settings</string>
+    <string name="quest_screens_title">Screen presentation</string>
+    <string name="quest_fixed_screen">Flat screens</string>
+    <string name="quest_fixed_screen_desc">Videos, menus and the 3D intro use a fixed flat screen with the original game camera. Matches remain stereo VR. Press the left menu button to recenter. Fully close the game and launcher after changing.</string>
+    <string name="quest_updates_help">Quest app updates come from SuperS92/GeneralsZH-QuestVR-Port. Download here, then confirm installation on the headset. Game data and settings are kept. Signed network settings still come from the Android base; online game data is updated under GeneralsOnline Settings.</string>
 </resources>

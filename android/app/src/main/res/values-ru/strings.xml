@@ -374,4 +374,5 @@
     <string name="quest_fixed_screen_desc">Front-end videos, menus and campaign screens stay in one place instead of following your head. The wrist HUD is unchanged. Press the left menu button to recenter. Fully close the game and launcher after changing.</string>
     <string name="quest_flat_intro">Show 3D intro on a flat screen</string>
     <string name="quest_flat_intro_desc">Shows the main-menu scene and its 3D intro with the original game camera on the flat screen. Matches remain stereo VR. Fully close the game and launcher after changing.</string>
+    <string name="nav_tab_online">Online</string>
 </resources>

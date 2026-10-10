@@ -387,6 +387,10 @@ void W3DMetalBarMenuDraw( GameWindow *window, WinInstanceData *instData )
 
 void W3DClockDraw( GameWindow *window, WinInstanceData *instData )
 {
+	// GeneralsX @tweak Codex 10/10/2026 Retire the legacy Quest menu clock widget.
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	return;
+#endif
 	W3DGameWinDefaultDraw( window, instData );
 	ICoord2D pos, size;
 
@@ -449,7 +453,12 @@ void W3DGeneralsXCreditDraw( GameWindow *window, WinInstanceData *instData )
 		return;
 
 	UnicodeString ucredit;
+	// GeneralsX @tweak Codex 10/10/2026 Match the fallback menu watermark to Quest branding.
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+	ucredit.translate("Generals VR for Quest - C&C Generals Zero Hour");
+#else
 	ucredit.translate("GeneralsX - Multiplatform C&C Generals");
+#endif
 	instData->setText(ucredit);
 
 	DisplayString *dString = instData->getTextDisplayString();
