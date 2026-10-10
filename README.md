@@ -56,6 +56,8 @@ The launcher can update the online game data. That is separate from updating thi
 
 ## Feedback
 
+The best way to ask questions and post suggestions is to use the [Flat2VR Modding discord](https://discord.com/channels/747967102895390741/1558218066016342226)
+
 [Bug reports and feedback](../../issues) are welcome. Please include the app version, game mode and steps to reproduce the problem. Check logs for account details before attaching them; never upload game files or credentials.
 
 I'd like to fix game-breaking bugs and add small comfort features I also find useful. Time is limited, so I can't promise major changes or new features, but feel free to ask.
