@@ -5,7 +5,7 @@
 Detailed tracing must be prepared while the game is closed. OVR Metrics CSV
 recording is configured by the user; this tool does not overwrite that setup.
 """
-import argparse,datetime,json,pathlib,re,subprocess,threading,time
+import argparse,datetime,hashlib,json,pathlib,re,subprocess,threading,time
 
 PACKAGE='com.generalsx.questvr'
 CSV_ROOT='/sdcard/Android/data/com.oculus.ovrmonitormetricsservice/files/CapturedMetrics'
@@ -35,6 +35,7 @@ def main():
     command=[args.adb,'-s',serial]
     args.output.mkdir(parents=True,exist_ok=True)
     owner=args.output/'profiling-owner.json'
+    device_key=hashlib.sha256(serial.encode()).hexdigest()
     def read(*parts,required=True,timeout=25):
         result=subprocess.run(command+list(parts),capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=timeout)
         if required and result.returncode: raise RuntimeError('ADB operation failed: '+parts[0])
@@ -48,6 +49,7 @@ def main():
         if owner.exists():
             state=json.loads(owner.read_text())
             if state.get('enabledByThisTool'):
+                if state.get('deviceKey')!=device_key: raise RuntimeError('Profiling state belongs to another device; nothing changed.')
                 read('shell','ovrgpuprofiler','-d')
                 owner.write_text(json.dumps(dict(enabledByThisTool=False,restoredUtc=utc()))+'\n')
                 print('Detailed profiling disabled. Fully close and restart the game before a normal comparison.')
@@ -61,7 +63,7 @@ def main():
         if pid: raise RuntimeError('Fully close the game AND launcher before preparing a fresh profiling context.')
         if detailed(): raise RuntimeError('Detailed profiling is already enabled; restore the previous owner first.')
         # Record ownership before enabling so an interrupted operation can be restored.
-        owner.write_text(json.dumps(dict(enabledByThisTool=True,preparedUtc=utc(),package=PACKAGE))+'\n')
+        owner.write_text(json.dumps(dict(enabledByThisTool=True,deviceKey=device_key,preparedUtc=utc(),package=PACKAGE))+'\n')
         read('shell','ovrgpuprofiler','-e',PACKAGE)
         if not detailed(): raise RuntimeError('The runtime did not enable detailed profiling.')
         print('Prepared detailed GPU profiling for the Quest game only. Now start a fresh game and warm it up.')
@@ -89,60 +91,77 @@ def main():
         raise RuntimeError('Prepare a dedicated trace run with this tool first.')
     pid,_=read('shell','pidof',PACKAGE,required=False)
     if not re.fullmatch(r'\d+(?: \d+)*',pid): raise RuntimeError('Open the Quest game and load a skirmish before capturing.')
-    print(f'Capture starts in {args.countdown} seconds; {args.seconds} seconds. Keep the same settings; do not record video.',flush=True)
-    time.sleep(args.countdown)
-    meta['captureStartUtc']=utc()
-    meta['deviceEpoch']=read('shell','date','+%s')[0]
-    workers=[];errors=[]
-    def stream(parts,path):
-        try:
-            with path.open('w',encoding='utf-8') as out:
-                process=subprocess.Popen(command+parts,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace')
-                try:
-                    for line in process.stdout: out.write(utc()+' '+line);out.flush()
-                    code=process.wait(timeout=5)
-                    if code not in (0,124,143): errors.append(dict(file=path.name,exit=code))
-                finally:
-                    if process.poll() is None: process.terminate();process.wait(timeout=5)
-        except Exception as failure: errors.append(dict(file=path.name,error=type(failure).__name__))
-    ids=','.join(str(value) for value in selected.values())
-    startup,_=read('logcat','-d','--pid='+pid.split()[0],'-v','epoch','GeneralsXR:I','*:S',required=False)
-    (folder/'native-startup.log').write_text(startup+'\n',encoding='utf-8')
-    # The profiler line-buffers its console only on a TTY. Force a remote PTY so
-    # a bounded timeout does not discard buffered samples when the process exits.
-    for parts,name in [(['shell','-tt','timeout',str(args.seconds),'ovrgpuprofiler','-r'+ids],'gpu-counters.log'),
-        (['shell','timeout',str(args.seconds),'logcat','-T','1','--pid='+pid.split()[0],'-v','epoch','GeneralsXR:I','*:S'],'native-performance.log')]:
-        worker=threading.Thread(target=stream,args=(parts,folder/name),daemon=True);worker.start();workers.append(worker)
-    end=time.monotonic()+args.seconds
-    trace_index=0;next_trace=time.monotonic()+10
-    while time.monotonic()<end:
-        if args.mode=='trace' and time.monotonic()>=next_trace:
-            trace_index+=1
-            value,code=read('shell','ovrgpuprofiler','-t0.25','-v',required=False,timeout=20)
-            (folder/f'render-trace-{trace_index:02d}.txt').write_text(utc()+'\n'+value+'\n',encoding='utf-8')
-            if code: errors.append(dict(trace=trace_index,exit=code))
-            next_trace=time.monotonic()+30
-        time.sleep(0.25)
-    for worker in workers:
-        worker.join(timeout=12)
-        if worker.is_alive(): errors.append(dict(error='Capture worker did not finish'))
-    # Only the current game's metrics files, never other apps' sessions.
-    files,_=read('shell','ls','-1',CSV_ROOT,required=False)
-    names=[name for name in files.splitlines() if PACKAGE in name and re.fullmatch(r'[A-Za-z0-9._-]+\.csv',name)]
-    csv_dir=folder/'ovr-metrics';csv_dir.mkdir()
-    csv_epochs={}
-    for name in sorted(names):
-        modified,_=read('shell','stat','-c','%Y',CSV_ROOT+'/'+name,required=False)
-        if not modified.isdigit() or int(modified)<int(meta['deviceEpoch'])-5: continue
-        csv_epochs[name]=int(modified)
-        _,code=read('pull',CSV_ROOT+'/'+name,str(csv_dir/name),required=False,timeout=60)
-        if code: errors.append(dict(csv=name,exit=code))
-    meta.update(endUtc=utc(),durationSeconds=args.seconds,errors=errors,ovrCsvFiles=[path.name for path in csv_dir.glob('*.csv')],csvDeviceModifiedEpoch=csv_epochs,traceFiles=trace_index)
-    meta['status']='CAPTURED_REVIEW_REQUIRED' if not errors else 'PARTIAL_CAPTURE'
-    if not meta['ovrCsvFiles']: meta['missingAppGpuTime']='Enable OVR Metrics CSV and Advanced stats before a fresh game; hardware counters alone do not give app GPU frame time.'
-    (folder/'manifest.json').write_text(json.dumps(meta,indent=2)+'\n',encoding='utf-8')
-    print('Saved: '+str(folder),flush=True)
-    if args.mode=='trace': print('Next: restore profiling, then fully close and restart the game. Do not compare detailed-trace FPS directly with baseline FPS.')
-    if errors or not meta['ovrCsvFiles']: print('Some data needs review; see manifest.json. This is not a complete bottleneck diagnosis.')
+    if args.mode=='trace' and json.loads(owner.read_text()).get('deviceKey')!=device_key:
+        raise RuntimeError('Trace preparation belongs to another device.')
+    processes=[]
+    try:
+        print(f'Capture starts in {args.countdown} seconds; {args.seconds} seconds. Keep the same settings; do not record video.',flush=True)
+        time.sleep(args.countdown)
+        meta['captureStartUtc']=utc()
+        meta['deviceEpoch']=read('shell','date','+%s')[0]
+        workers=[];errors=[]
+        def stream(parts,path):
+            try:
+                with path.open('w',encoding='utf-8') as out:
+                    process=subprocess.Popen(command+parts,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace')
+                    processes.append(process)
+                    try:
+                        for line in process.stdout: out.write(utc()+' '+line);out.flush()
+                        code=process.wait(timeout=5)
+                        if code not in (0,124,143): errors.append(dict(file=path.name,exit=code))
+                    finally:
+                        if process.poll() is None: process.terminate();process.wait(timeout=5)
+            except Exception as failure: errors.append(dict(file=path.name,error=type(failure).__name__))
+        ids=','.join(str(value) for value in selected.values())
+        startup,_=read('logcat','-d','--pid='+pid.split()[0],'-v','epoch','GeneralsXR:I','*:S',required=False)
+        (folder/'native-startup.log').write_text(startup+'\n',encoding='utf-8')
+        # The profiler line-buffers its console only on a TTY. Force a remote PTY so
+        # a bounded timeout does not discard buffered samples when the process exits.
+        for parts,name in [(['shell','-tt','timeout',str(args.seconds),'ovrgpuprofiler','-r'+ids],'gpu-counters.log'),
+            (['shell','timeout',str(args.seconds),'logcat','-T','1','--pid='+pid.split()[0],'-v','epoch','GeneralsXR:I','*:S'],'native-performance.log')]:
+            worker=threading.Thread(target=stream,args=(parts,folder/name),daemon=True);worker.start();workers.append(worker)
+        end=time.monotonic()+args.seconds
+        trace_index=0;next_trace=time.monotonic()+10
+        while time.monotonic()<end:
+            if args.mode=='trace' and time.monotonic()>=next_trace:
+                trace_index+=1
+                value,code=read('shell','ovrgpuprofiler','-t0.25','-v',required=False,timeout=20)
+                (folder/f'render-trace-{trace_index:02d}.txt').write_text(utc()+'\n'+value+'\n',encoding='utf-8')
+                if code: errors.append(dict(trace=trace_index,exit=code))
+                next_trace=time.monotonic()+30
+            time.sleep(0.25)
+        for worker in workers:
+            worker.join(timeout=12)
+            if worker.is_alive(): errors.append(dict(error='Capture worker did not finish'))
+        # Only the current game's metrics files, never other apps' sessions.
+        files,_=read('shell','ls','-1',CSV_ROOT,required=False)
+        names=[name for name in files.splitlines() if PACKAGE in name and re.fullmatch(r'[A-Za-z0-9._-]+\.csv',name)]
+        csv_dir=folder/'ovr-metrics';csv_dir.mkdir()
+        csv_epochs={}
+        for name in sorted(names):
+            modified,_=read('shell','stat','-c','%Y',CSV_ROOT+'/'+name,required=False)
+            if not modified.isdigit() or int(modified)<int(meta['deviceEpoch'])-5: continue
+            csv_epochs[name]=int(modified)
+            _,code=read('pull',CSV_ROOT+'/'+name,str(csv_dir/name),required=False,timeout=60)
+            if code: errors.append(dict(csv=name,exit=code))
+        meta.update(endUtc=utc(),durationSeconds=args.seconds,errors=errors,ovrCsvFiles=[path.name for path in csv_dir.glob('*.csv')],csvDeviceModifiedEpoch=csv_epochs,traceFiles=trace_index)
+        meta['status']='CAPTURED_REVIEW_REQUIRED' if not errors else 'PARTIAL_CAPTURE'
+        if not meta['ovrCsvFiles']: meta['missingAppGpuTime']='Enable OVR Metrics CSV and Advanced stats before a fresh game; hardware counters alone do not give app GPU frame time.'
+        (folder/'manifest.json').write_text(json.dumps(meta,indent=2)+'\n',encoding='utf-8')
+        print('Saved: '+str(folder),flush=True)
+        if args.mode=='trace': print('Next: restore profiling, then fully close and restart the game. Do not compare detailed-trace FPS directly with baseline FPS.')
+        if errors or not meta['ovrCsvFiles']: print('Some data needs review; see manifest.json. This is not a complete bottleneck diagnosis.')
+    finally:
+        for process in processes:
+            if process.poll() is None:
+                process.terminate()
+                process.wait(timeout=5)
+        if args.mode=='trace':
+            _,code=read('shell','ovrgpuprofiler','-d',required=False)
+            if not code:
+                owner.write_text(json.dumps(dict(enabledByThisTool=False,deviceKey=device_key,restoredUtc=utc()))+'\n')
+                print('Detailed profiling restored. Fully close and restart the game to leave its profiling context.')
+            else:
+                print('Profiling restore failed; run Restore before the next normal session.')
 
 if __name__=='__main__': main()

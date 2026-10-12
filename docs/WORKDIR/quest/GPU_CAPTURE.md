@@ -31,7 +31,9 @@ python scripts/qa/quest/capture-gpu.py --output work/evidence/gpu --mode trace -
 python scripts/qa/quest/capture-gpu.py --output work/evidence/gpu --mode restore
 ```
 
-Fully close and restart after restoring. If a capture fails, restore explicitly.
+Trace capture restores the tool's profiling switch on exit; fully close and
+restart afterward to discard that process's profiling context. Use Restore if
+preparation was interrupted, the connection was lost or capture never started.
 Detailed profiling changes GPU timing; compare its overhead with the baseline.
 Counters are selected by names from the actual runtime catalog, never fixed IDs.
 Short surface traces are separate from native CPU times and transfer GPU times.
