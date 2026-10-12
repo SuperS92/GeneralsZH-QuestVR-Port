@@ -76,4 +76,6 @@
     <string name="quest_updates_help">Quest app updates come from SuperS92/GeneralsZH-QuestVR-Port. Download here, then confirm installation on the headset. Game data and settings are kept. Signed network settings still come from the Android base; online game data is updated under GeneralsOnline Settings.</string>
     <string name="quest_track_streaming">Vehicle track streaming (experimental)</string>
     <string name="quest_track_streaming_desc">Tries to avoid waits when updating vehicle track buffers. Keeps tracks visible. Default off. Fully restart the game and launcher.</string>
+    <string name="quest_color_transfer">Color transfer (experimental)</string>
+    <string name="quest_color_transfer_desc">Alternative GPU path for presenting completed eye images and the HUD. Keeps resolution and colors. Default off. Fully restart the game and launcher.</string>
 </resources>

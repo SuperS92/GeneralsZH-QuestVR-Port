@@ -14,6 +14,7 @@
 #include <vulkan/vulkan.h>
 #include "VRDevice/QuestXRInterface.h"
 #include "QuestSpatialAA.h"
+#include "QuestColorTransfer.h"
 #include "QuestEyeCapture.h"
 
 #include <cstdint>
@@ -193,6 +194,8 @@ private:
 	uint32_t m_timestampValidBits = 0;
 	void *m_dxvkInterop = nullptr;
 	SpatialAA m_spatialAA;
+    ColorTransfer m_colorTransfer;
+    bool m_colorTransferAttempted = false;
 	EyeCapture m_eyeCapture;
 	std::array<QuestXRDiagnosticCamera, 2> m_diagnosticCameras{};
 	bool m_spatialAaAttempted = false;

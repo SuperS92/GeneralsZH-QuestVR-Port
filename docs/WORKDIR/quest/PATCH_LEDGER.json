@@ -139,7 +139,7 @@
     {
       "path": "GeneralsMD/Code/Main/CMakeLists.txt",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Optional Quest build wiring including spatial/SMAA and bounded raw-eye capture modules; ordinary target remains available",
+      "purpose": "Optional Quest build wiring including spatial/SMAA and bounded raw-eye capture modules; ordinary target remains available; optional exact-pixel Quest color transfer module",
       "risk": "build/identity",
       "owningTest": "control and Quest builds; isolated host GPU AA/readback fixtures",
       "removalCondition": "Upstream provides equivalent optional platform support"
@@ -171,7 +171,7 @@
     {
       "path": "android/app/src/main/java/com/generalsx/zerohour/GeneralsZHActivity.java",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Quest guards for private import/storage, driver choice and engine updates; expose optional local spatial AA choice to native rendering before SDL launch; presentation-only passthrough/test-label environment; presentation-only vehicle-track streaming environment",
+      "purpose": "Quest guards for private import/storage, driver choice and engine updates; expose optional local spatial AA choice to native rendering before SDL launch; presentation-only passthrough/test-label environment; presentation-only vehicle-track streaming environment; isolated color transfer environment preference",
       "risk": "Android app isolation",
       "owningTest": "Java compile and merged manifest; import/relaunch hardware gate",
       "removalCondition": "Upstream provides equivalent optional platform support"
@@ -179,7 +179,7 @@
     {
       "path": "android/app/src/main/java/com/generalsx/zerohour/SetupActivity.java",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Quest guards for private import/storage, driver choice and engine updates; show Quest PC-profile migration data action even without a newer package version; clear only ReplayCheck diagnostic markers on normal private Quest launches; default-off Off/Gentle/SMAA choice and old opt-in migration; merged default-on flat-screen preference and direct six-item Quest navigation; default-off front-end passthrough switch and separate local build label; default-off vehicle-track streaming and shared Online navigation",
+      "purpose": "Quest guards for private import/storage, driver choice and engine updates; show Quest PC-profile migration data action even without a newer package version; clear only ReplayCheck diagnostic markers on normal private Quest launches; default-off Off/Gentle/SMAA choice and old opt-in migration; merged default-on flat-screen preference and direct six-item Quest navigation; default-off front-end passthrough switch and separate local build label; default-off vehicle-track streaming and shared Online navigation; default-off Quest color transfer control",
       "risk": "Android app isolation",
       "owningTest": "Java compile and merged manifest; import/relaunch hardware gate; normal-play versus replay detailed trace lifecycle hardware gate",
       "removalCondition": "Upstream provides equivalent optional platform support"

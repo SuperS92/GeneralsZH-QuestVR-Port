@@ -21,6 +21,12 @@ int main() {
     _putenv_s("GX_QUEST_TRACK_STREAMING", "1");
     require(PerformanceRequested(PerfOption::TrackStreaming), "Track streaming can be enabled independently");
     _putenv_s("GX_QUEST_TRACK_STREAMING", "");
+    require(!PerformanceRequested(PerfOption::ColorTransfer), "Color transfer defaults off");
+    _putenv_s("GX_QUEST_COLOR_TRANSFER", "true");
+    require(!PerformanceRequested(PerfOption::ColorTransfer), "Color transfer requires exact 1");
+    _putenv_s("GX_QUEST_COLOR_TRANSFER", "1");
+    require(PerformanceRequested(PerfOption::ColorTransfer), "Color transfer can be enabled independently");
+    _putenv_s("GX_QUEST_COLOR_TRANSFER", "");
     for (bool planar : {false, true}) for (size_t sampleBytes : {size_t(1),size_t(2),size_t(4)})
         for (size_t channels : {size_t(1),size_t(2),size_t(6)}) {
         std::vector<uint8_t> original, geometric;

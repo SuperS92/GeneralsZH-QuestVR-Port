@@ -439,4 +439,6 @@
     <string name="quest_frontend_passthrough_desc">Shows your surroundings behind flat intro and menu screens. Use with Flat screens. The gameplay background stays unchanged. Default off; full restart required.</string>
     <string name="quest_track_streaming">Vehicle track streaming (experimental)</string>
     <string name="quest_track_streaming_desc">Tries to avoid waits when updating vehicle track buffers. Keeps tracks visible. Default off. Fully restart the game and launcher.</string>
+    <string name="quest_color_transfer">Color transfer (experimental)</string>
+    <string name="quest_color_transfer_desc">Alternative GPU path for presenting completed eye images and the HUD. Keeps resolution and colors. Default off. Fully restart the game and launcher.</string>
 </resources>

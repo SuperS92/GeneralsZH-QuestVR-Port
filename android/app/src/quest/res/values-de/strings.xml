@@ -76,4 +76,6 @@
     <string name="quest_updates_help">Quest-App-Updates kommen von SuperS92/GeneralsZH-QuestVR-Port. Hier herunterladen und die Installation im Headset bestätigen. Spieldaten und Einstellungen bleiben erhalten. Signierte Netzwerkeinstellungen kommen weiterhin vom Android-Unterbau; Online-Spieldaten aktualisierst du unter GeneralsOnline Einstellungen.</string>
     <string name="quest_track_streaming">Fahrzeugspur-Puffer (experimentell)</string>
     <string name="quest_track_streaming_desc">Versucht, Wartezeiten beim Aktualisieren der Spur-Puffer zu vermeiden. Spuren bleiben sichtbar. Standardmäßig Aus. Spiel und Launcher vollständig neu starten.</string>
+    <string name="quest_color_transfer">Bildübergabe (experimentell)</string>
+    <string name="quest_color_transfer_desc">Alternativer GPU-Weg zur Ausgabe der fertigen Augenbilder und des HUD. Auflösung und Farben bleiben gleich. Standardmäßig aus. Spiel und Launcher vollständig neu starten.</string>
 </resources>

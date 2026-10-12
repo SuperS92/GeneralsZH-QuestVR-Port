@@ -432,4 +432,6 @@
     <string name="quest_fence_contours">Zaunkonturen (experimentell)</string>
     <string name="quest_fence_contours_on">An</string>
     <string name="quest_fence_contours_desc">GlÃ¤ttet unterstÃ¼tzte Zaunmuster und transparente Kanten. ZÃ¤une kÃ¶nnen weicher oder dÃ¼nner aussehen. VollstÃ¤ndiger Neustart nÃ¶tig.</string>
+    <string name="quest_color_transfer">Bildübergabe (experimentell)</string>
+    <string name="quest_color_transfer_desc">Alternativer GPU-Weg zur Ausgabe der fertigen Augenbilder und des HUD. Auflösung und Farben bleiben gleich. Standardmäßig aus. Spiel und Launcher vollständig neu starten.</string>
 </resources>

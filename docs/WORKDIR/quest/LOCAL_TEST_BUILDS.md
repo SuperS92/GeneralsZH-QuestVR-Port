@@ -38,3 +38,11 @@ Add an independent default-off Vehicle track streaming switch and split CPU
 buffer measurements. See [trial scope and validation](TRACK_STREAMING_TRIAL.md).
 Keep Android version 1.4.0.9 / 10409, with display/artifact label Test 02. The
 installed Test 01 and public release remain unchanged until explicitly installed.
+
+## Test 03
+
+Add an independent default-off Color transfer trial. It replaces format-converting
+blits with exact-pixel raster output to the acquired swapchains when supported.
+See [scope and validation](COLOR_TRANSFER_TRIAL.md). Preserve Test 02's vehicle
+track option and retain Android version 1.4.0.9 / 10409 with display label Test 03.
+No automatic installation or public upload.

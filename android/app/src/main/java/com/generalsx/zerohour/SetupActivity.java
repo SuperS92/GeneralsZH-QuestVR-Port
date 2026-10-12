@@ -171,6 +171,11 @@ public class SetupActivity extends Activity {
         return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getBoolean("quest_track_streaming", false);
     }
+    // GeneralsX @performance Codex 13/10/2026 Exact-pixel transfer trial defaults off.
+    static boolean getQuestColorTransfer(android.content.Context ctx) {
+        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean("quest_color_transfer", false);
+    }
     static final String[] QUEST_PERF_KEYS = {"quest_perf_audio", "quest_perf_tracks", "quest_perf_terrain",
         "quest_perf_trees", "quest_perf_shadows", "quest_perf_smaa", "quest_perf_metrics", "quest_terrain_batching"};
     static final String[] QUEST_PERF_ENV = {"GX_QUEST_PERF_AUDIO", "GX_QUEST_PERF_TRACKS", "GX_QUEST_PERF_TERRAIN",
@@ -1773,6 +1778,12 @@ public class SetupActivity extends Activity {
                 getQuestTrackStreaming(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .edit().putBoolean("quest_track_streaming", index == 1).apply());
             UiKit.supporting(trackStreaming, getString(R.string.quest_track_streaming_desc));
+            LinearLayout colorTransfer = UiKit.card(root);
+            UiKit.sectionHeader(colorTransfer, R.drawable.ic_gzh_display, getString(R.string.quest_color_transfer), false);
+            UiKit.segmented(colorTransfer, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
+                getQuestColorTransfer(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit().putBoolean("quest_color_transfer", index == 1).apply());
+            UiKit.supporting(colorTransfer, getString(R.string.quest_color_transfer_desc));
             int[] titles = {R.string.quest_perf_audio, R.string.quest_perf_tracks, R.string.quest_perf_terrain,
                 R.string.quest_perf_trees, R.string.quest_perf_shadows, R.string.quest_perf_smaa, R.string.quest_perf_metrics, R.string.quest_terrain_batching};
             int[] descriptions = {R.string.quest_perf_audio_desc, R.string.quest_perf_tracks_desc, R.string.quest_perf_terrain_desc,

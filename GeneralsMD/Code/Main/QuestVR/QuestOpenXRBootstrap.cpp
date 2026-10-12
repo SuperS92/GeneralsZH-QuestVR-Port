@@ -10,6 +10,7 @@
 
 #include <d3d8.h>
 #include "QuestOpenXRBootstrap.h"
+#include "VRDevice/QuestPerformance.h"
 #include "VRDevice/QuestXRInterface.h"
 #include "VRDevice/QuestVRMath.h"
 #include "VRDevice/QuestDrawCapture.h"
@@ -1410,6 +1411,32 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
             "Quest AA mode=%u active=%d (0=off 1=gentle 2=SMAA); historical MSAA remains disabled", mode, m_spatialAA.ready());
 	}
 	const bool filteredEyes = copyEyeTargets && m_spatialAA.ready() && m_spatialAA.matches(eyeImages);
+    // GeneralsX @performance Codex 13/10/2026 Optional direct raster conversion,
+    // with immutable per-source descriptors and acquired swapchain destinations.
+    if (!m_colorTransferAttempted && PerformanceRequested(PerfOption::ColorTransfer)) {
+        m_colorTransferAttempted = true;
+        std::array<ColorTransfer::Source, 3> sources{};
+        bool compatible = true;
+        for (unsigned channel = 0; channel < 3; ++channel) {
+            auto &source = sources[channel];
+            source.width = channel < 2 ? m_recommendedEyeWidth : m_menuWidth;
+            source.height = channel < 2 ? m_recommendedEyeHeight : m_menuHeight;
+            source.destinationLayer = channel < 2 ? channel : 0;
+            source.destinations = channel < 2 ? m_swapchainImages : m_menuSwapchainImages;
+            VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+            compatible = queryTextureImage(channel < 2 ? m_eyeTextures[channel] : m_menuTexture,
+                source.width, source.height, source.image, layout, &source.format, &source.usage) && compatible;
+        }
+        const bool active = compatible && m_colorTransfer.initialize(m_vkPhysicalDevice,
+            m_vkDevice, static_cast<VkFormat>(m_colorFormat), sources);
+        __android_log_print(ANDROID_LOG_INFO, kLogTag,
+            "Quest raster color transfer: requested=1 active=%d; exact UNORM pixels, AA eyes retain original transfer", active);
+    }
+    const bool rasterEyes = copyEyeTargets && !filteredEyes
+        && m_colorTransfer.matches(0, eyeImages[0], imageIndex)
+        && m_colorTransfer.matches(1, eyeImages[1], imageIndex);
+    const bool rasterMenu = copyMenu && m_colorTransfer.matches(2, menuImage, menuImageIndex);
+
 	// GeneralsX @feature Codex 01/10/2026 Manually requested bounded raw-eye capture.
 	EyeCapture::Frame captureFrame;
 	captureFrame.monotonicNs = monotonicNanoseconds();
@@ -1477,12 +1504,20 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 	toTransfer.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	toTransfer.image = m_swapchainImages[imageIndex];
 	toTransfer.subresourceRange = allLayers;
+	if (!rasterEyes) {
 	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 		VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &toTransfer);
+	}
 
-	if (copyEyeTargets) {
-		for (uint32_t eye = 0; eye < m_viewCount; ++eye) {
-			VkImageSubresourceRange sourceRange{};
+    if (rasterEyes) {
+        for (uint32_t eye = 0; eye < m_viewCount; ++eye) {
+            if (captureEyes) m_eyeCapture.copy(commandBuffer, eye, false,
+                eyeImages[eye], eyeLayouts[eye], true);
+            m_colorTransfer.record(commandBuffer, eye, imageIndex, eyeLayouts[eye]);
+        }
+    } else if (copyEyeTargets) {
+        for (uint32_t eye = 0; eye < m_viewCount; ++eye) {
+            VkImageSubresourceRange sourceRange{};
 			sourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			sourceRange.levelCount = 1;
 			sourceRange.layerCount = 1;
@@ -1572,11 +1607,15 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 	toCompositor.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 	toCompositor.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	toCompositor.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	if (!rasterEyes) {
 	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &toCompositor);
+	}
 
-	if (copyMenu) {
-		VkImageSubresourceRange menuRange{};
+    if (rasterMenu) {
+        m_colorTransfer.record(commandBuffer, 2, menuImageIndex, menuLayout);
+    } else if (copyMenu) {
+        VkImageSubresourceRange menuRange{};
 		menuRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		menuRange.levelCount = 1;
 		menuRange.layerCount = 1;
@@ -2235,6 +2274,8 @@ void Bootstrap::detachGraphics()
 	m_eyeCapture.destroy(); // Queue completed above; drain the file writer before teardown.
 	m_spatialAA.destroy();
 	m_spatialAaAttempted = false;
+    m_colorTransfer.destroy();
+    m_colorTransferAttempted = false;
 	for (VkFence fence : m_commandFences) {
 		if (fence != VK_NULL_HANDLE) {
 			vkDestroyFence(m_vkDevice, fence, nullptr);
