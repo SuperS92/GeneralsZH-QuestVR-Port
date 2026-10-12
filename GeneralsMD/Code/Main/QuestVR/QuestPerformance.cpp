@@ -12,11 +12,12 @@
 namespace QuestXR {
 namespace {
 constexpr const char *optionNames[] = {"GX_QUEST_PERF_AUDIO", "GX_QUEST_PERF_TRACKS",
-    "GX_QUEST_PERF_TERRAIN", "GX_QUEST_PERF_TREES", "GX_QUEST_PERF_SHADOWS", "GX_QUEST_PERF_SMAA", "GX_QUEST_TERRAIN_BATCHING", "GX_QUEST_TRACK_STREAMING", "GX_QUEST_COLOR_TRANSFER"};
+    "GX_QUEST_PERF_TERRAIN", "GX_QUEST_PERF_TREES", "GX_QUEST_PERF_SHADOWS", "GX_QUEST_PERF_SMAA", "GX_QUEST_TERRAIN_BATCHING", "GX_QUEST_TRACK_STREAMING", "GX_QUEST_HUD_TRANSFER"};
 constexpr const char *stageNames[] = {"audio", "tracks", "terrain_blend", "trees", "shadows", "terrain_submit",
     "track_pack", "track_lock", "track_copy", "track_unlock", "track_submit"};
 static_assert(sizeof(optionNames) / sizeof(optionNames[0]) == size_t(PerfOption::Count), "Option names must match");
 static_assert(sizeof(stageNames) / sizeof(stageNames[0]) == size_t(PerfStage::Count), "Stage names must match");
+uint64_t hudCopiedPixels = 0, hudFullPixels = 0, hudCompactFrames = 0, hudFullFrames = 0;
 bool frameActive = false;
 int worldEye = -1;
 struct Upload {
@@ -114,6 +115,11 @@ void RecordPerformanceFrameInterval(double milliseconds) {
             (unsigned long long)terrainDraws[eye][pass], (unsigned long long)terrainPatches[eye][pass]);
     for (int eye = 0; eye < 2; ++eye) for (int pass = 0; pass < 2; ++pass)
         terrainDraws[eye][pass] = terrainPatches[eye][pass] = 0;
+    __android_log_print(ANDROID_LOG_INFO, "GeneralsXR",
+        "Quest HUD traffic: compact_frames=%llu full_frames=%llu copied_pixels=%llu original_pixels=%llu (120 frames)",
+        (unsigned long long)hudCompactFrames, (unsigned long long)hudFullFrames,
+        (unsigned long long)hudCopiedPixels, (unsigned long long)hudFullPixels);
+    hudCopiedPixels = hudFullPixels = hudCompactFrames = hudFullFrames = 0;
     frames = 0; stageMs = {}; stageCalls = {};
     trackHits = trackUploads = trackSavedBytes = lightHits = lightMisses = 0;
     shadowAppends = shadowResets = treeOriginalBytes = treeWrittenBytes = 0;
@@ -181,6 +187,13 @@ void RecordTerrainSubmission(unsigned patches, bool shroud) {
     if (!PerformanceMetricsRequested() || eye < 0 || !patches) return;
     ++terrainDraws[eye][shroud ? 1 : 0];
     terrainPatches[eye][shroud ? 1 : 0] += patches;
+}
+// GeneralsX @performance Codex 13/10/2026 Measure real compact/full HUD copy traffic.
+void RecordHudTransfer(unsigned width, unsigned fullHeight, unsigned copiedHeight, bool compact) {
+    if (!PerformanceMetricsRequested()) return;
+    hudCopiedPixels += uint64_t(width) * copiedHeight;
+    hudFullPixels += uint64_t(width) * fullHeight;
+    if (compact) ++hudCompactFrames; else ++hudFullFrames;
 }
 void RecordTreeRange(size_t originalBytes, size_t writtenBytes) {
     if (PerformanceMetricsRequested()) { treeOriginalBytes += originalBytes; treeWrittenBytes += writtenBytes; }

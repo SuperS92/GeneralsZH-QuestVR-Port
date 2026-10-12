@@ -434,6 +434,6 @@
     <string name="quest_fence_contours">Fence contours (experimental)</string>
     <string name="quest_fence_contours_on">On</string>
     <string name="quest_fence_contours_desc">Softens supported railing patterns and transparent edges. Fences may look softer or thinner. Full restart required.</string>
-    <string name="quest_color_transfer">Color transfer (experimental)</string>
-    <string name="quest_color_transfer_desc">Alternative GPU path for presenting completed eye images and the HUD. Keeps resolution and colors. Default off. Fully restart the game and launcher.</string>
+    <string name="quest_hud_transfer">HUD transfer (experimental)</string>
+    <string name="quest_hud_transfer_desc">Transfers the compact HUD into a smaller output buffer. Keeps pixel width and sharpness; larger windows use the full buffer. Default off. Fully restart the game and launcher.</string>
 </resources>

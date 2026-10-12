@@ -14,7 +14,7 @@
 #include <vulkan/vulkan.h>
 #include "VRDevice/QuestXRInterface.h"
 #include "QuestSpatialAA.h"
-#include "QuestColorTransfer.h"
+#include "VRDevice/QuestHudTransfer.h"
 #include "QuestEyeCapture.h"
 
 #include <cstdint>
@@ -102,7 +102,7 @@ private:
 	void recordFrameDiagnostics(uint32_t layerCount);
 	bool pollEvents();
 	bool renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
-		uint32_t menuImageIndex, bool copyMenu);
+		uint32_t menuImageIndex, bool copyMenu, const HudTransferPlan &hudPlan);
 	bool queryEyeImage(uint32_t eye, VkImage &image, VkImageLayout &layout,
 		VkFormat *format = nullptr, VkImageUsageFlags *usage = nullptr) const;
 	bool queryTextureImage(::IDirect3DTexture8 *texture, uint32_t width, uint32_t height,
@@ -118,6 +118,8 @@ private:
 	XrSpace m_viewSpace = XR_NULL_HANDLE;
 	XrSwapchain m_colorSwapchain = XR_NULL_HANDLE;
 	XrSwapchain m_menuSwapchain = XR_NULL_HANDLE;
+    XrSwapchain m_compactMenuSwapchain = XR_NULL_HANDLE;
+    std::vector<VkImage> m_compactMenuImages;
 	XrActionSet m_actionSet = XR_NULL_HANDLE;
 	XrAction m_aimPoseAction = XR_NULL_HANDLE;
 	XrAction m_triggerAction = XR_NULL_HANDLE;
@@ -194,8 +196,6 @@ private:
 	uint32_t m_timestampValidBits = 0;
 	void *m_dxvkInterop = nullptr;
 	SpatialAA m_spatialAA;
-    ColorTransfer m_colorTransfer;
-    bool m_colorTransferAttempted = false;
 	EyeCapture m_eyeCapture;
 	std::array<QuestXRDiagnosticCamera, 2> m_diagnosticCameras{};
 	bool m_spatialAaAttempted = false;

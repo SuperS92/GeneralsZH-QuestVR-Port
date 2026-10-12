@@ -10,6 +10,7 @@
 
 #include <d3d8.h>
 #include "QuestOpenXRBootstrap.h"
+#include "VRDevice/QuestHudTransfer.h"
 #include "VRDevice/QuestPerformance.h"
 #include "VRDevice/QuestXRInterface.h"
 #include "VRDevice/QuestVRMath.h"
@@ -711,7 +712,30 @@ bool Bootstrap::createMenuTarget(IDirect3DDevice8 *device, uint32_t width, uint3
 	for (const XrSwapchainImageVulkanKHR &swapchainImage : xrImages) {
 		m_menuSwapchainImages.push_back(swapchainImage.image);
 	}
-	return true;
+    // GeneralsX @performance Codex 13/10/2026 One optional half-height HUD
+    // swapchain; the full menu swapchain remains the fallback for every frame.
+    if (PerformanceRequested(PerfOption::HudTransfer) && m_menuHeight >= 128) {
+        createInfo.height = m_menuHeight - m_menuHeight / 2;
+        result = xrCreateSwapchain(m_session, &createInfo, &m_compactMenuSwapchain);
+        uint32_t compactCount = 0;
+        if (XR_SUCCEEDED(result)) result = xrEnumerateSwapchainImages(m_compactMenuSwapchain, 0, &compactCount, nullptr);
+        std::vector<XrSwapchainImageVulkanKHR> compactImages(compactCount);
+        for (auto &image : compactImages) image.type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR;
+        if (XR_SUCCEEDED(result) && compactCount) result = xrEnumerateSwapchainImages(m_compactMenuSwapchain,
+            compactCount, &compactCount, reinterpret_cast<XrSwapchainImageBaseHeader *>(compactImages.data()));
+        if (XR_SUCCEEDED(result) && compactCount && compactCount <= compactImages.size()) {
+            for (uint32_t i = 0; i < compactCount; ++i) m_compactMenuImages.push_back(compactImages[i].image);
+        } else {
+            if (m_compactMenuSwapchain != XR_NULL_HANDLE) xrDestroySwapchain(m_compactMenuSwapchain);
+            m_compactMenuSwapchain = XR_NULL_HANDLE;
+            __android_log_print(ANDROID_LOG_WARN, kLogTag, "Compact HUD output unavailable (%d); retaining full UI transfer", result);
+        }
+    }
+    __android_log_print(ANDROID_LOG_INFO, kLogTag,
+        "Quest HUD transfer: requested=%d active=%d canvas=%ux%u compact_height=%u images=%zu (full restart)",
+        PerformanceRequested(PerfOption::HudTransfer), !m_compactMenuImages.empty(),
+        m_menuWidth, m_menuHeight, m_menuHeight - m_menuHeight / 2, m_compactMenuImages.size());
+    return true;
 }
 
 bool Bootstrap::createActions()
@@ -1353,10 +1377,11 @@ bool Bootstrap::recenterGameSpace()
 }
 
 bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
-	uint32_t menuImageIndex, bool copyMenu)
+	uint32_t menuImageIndex, bool copyMenu, const HudTransferPlan &hudPlan)
 {
+    const auto &menuImages = hudPlan.compact ? m_compactMenuImages : m_menuSwapchainImages;
 	if (imageIndex >= m_swapchainImages.size()
-		|| (copyMenu && menuImageIndex >= m_menuSwapchainImages.size())) {
+		|| (copyMenu && menuImageIndex >= menuImages.size())) {
 		return false;
 	}
 	VkFence fence = m_commandFences[imageIndex];
@@ -1411,32 +1436,6 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
             "Quest AA mode=%u active=%d (0=off 1=gentle 2=SMAA); historical MSAA remains disabled", mode, m_spatialAA.ready());
 	}
 	const bool filteredEyes = copyEyeTargets && m_spatialAA.ready() && m_spatialAA.matches(eyeImages);
-    // GeneralsX @performance Codex 13/10/2026 Optional direct raster conversion,
-    // with immutable per-source descriptors and acquired swapchain destinations.
-    if (!m_colorTransferAttempted && PerformanceRequested(PerfOption::ColorTransfer)) {
-        m_colorTransferAttempted = true;
-        std::array<ColorTransfer::Source, 3> sources{};
-        bool compatible = true;
-        for (unsigned channel = 0; channel < 3; ++channel) {
-            auto &source = sources[channel];
-            source.width = channel < 2 ? m_recommendedEyeWidth : m_menuWidth;
-            source.height = channel < 2 ? m_recommendedEyeHeight : m_menuHeight;
-            source.destinationLayer = channel < 2 ? channel : 0;
-            source.destinations = channel < 2 ? m_swapchainImages : m_menuSwapchainImages;
-            VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-            compatible = queryTextureImage(channel < 2 ? m_eyeTextures[channel] : m_menuTexture,
-                source.width, source.height, source.image, layout, &source.format, &source.usage) && compatible;
-        }
-        const bool active = compatible && m_colorTransfer.initialize(m_vkPhysicalDevice,
-            m_vkDevice, static_cast<VkFormat>(m_colorFormat), sources);
-        __android_log_print(ANDROID_LOG_INFO, kLogTag,
-            "Quest raster color transfer: requested=1 active=%d; exact UNORM pixels, AA eyes retain original transfer", active);
-    }
-    const bool rasterEyes = copyEyeTargets && !filteredEyes
-        && m_colorTransfer.matches(0, eyeImages[0], imageIndex)
-        && m_colorTransfer.matches(1, eyeImages[1], imageIndex);
-    const bool rasterMenu = copyMenu && m_colorTransfer.matches(2, menuImage, menuImageIndex);
-
 	// GeneralsX @feature Codex 01/10/2026 Manually requested bounded raw-eye capture.
 	EyeCapture::Frame captureFrame;
 	captureFrame.monotonicNs = monotonicNanoseconds();
@@ -1504,20 +1503,12 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 	toTransfer.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	toTransfer.image = m_swapchainImages[imageIndex];
 	toTransfer.subresourceRange = allLayers;
-	if (!rasterEyes) {
 	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 		VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &toTransfer);
-	}
 
-    if (rasterEyes) {
-        for (uint32_t eye = 0; eye < m_viewCount; ++eye) {
-            if (captureEyes) m_eyeCapture.copy(commandBuffer, eye, false,
-                eyeImages[eye], eyeLayouts[eye], true);
-            m_colorTransfer.record(commandBuffer, eye, imageIndex, eyeLayouts[eye]);
-        }
-    } else if (copyEyeTargets) {
-        for (uint32_t eye = 0; eye < m_viewCount; ++eye) {
-            VkImageSubresourceRange sourceRange{};
+	if (copyEyeTargets) {
+		for (uint32_t eye = 0; eye < m_viewCount; ++eye) {
+			VkImageSubresourceRange sourceRange{};
 			sourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			sourceRange.levelCount = 1;
 			sourceRange.layerCount = 1;
@@ -1607,15 +1598,11 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 	toCompositor.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 	toCompositor.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	toCompositor.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	if (!rasterEyes) {
 	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &toCompositor);
-	}
 
-    if (rasterMenu) {
-        m_colorTransfer.record(commandBuffer, 2, menuImageIndex, menuLayout);
-    } else if (copyMenu) {
-        VkImageSubresourceRange menuRange{};
+	if (copyMenu) {
+		VkImageSubresourceRange menuRange{};
 		menuRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		menuRange.levelCount = 1;
 		menuRange.layerCount = 1;
@@ -1626,7 +1613,7 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 		menuDestination.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		menuDestination.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		menuDestination.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		menuDestination.image = m_menuSwapchainImages[menuImageIndex];
+		menuDestination.image = menuImages[menuImageIndex];
 		menuDestination.subresourceRange = menuRange;
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 			VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &menuDestination);
@@ -1643,29 +1630,9 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &menuSource);
 
-		if (m_colorRequiresBlit) {
-			VkImageBlit menuBlit{};
-			menuBlit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			menuBlit.srcSubresource.layerCount = 1;
-			menuBlit.srcOffsets[1] = {
-				static_cast<int32_t>(m_menuWidth), static_cast<int32_t>(m_menuHeight), 1};
-			menuBlit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			menuBlit.dstSubresource.layerCount = 1;
-			menuBlit.dstOffsets[1] = menuBlit.srcOffsets[1];
-			vkCmdBlitImage(commandBuffer, menuImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				m_menuSwapchainImages[menuImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				1, &menuBlit, VK_FILTER_NEAREST);
-		} else {
-			VkImageCopy menuCopy{};
-			menuCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			menuCopy.srcSubresource.layerCount = 1;
-			menuCopy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			menuCopy.dstSubresource.layerCount = 1;
-			menuCopy.extent = {m_menuWidth, m_menuHeight, 1};
-			vkCmdCopyImage(commandBuffer, menuImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				m_menuSwapchainImages[menuImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				1, &menuCopy);
-		}
+        CopyHudColorImage(commandBuffer, menuImage, menuImages[menuImageIndex],
+            m_menuWidth, hudPlan, m_colorRequiresBlit);
+        RecordHudTransfer(m_menuWidth, m_menuHeight, hudPlan.destinationHeight, hudPlan.compact);
 
 		VkImageMemoryBarrier menuSourceRestore = menuSource;
 		menuSourceRestore.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
@@ -1948,26 +1915,35 @@ bool Bootstrap::endFrame()
 			waited = XR_SUCCEEDED(result);
 		}
 
-		uint32_t menuImageIndex = 0;
-		bool menuAcquired = false;
+        const MenuGeometry menuGeometry = getMenuGeometry(m_menuPresentation,
+            m_menuCropTop, m_menuWidth, m_menuHeight, m_controllers,
+            m_fixedFrontend && m_frontendAnchorValid ? &m_frontendAnchor : nullptr);
+        const int32_t originalCropTop = static_cast<int32_t>(std::lround(
+            static_cast<float>(m_menuHeight) * menuGeometry.cropTop));
+        const HudTransferPlan hudPlan = PlanHudTransfer(m_menuHeight, originalCropTop,
+            m_menuPresentation == QUEST_XR_MENU_HUD && m_eyeRenderingComplete,
+            m_compactMenuSwapchain != XR_NULL_HANDLE && !m_compactMenuImages.empty());
+        const XrSwapchain activeMenuSwapchain = hudPlan.compact ? m_compactMenuSwapchain : m_menuSwapchain;
+        uint32_t menuImageIndex = 0;
+        bool menuAcquired = false;
 		bool menuWaited = false;
 		if (XR_SUCCEEDED(result) && m_menuRenderingComplete) {
 			{
 				DxvkQueueGuard queueGuard(m_dxvkInterop);
-				result = xrAcquireSwapchainImage(m_menuSwapchain, &acquireInfo, &menuImageIndex);
+				result = xrAcquireSwapchainImage(activeMenuSwapchain, &acquireInfo, &menuImageIndex);
 			}
 			menuAcquired = XR_SUCCEEDED(result);
 			if (XR_SUCCEEDED(result)) {
 				XrSwapchainImageWaitInfo menuWaitInfo{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
 				menuWaitInfo.timeout = XR_INFINITE_DURATION;
-				result = xrWaitSwapchainImage(m_menuSwapchain, &menuWaitInfo);
+				result = xrWaitSwapchainImage(activeMenuSwapchain, &menuWaitInfo);
 				menuWaited = XR_SUCCEEDED(result);
 			}
 		}
 
 		const bool rendered = XR_SUCCEEDED(result) && waited
 			&& renderCompositorImages(imageIndex, m_eyeRenderingComplete,
-				menuImageIndex, menuWaited && m_menuRenderingComplete);
+				menuImageIndex, menuWaited && m_menuRenderingComplete, hudPlan);
 		bool released = true;
 		if (acquired && waited) {
 			XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
@@ -1986,7 +1962,7 @@ bool Bootstrap::endFrame()
 			XrResult releaseResult = XR_SUCCESS;
 			{
 				DxvkQueueGuard queueGuard(m_dxvkInterop);
-				releaseResult = xrReleaseSwapchainImage(m_menuSwapchain, &releaseInfo);
+				releaseResult = xrReleaseSwapchainImage(activeMenuSwapchain, &releaseInfo);
 			}
 			released = released && XR_SUCCEEDED(releaseResult);
 			if (XR_FAILED(releaseResult)) {
@@ -2012,16 +1988,12 @@ bool Bootstrap::endFrame()
 				: reinterpret_cast<const XrCompositionLayerBaseHeader *>(&projectionLayer);
 
 			if (menuWaited && m_menuRenderingComplete) {
-				const MenuGeometry geometry = getMenuGeometry(m_menuPresentation,
-					m_menuCropTop, m_menuWidth, m_menuHeight, m_controllers,
-					m_fixedFrontend && m_frontendAnchorValid ? &m_frontendAnchor : nullptr);
-				const int32_t cropTop = static_cast<int32_t>(std::lround(
-					static_cast<float>(m_menuHeight) * geometry.cropTop));
-				const int32_t cropHeight = static_cast<int32_t>(m_menuHeight) - cropTop;
+                const MenuGeometry &geometry = menuGeometry;
+                const int32_t cropHeight = static_cast<int32_t>(hudPlan.visibleHeight);
 				menuLayer.space = geometry.viewLocked ? m_viewSpace : m_gameSpace;
 				menuLayer.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
-				menuLayer.subImage.swapchain = m_menuSwapchain;
-				menuLayer.subImage.imageRect.offset = {0, cropTop};
+				menuLayer.subImage.swapchain = activeMenuSwapchain;
+				menuLayer.subImage.imageRect.offset = {0, static_cast<int32_t>(hudPlan.subImageTop)};
 				menuLayer.subImage.imageRect.extent = {
 					static_cast<int32_t>(m_menuWidth), cropHeight};
 				menuLayer.pose = geometry.pose;
@@ -2274,8 +2246,6 @@ void Bootstrap::detachGraphics()
 	m_eyeCapture.destroy(); // Queue completed above; drain the file writer before teardown.
 	m_spatialAA.destroy();
 	m_spatialAaAttempted = false;
-    m_colorTransfer.destroy();
-    m_colorTransferAttempted = false;
 	for (VkFence fence : m_commandFences) {
 		if (fence != VK_NULL_HANDLE) {
 			vkDestroyFence(m_vkDevice, fence, nullptr);
@@ -2319,6 +2289,9 @@ void Bootstrap::detachGraphics()
 		m_menuTexture->Release();
 		m_menuTexture = nullptr;
 	}
+    if (m_compactMenuSwapchain != XR_NULL_HANDLE) xrDestroySwapchain(m_compactMenuSwapchain);
+    m_compactMenuSwapchain = XR_NULL_HANDLE;
+    m_compactMenuImages.clear();
 	if (m_menuSwapchain != XR_NULL_HANDLE) {
 		xrDestroySwapchain(m_menuSwapchain);
 	}

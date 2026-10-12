@@ -46,3 +46,11 @@ blits with exact-pixel raster output to the acquired swapchains when supported.
 See [scope and validation](COLOR_TRANSFER_TRIAL.md). Preserve Test 02's vehicle
 track option and retain Android version 1.4.0.9 / 10409 with display label Test 03.
 No automatic installation or public upload.
+
+## Test 04
+
+Retire the ineffective Test 03 raster transfer. Add the default-off compact
+HUD output trial, retaining pixel width and full output for expanding/front-end
+UI. See [scope and validation](HUD_TRANSFER_TRIAL.md). Vehicle track streaming
+remains independent. Android version and updater stay at the current public
+release; the display/artifact label is Test 04.

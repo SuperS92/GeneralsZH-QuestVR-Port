@@ -1,5 +1,11 @@
 # Exact-pixel color transfer trial
 
+Historical Test 03 experiment, retired in Test 04. The stationary pair showed
+48 FPS with both paths and essentially unchanged app GPU time; raster transfer
+was slightly slower. Remove its active engine path and launcher control; ignore
+the saved preference. Code and fixtures remain recoverable in Git history.
+Continue with [compact HUD output](HUD_TRANSFER_TRIAL.md).
+
 Local Test 03 adds **Color transfer (experimental)**, default off. Fully close
 the game and launcher after changing it. Android version 1.4.0.9 / 10409 and
 the published APK updater stay unchanged. Vehicle track streaming remains an
