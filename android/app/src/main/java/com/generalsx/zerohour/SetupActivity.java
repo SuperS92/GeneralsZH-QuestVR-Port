@@ -166,6 +166,11 @@ public class SetupActivity extends Activity {
         return false; // Retired after active device test produced no sufficient flicker benefit.
     }
     // GeneralsX @performance Codex 05/10/2026 Independent default-off A/B options, local to this launcher.
+    // GeneralsX @performance Codex 12/10/2026 Independent default-off track-buffer trial.
+    static boolean getQuestTrackStreaming(android.content.Context ctx) {
+        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean("quest_track_streaming", false);
+    }
     static final String[] QUEST_PERF_KEYS = {"quest_perf_audio", "quest_perf_tracks", "quest_perf_terrain",
         "quest_perf_trees", "quest_perf_shadows", "quest_perf_smaa", "quest_perf_metrics", "quest_terrain_batching"};
     static final String[] QUEST_PERF_ENV = {"GX_QUEST_PERF_AUDIO", "GX_QUEST_PERF_TRACKS", "GX_QUEST_PERF_TERRAIN",
@@ -268,6 +273,11 @@ public class SetupActivity extends Activity {
         // dropped back on Home.
         if (savedInstanceState != null) {
             currentTab = savedInstanceState.getInt(STATE_TAB, TAB_HOME);
+        }
+        if (BuildConfig.QUEST_VR && getIntent().hasExtra(EXTRA_QUEST_TAB)) {
+            int tab = getIntent().getIntExtra(EXTRA_QUEST_TAB, TAB_HOME);
+            if (tab >= TAB_HOME && tab <= TAB_HELP) currentTab = tab;
+            getIntent().removeExtra(EXTRA_QUEST_TAB);
         }
 
         // GeneralsX @bugfix Android port 08/07/2026 This screen is the ONLY
@@ -377,7 +387,8 @@ public class SetupActivity extends Activity {
     private static final int TAB_TOOLS = 4;
     private static final int TAB_HELP = 5;
 
-    private static final int TAB_ONLINE = 6;
+    static final int TAB_ONLINE = 6;
+    private static final String EXTRA_QUEST_TAB = "quest_launcher_tab";
     private QuestLauncherNavigation questNavigation;
     private int currentTab = TAB_HOME;
     private FrameLayout contentHost;
@@ -412,15 +423,38 @@ public class SetupActivity extends Activity {
     }
 
     // GeneralsX @feature Codex 10/10/2026 Direct Online shortcut beside the five launcher pages.
+    // GeneralsX @feature Codex 12/10/2026 Share navigation with Online without changing account behavior.
+    static QuestLauncherNavigation createQuestNavigation(android.content.Context context, int selected,
+            QuestLauncherNavigation.DestinationListener listener) {
+        return new QuestLauncherNavigation(context,
+            new int[]{TAB_HOME, TAB_GRAPHICS, TAB_ONLINE, TAB_INTERFACE, TAB_TOOLS, TAB_HELP},
+            new int[]{R.string.nav_tab_home, R.string.nav_tab_graphics, R.string.nav_tab_online,
+                R.string.nav_tab_interface, R.string.nav_tab_tools, R.string.nav_tab_help},
+            new int[]{R.drawable.ic_gzh_home, R.drawable.ic_gzh_display, R.drawable.ic_gzh_globe,
+                R.drawable.ic_gzh_globe, R.drawable.ic_gzh_wrench, R.drawable.ic_gzh_info},
+            selected, TAB_ONLINE, listener);
+    }
+    static void openQuestTab(android.app.Activity source, int tab) {
+        if (!BuildConfig.QUEST_VR || tab < TAB_HOME || tab > TAB_HELP) return;
+        source.startActivity(new Intent(source, SetupActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra(EXTRA_QUEST_TAB, tab));
+        source.finish();
+    }
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (BuildConfig.QUEST_VR && intent.hasExtra(EXTRA_QUEST_TAB)) {
+            int tab = intent.getIntExtra(EXTRA_QUEST_TAB, TAB_HOME);
+            if (tab >= TAB_HOME && tab <= TAB_HELP) showTab(tab);
+            intent.removeExtra(EXTRA_QUEST_TAB);
+        }
+    }
+
     private View buildBottomNav() {
         if (BuildConfig.QUEST_VR) {
-            questNavigation = new QuestLauncherNavigation(this,
-                new int[]{TAB_HOME, TAB_GRAPHICS, TAB_ONLINE, TAB_INTERFACE, TAB_TOOLS, TAB_HELP},
-                new int[]{R.string.nav_tab_home, R.string.nav_tab_graphics, R.string.nav_tab_online,
-                    R.string.nav_tab_interface, R.string.nav_tab_tools, R.string.nav_tab_help},
-                new int[]{R.drawable.ic_gzh_home, R.drawable.ic_gzh_display, R.drawable.ic_gzh_globe,
-                    R.drawable.ic_gzh_globe, R.drawable.ic_gzh_wrench, R.drawable.ic_gzh_info},
-                currentTab, TAB_ONLINE, tab -> {
+            questNavigation = createQuestNavigation(this, currentTab, tab -> {
                     if (tab == TAB_ONLINE) startActivity(new Intent(this, GeneralsOnlineActivity.class));
                     else showTab(tab);
                 });
@@ -1733,6 +1767,12 @@ public class SetupActivity extends Activity {
             passthrough.setChecked(getQuestFrontendPassthrough(this));
             passthrough.setOnCheckedChangeListener((button, checked) -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .edit().putBoolean("quest_frontend_passthrough", checked).apply());
+            LinearLayout trackStreaming = UiKit.card(root);
+            UiKit.sectionHeader(trackStreaming, R.drawable.ic_gzh_display, getString(R.string.quest_track_streaming), false);
+            UiKit.segmented(trackStreaming, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
+                getQuestTrackStreaming(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit().putBoolean("quest_track_streaming", index == 1).apply());
+            UiKit.supporting(trackStreaming, getString(R.string.quest_track_streaming_desc));
             int[] titles = {R.string.quest_perf_audio, R.string.quest_perf_tracks, R.string.quest_perf_terrain,
                 R.string.quest_perf_trees, R.string.quest_perf_shadows, R.string.quest_perf_smaa, R.string.quest_perf_metrics, R.string.quest_terrain_batching};
             int[] descriptions = {R.string.quest_perf_audio_desc, R.string.quest_perf_tracks_desc, R.string.quest_perf_terrain_desc,

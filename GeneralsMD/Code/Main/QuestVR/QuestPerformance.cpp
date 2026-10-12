@@ -12,8 +12,11 @@
 namespace QuestXR {
 namespace {
 constexpr const char *optionNames[] = {"GX_QUEST_PERF_AUDIO", "GX_QUEST_PERF_TRACKS",
-    "GX_QUEST_PERF_TERRAIN", "GX_QUEST_PERF_TREES", "GX_QUEST_PERF_SHADOWS", "GX_QUEST_PERF_SMAA", "GX_QUEST_TERRAIN_BATCHING"};
-constexpr const char *stageNames[] = {"audio", "tracks", "terrain_blend", "trees", "shadows", "terrain_submit"};
+    "GX_QUEST_PERF_TERRAIN", "GX_QUEST_PERF_TREES", "GX_QUEST_PERF_SHADOWS", "GX_QUEST_PERF_SMAA", "GX_QUEST_TERRAIN_BATCHING", "GX_QUEST_TRACK_STREAMING"};
+constexpr const char *stageNames[] = {"audio", "tracks", "terrain_blend", "trees", "shadows", "terrain_submit",
+    "track_pack", "track_lock", "track_copy", "track_unlock", "track_submit"};
+static_assert(sizeof(optionNames) / sizeof(optionNames[0]) == size_t(PerfOption::Count), "Option names must match");
+static_assert(sizeof(stageNames) / sizeof(stageNames[0]) == size_t(PerfStage::Count), "Stage names must match");
 bool frameActive = false;
 int worldEye = -1;
 struct Upload {
@@ -58,26 +61,35 @@ PerformanceFrameScope::PerformanceFrameScope() : previous(frameActive) {
     if (!logged) {
         logged=true;
         __android_log_print(ANDROID_LOG_INFO, "GeneralsXR",
-            "Quest perf choices: audio=%d tracks=%d terrain=%d trees=%d shadows=%d smaa_scratch=%d metrics=%d (full restart; default off)",
+            "Quest perf choices: audio=%d tracks=%d terrain=%d trees=%d shadows=%d smaa_scratch=%d metrics=%d track_streaming=%d (full restart)",
             PerformanceRequested(PerfOption::AudioGrowth), PerformanceRequested(PerfOption::TrackUpload),
             PerformanceRequested(PerfOption::TerrainLighting), PerformanceRequested(PerfOption::TreeRange),
-            PerformanceRequested(PerfOption::ShadowAppend), PerformanceRequested(PerfOption::SmaaScratch), PerformanceMetricsRequested());
+            PerformanceRequested(PerfOption::ShadowAppend), PerformanceRequested(PerfOption::SmaaScratch), PerformanceMetricsRequested(), PerformanceRequested(PerfOption::TrackStreaming));
     }
 }
 PerformanceFrameScope::~PerformanceFrameScope() { clearFrameCaches(); frameActive = previous; }
 PerformanceEyeScope::PerformanceEyeScope(int eye) : previous(worldEye) { worldEye = eye; }
 PerformanceEyeScope::~PerformanceEyeScope() { worldEye = previous; }
-PerformanceStageScope::PerformanceStageScope(PerfStage value)
-    : stage(value), enabled(PerformanceMetricsRequested()) {
-    if (enabled) start = std::chrono::steady_clock::now();
+// GeneralsX @performance Codex 12/10/2026 Split CPU buffer waits from packing and submission.
+PerformanceStageScope::PerformanceStageScope(PerfStage value, bool startNow)
+    : stage(value), enabled(false) {
+    if (startNow) Start();
 }
-PerformanceStageScope::~PerformanceStageScope() {
+void PerformanceStageScope::Start() {
+    if (!enabled && PerformanceMetricsRequested()) {
+        start = std::chrono::steady_clock::now();
+        enabled = true;
+    }
+}
+void PerformanceStageScope::Stop() {
     if (enabled) {
         stageMs[size_t(stage)] += std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - start).count();
         ++stageCalls[size_t(stage)];
+        enabled = false;
     }
 }
+PerformanceStageScope::~PerformanceStageScope() { Stop(); }
 void RecordPerformanceFrameInterval(double milliseconds) {
     if (!PerformanceMetricsRequested() || !(milliseconds > 0) || !std::isfinite(milliseconds)) return;
     intervals[frames++] = milliseconds;

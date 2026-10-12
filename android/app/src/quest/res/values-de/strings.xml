@@ -47,19 +47,19 @@
     <string name="quest_perf_metrics_desc">Protokolliert Frame-Zeiten und Renderabschnitte alle 120 Stereo-Bilder. Für beide Vergleichsläufe eingeschaltet lassen. Vollständiger Neustart nötig.</string>
     <string name="quest_tree_wind_pair">Stereo-Baumwind (experimentell)</string>
     <string name="quest_tree_wind_pair_desc">Gleiche Windbewegung in beiden Augen. Die Bäume bewegen sich weiter. Vollständiger Neustart nötig.</string>
-    <string name="quest_tree_contours">Baumkonturen (experimentell)</string>
+    <string name="quest_tree_contours">Baumkonturen</string>
     <string name="quest_tree_contours_on">Sanft</string>
     <string name="quest_tree_contours_desc">Glättet Texturmuster und transparente Baumkonturen. Bäume können weicher oder dünner aussehen. Gelände und Straßen bleiben erhalten. Vollständiger Neustart nötig.</string>
     <string name="quest_fence_contours">Zaunkonturen (experimentell)</string>
     <string name="quest_fence_contours_on">An</string>
     <string name="quest_fence_contours_desc">GlÃ¤ttet unterstÃ¼tzte Zaunmuster und transparente Kanten. ZÃ¤une kÃ¶nnen weicher oder dÃ¼nner aussehen. VollstÃ¤ndiger Neustart nÃ¶tig.</string>
     <string name="quest_shadows">Schatten</string>
-    <string name="quest_shadows_desc">Zeigt Schatten von Gebäuden und Einheiten. Standardmäßig aus; kann FPS kosten. Die automatische Qualitätsregelung kann Schatten bei hoher Last zeitweise abschalten. Gilt ab dem nächsten Spielstart.</string>
+    <string name="quest_shadows_desc">Zeigt Schatten von Gebäuden und Einheiten. Standardmäßig an; kann FPS kosten. Die automatische Qualitätsregelung kann Schatten bei hoher Last zeitweise abschalten. Gilt ab dem nächsten Spielstart.</string>
     <string name="quest_automatic_fixes">Randschutz, Boden-Fernfilterung, Straßen-Mipmaps, Audioladen und die Upload-Optimierungen für Fahrzeugspuren und Bäume sind automatisch aktiv.</string>
     <string name="quest_support_title">Quest-VR-Projekt unterstützen</string>
     <string name="quest_support_attribution">Wenn dir dieser Quest-VR-Port gefällt, kannst du SuperS92 auf Ko-Fi einen Kaffee spendieren. Unterstützung ist völlig freiwillig.</string>
     <string name="quest_terrain_batching">Gelände bündeln (experimentell)</string>
-    <string name="quest_terrain_batching_desc">Zeichnet unveränderte Geländeabschnitte mit weniger Grafikbefehlen. Standardmäßig Aus. Dieselbe Szene mit aktivierten Performance-Messwerten vergleichen; nach Änderungen Spiel und Launcher vollständig schließen. Online-Kompatibilität erneut prüfen.</string>
+    <string name="quest_terrain_batching_desc">Bündelt Grafikbefehle für das Gelände. Standardmäßig an. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
 
     <string name="setup_button_select_game_folder">Zero Hour Ordner auswählen</string>
     <string name="setup_button_select_base_generals">Generals Basis Ordner auswählen</string>
@@ -74,4 +74,6 @@
     <string name="quest_fixed_screen">Flache Bildschirme</string>
     <string name="quest_fixed_screen_desc">Videos, Menüs und das 3D-Intro erscheinen auf einem festen flachen Bildschirm mit der ursprünglichen Spielkamera. Matches bleiben in Stereo-VR. Linken Menüknopf zum Zentrieren drücken. Nach Änderungen Spiel und Launcher vollständig schließen.</string>
     <string name="quest_updates_help">Quest-App-Updates kommen von SuperS92/GeneralsZH-QuestVR-Port. Hier herunterladen und die Installation im Headset bestätigen. Spieldaten und Einstellungen bleiben erhalten. Signierte Netzwerkeinstellungen kommen weiterhin vom Android-Unterbau; Online-Spieldaten aktualisierst du unter GeneralsOnline Einstellungen.</string>
+    <string name="quest_track_streaming">Fahrzeugspur-Puffer (experimentell)</string>
+    <string name="quest_track_streaming_desc">Versucht, Wartezeiten beim Aktualisieren der Spur-Puffer zu vermeiden. Spuren bleiben sichtbar. Standardmäßig Aus. Spiel und Launcher vollständig neu starten.</string>
 </resources>

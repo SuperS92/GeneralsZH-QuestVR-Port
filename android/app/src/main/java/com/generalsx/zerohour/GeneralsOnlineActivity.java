@@ -170,6 +170,13 @@ public class GeneralsOnlineActivity extends Activity {
         android.widget.FrameLayout host = new android.widget.FrameLayout(this);
         shell.addView(host, new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        // GeneralsX @feature Codex 12/10/2026 Retain the same Quest navigation on Online.
+        if (BuildConfig.QUEST_VR) {
+            shell.addView(SetupActivity.createQuestNavigation(this, SetupActivity.TAB_ONLINE, tab -> {
+                if (tab != SetupActivity.TAB_ONLINE) SetupActivity.openQuestTab(this, tab);
+            }), new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        }
         LinearLayout page = UiKit.scrollingPage(host);
 
         LinearLayout statusCard = UiKit.card(page);

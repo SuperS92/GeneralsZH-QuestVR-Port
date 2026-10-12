@@ -15,6 +15,12 @@ int main() {
     require(!PerformanceRequested(PerfOption::AudioGrowth), "Only exact 1 enables option");
     _putenv_s("GX_QUEST_PERF_AUDIO", "1");
     require(PerformanceRequested(PerfOption::AudioGrowth), "Exact 1 enables option");
+    require(!PerformanceRequested(PerfOption::TrackStreaming), "Track streaming defaults off");
+    _putenv_s("GX_QUEST_TRACK_STREAMING", "true");
+    require(!PerformanceRequested(PerfOption::TrackStreaming), "Track streaming requires exact 1");
+    _putenv_s("GX_QUEST_TRACK_STREAMING", "1");
+    require(PerformanceRequested(PerfOption::TrackStreaming), "Track streaming can be enabled independently");
+    _putenv_s("GX_QUEST_TRACK_STREAMING", "");
     for (bool planar : {false, true}) for (size_t sampleBytes : {size_t(1),size_t(2),size_t(4)})
         for (size_t channels : {size_t(1),size_t(2),size_t(6)}) {
         std::vector<uint8_t> original, geometric;

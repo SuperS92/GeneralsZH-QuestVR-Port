@@ -898,19 +898,41 @@ Try improving the fit to vertical surfaces like cliffs.
 		}
         };
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
-        if (QuestXR::PerformanceRequested(QuestXR::PerfOption::TrackUpload) && QuestXR::PerformanceEye() >= 0) {
+        // GeneralsX @performance Codex 12/10/2026 Default-off full rewrite of this dedicated dynamic buffer.
+        // DXVK keeps the old allocation for recorded draws. Refill every vertex subsequently indexed;
+        // never use NOOVERWRITE while replacing the prefix. Exact second-eye reuse remains checked.
+        const bool reuseUpload = QuestXR::PerformanceRequested(QuestXR::PerfOption::TrackUpload)
+            && QuestXR::PerformanceEye() >= 0;
+        const bool streamUpload = QuestXR::PerformanceRequested(QuestXR::PerfOption::TrackStreaming)
+            && QuestXR::PerformanceEye() >= 0 && m_vertexBuffer->Type() == BUFFER_TYPE_DX8;
+        if (reuseUpload || streamUpload) {
             static std::vector<VertexFormatXYZDUV1> packed;
-            packed.resize(m_vertexBuffer->Get_Vertex_Count());
-            fillVertices(packed.data());
-            size_t vertexCount = 0;
-            for (mod=m_usedModules; mod; mod=mod->m_nextSystem)
-                if (mod->m_activeEdgeCount >= 2 && mod->Is_Really_Visible()) vertexCount += mod->m_activeEdgeCount*2;
-            const size_t bytes = vertexCount * sizeof(VertexFormatXYZDUV1);
-            if (bytes && !QuestXR::TrackUploadMatches(this, m_vertexBuffer, packed.data(), bytes)) {
-                DX8VertexBufferClass::WriteLockClass lockVtxBuffer(m_vertexBuffer);
-                auto *destination = lockVtxBuffer.Get_Vertex_Array();
-                if (!destination) { QuestXR::InvalidateTrackUpload(); return; }
-                std::memcpy(destination, packed.data(), bytes);
+            size_t bytes = 0;
+            {
+                QuestXR::PerformanceStageScope perfPack(QuestXR::PerfStage::TrackPack);
+                packed.resize(m_vertexBuffer->Get_Vertex_Count());
+                fillVertices(packed.data());
+                size_t vertexCount = 0;
+                for (mod=m_usedModules; mod; mod=mod->m_nextSystem)
+                    if (mod->m_activeEdgeCount >= 2 && mod->Is_Really_Visible()) vertexCount += mod->m_activeEdgeCount*2;
+                bytes = vertexCount * sizeof(VertexFormatXYZDUV1);
+            }
+            if (bytes && (!reuseUpload || !QuestXR::TrackUploadMatches(this, m_vertexBuffer, packed.data(), bytes))) {
+                QuestXR::PerformanceStageScope perfUnlock(QuestXR::PerfStage::TrackUnlock, false);
+                {
+                    QuestXR::PerformanceStageScope perfLock(QuestXR::PerfStage::TrackLock);
+                    DX8VertexBufferClass::WriteLockClass lockVtxBuffer(m_vertexBuffer,
+                        streamUpload ? D3DLOCK_DISCARD : 0);
+                    perfLock.Stop();
+                    auto *destination = lockVtxBuffer.Get_Vertex_Array();
+                    if (!destination) { QuestXR::InvalidateTrackUpload(); return; }
+                    {
+                        QuestXR::PerformanceStageScope perfCopy(QuestXR::PerfStage::TrackCopy);
+                        std::memcpy(destination, packed.data(), bytes);
+                    }
+                    perfUnlock.Start();
+                }
+                perfUnlock.Stop();
                 QuestXR::RememberTrackUpload(this, m_vertexBuffer, packed.data(), bytes);
             }
         } else
@@ -924,6 +946,9 @@ Try improving the fit to vertical surfaces like cliffs.
 	//draw the filled vertex buffers
 	if (m_edgesToFlush >= 2)
 	{
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        QuestXR::PerformanceStageScope perfSubmit(QuestXR::PerfStage::TrackSubmit);
+#endif
 		ShaderClass::Invalidate();
 		DX8Wrapper::Set_Material(m_vertexMaterialClass);
 		DX8Wrapper::Set_Shader(m_shaderClass);

@@ -26,6 +26,8 @@ def main():
     parser.add_argument('--mode',choices=('probe','prepare-trace','baseline','trace','restore'),default='probe')
     parser.add_argument('--seconds',type=int,default=180)
     parser.add_argument('--countdown',type=int,default=15)
+    parser.add_argument('--without-ovr',action='store_true',
+        help='Capture built-in GPU counters and game logs without installing OVR Metrics; app GPU frame time may be unavailable.')
     args=parser.parse_args()
     if not 15<=args.seconds<=600 or not 0<=args.countdown<=60: parser.error('Invalid capture duration/countdown')
     devices=subprocess.check_output([args.adb,'devices'],text=True)
@@ -59,6 +61,8 @@ def main():
     available=catalog(metrics)
     if not available: raise RuntimeError('No hardware metric catalog detected.')
     if args.mode=='prepare-trace':
+        if (args.output/'detailed-trace-blocked.json').exists():
+            raise RuntimeError('Detailed tracing is blocked after a recorded compatibility failure. Use a normal baseline; review the saved failure before preparing another trace.')
         pid,_=read('shell','pidof',PACKAGE,required=False)
         if pid: raise RuntimeError('Fully close the game AND launcher before preparing a fresh profiling context.')
         if detailed(): raise RuntimeError('Detailed profiling is already enabled; restore the previous owner first.')
@@ -82,15 +86,29 @@ def main():
     selected={name:available[name] for name in COUNTERS if name in available}
     meta['selectedCounters']=selected
     meta['unsupportedCounters']=[name for name in COUNTERS if name not in available]
+    ovr_package='com.oculus.ovrmonitormetricsservice'
+    ovr_info,_=read('shell','dumpsys','package',ovr_package,required=False)
+    ovr_version=re.search(r'versionName=(\S+)',ovr_info)
+    ovr_activity,_=read('shell','cmd','package','resolve-activity','--brief',
+        '-a','android.intent.action.VIEW','-d','omms://app',required=False)
+    meta['ovrMetricsVersion']=ovr_version.group(1) if ovr_version else None
+    meta['ovrMetricsInstalled']=bool(ovr_version)
+    meta['ovrMetricsReady']=bool(ovr_version and 'stub' not in ovr_version.group(1).lower()
+        and any(line.strip().startswith(ovr_package+'/') for line in ovr_activity.splitlines()))
+    meta['ovrCsvRequested']=not args.without_ovr
     if args.mode=='probe':
-        meta['ovrMetricsInstalled']=bool(read('shell','pm','path','com.oculus.ovrmonitormetricsservice',required=False)[0])
         (folder/'manifest.json').write_text(json.dumps(meta,indent=2)+'\n')
         print('Probe saved: '+str(folder));return
+    if args.mode=='baseline' and not args.without_ovr and not meta['ovrMetricsReady']:
+        meta['status']='OVR_METRICS_SETUP_REQUIRED'
+        (folder/'manifest.json').write_text(json.dumps(meta,indent=2)+'\n',encoding='utf-8')
+        raise RuntimeError('OVR Metrics is missing, a system stub, or not launchable. Close the game, install OVR Metrics Tool from Meta Horizon Store, then configure Basic stats and CSV before a fresh baseline.')
     if args.mode=='baseline' and meta['detailedProfiling']: raise RuntimeError('Restore detailed profiling and restart the game before a baseline.')
     if args.mode=='trace' and (not meta['detailedProfiling'] or not owner.exists() or not json.loads(owner.read_text()).get('enabledByThisTool')):
         raise RuntimeError('Prepare a dedicated trace run with this tool first.')
     pid,_=read('shell','pidof',PACKAGE,required=False)
     if not re.fullmatch(r'\d+(?: \d+)*',pid): raise RuntimeError('Open the Quest game and load a skirmish before capturing.')
+    meta['capturedProcessId']=int(pid.split()[0])
     if args.mode=='trace' and json.loads(owner.read_text()).get('deviceKey')!=device_key:
         raise RuntimeError('Trace preparation belongs to another device.')
     processes=[]
@@ -118,7 +136,8 @@ def main():
         # The profiler line-buffers its console only on a TTY. Force a remote PTY so
         # a bounded timeout does not discard buffered samples when the process exits.
         for parts,name in [(['shell','-tt','timeout',str(args.seconds),'ovrgpuprofiler','-r'+ids],'gpu-counters.log'),
-            (['shell','timeout',str(args.seconds),'logcat','-T','1','--pid='+pid.split()[0],'-v','epoch','GeneralsXR:I','*:S'],'native-performance.log')]:
+            (['shell','timeout',str(args.seconds),'logcat','-T','1','--pid='+pid.split()[0],'-v','epoch','GeneralsXR:I','*:S'],'native-performance.log'),
+            (['shell','timeout',str(args.seconds),'logcat','-T','1','--pid='+pid.split()[0],'-v','epoch','VrApi:I','XrPerformanceManager:I','VrPerfMetrics:I','*:S'],'runtime-performance.log')]:
             worker=threading.Thread(target=stream,args=(parts,folder/name),daemon=True);worker.start();workers.append(worker)
         end=time.monotonic()+args.seconds
         trace_index=0;next_trace=time.monotonic()+10
@@ -134,7 +153,7 @@ def main():
             worker.join(timeout=12)
             if worker.is_alive(): errors.append(dict(error='Capture worker did not finish'))
         # Only the current game's metrics files, never other apps' sessions.
-        files,_=read('shell','ls','-1',CSV_ROOT,required=False)
+        files='' if args.without_ovr else read('shell','ls','-1',CSV_ROOT,required=False)[0]
         names=[name for name in files.splitlines() if PACKAGE in name and re.fullmatch(r'[A-Za-z0-9._-]+\.csv',name)]
         csv_dir=folder/'ovr-metrics';csv_dir.mkdir()
         csv_epochs={}
@@ -145,12 +164,16 @@ def main():
             _,code=read('pull',CSV_ROOT+'/'+name,str(csv_dir/name),required=False,timeout=60)
             if code: errors.append(dict(csv=name,exit=code))
         meta.update(endUtc=utc(),durationSeconds=args.seconds,errors=errors,ovrCsvFiles=[path.name for path in csv_dir.glob('*.csv')],csvDeviceModifiedEpoch=csv_epochs,traceFiles=trace_index)
+        runtime_text=(folder/'runtime-performance.log').read_text(encoding='utf-8')
+        runtime_gpu_samples=len(re.findall(r'\bFPS=\d+/\d+[^\r\n]*,App=[0-9.]+ms',runtime_text))
+        meta['runtimeAppGpuTimingSamples']=runtime_gpu_samples
+        if runtime_gpu_samples: meta['appGpuTimeSource']='Game-process runtime-performance.log; App= field, validate capture window before analysis'
         meta['status']='CAPTURED_REVIEW_REQUIRED' if not errors else 'PARTIAL_CAPTURE'
-        if not meta['ovrCsvFiles']: meta['missingAppGpuTime']='Enable OVR Metrics CSV and Advanced stats before a fresh game; hardware counters alone do not give app GPU frame time.'
+        if not meta['ovrCsvFiles'] and not runtime_gpu_samples: meta['missingAppGpuTime']='No app-specific OVR CSV or runtime App= samples. Hardware counters alone do not give app GPU frame time. Native copy_gpu excludes world rendering. OVR Basic stats with CSV is an optional separate data source.'
         (folder/'manifest.json').write_text(json.dumps(meta,indent=2)+'\n',encoding='utf-8')
         print('Saved: '+str(folder),flush=True)
         if args.mode=='trace': print('Next: restore profiling, then fully close and restart the game. Do not compare detailed-trace FPS directly with baseline FPS.')
-        if errors or not meta['ovrCsvFiles']: print('Some data needs review; see manifest.json. This is not a complete bottleneck diagnosis.')
+        if errors or (not meta['ovrCsvFiles'] and not runtime_gpu_samples): print('Some data needs review; see manifest.json. This is not a complete bottleneck diagnosis.')
     finally:
         for process in processes:
             if process.poll() is None:

@@ -378,7 +378,7 @@
     <string name="quest_perf_metrics_desc">Logs frame-interval percentiles and stage times every 120 stereo frames. Keep enabled in both comparison runs. Full restart required.</string>
     <string name="quest_tree_wind_pair">Stereo tree wind (experimental)</string>
     <string name="quest_tree_wind_pair_desc">Uses the same wind movement in both eyes. Trees still sway. Full restart required.</string>
-    <string name="quest_tree_contours">Tree contours (experimental)</string>
+    <string name="quest_tree_contours">Tree contours</string>
     <string name="quest_tree_contours_on">Gentle</string>
     <string name="quest_tree_contours_desc">Softens tree texture patterns and transparent contours. Trees may look softer or thinner. Keeps terrain and roads intact. Full restart required.</string>
     <string name="quest_terrain_far_mips">Distant ground textures (experimental)</string>
@@ -415,7 +415,7 @@
     <string name="quest_support_title">Support this Quest VR project</string>
     <string name="quest_support_attribution">If you like this Quest VR port, you can buy SuperS92 a coffee on Ko-Fi. Support is entirely optional.</string>
     <string name="quest_terrain_batching">Terrain batching (experimental)</string>
-    <string name="quest_terrain_batching_desc">Groups terrain rendering commands. Enabled by default. You can turn it off for comparisons. Applies after fully closing the game and launcher and starting again.</string>
+    <string name="quest_terrain_batching_desc">Groups terrain rendering commands. Enabled by default. Fully restart the game and launcher after changing.</string>
 
     <!-- Quest release updates and flat-screen trials -->
     <string name="quest_updates_help">Quest app updates come from SuperS92/GeneralsZH-QuestVR-Port. Download here, then confirm installation on the headset. Game data and settings are kept. Signed network settings still come from the Android base; online game data is updated under GeneralsOnline Account.</string>
@@ -435,6 +435,8 @@
     <string name="quest_flat_intro">Show 3D intro on a flat screen</string>
     <string name="quest_flat_intro_desc">Shows the main-menu scene and its 3D intro with the original game camera on the flat screen. Matches remain stereo VR. Fully close the game and launcher after changing.</string>
     <string name="nav_tab_online">Online</string>
-    <string name="quest_frontend_passthrough">Passthrough behind flat screens (experimental)</string>
+    <string name="quest_frontend_passthrough">Passthrough behind flat screens</string>
     <string name="quest_frontend_passthrough_desc">Shows your surroundings behind flat intro and menu screens. Use with Flat screens. The gameplay background stays unchanged. Default off; full restart required.</string>
+    <string name="quest_track_streaming">Vehicle track streaming (experimental)</string>
+    <string name="quest_track_streaming_desc">Tries to avoid waits when updating vehicle track buffers. Keeps tracks visible. Default off. Fully restart the game and launcher.</string>
 </resources>

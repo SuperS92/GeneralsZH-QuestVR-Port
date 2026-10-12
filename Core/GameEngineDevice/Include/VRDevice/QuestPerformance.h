@@ -7,8 +7,8 @@
 #include <vector>
 namespace QuestXR {
 // GeneralsX @performance Codex 05/10/2026 Independent, default-off presentation experiments.
-enum class PerfOption { AudioGrowth, TrackUpload, TerrainLighting, TreeRange, ShadowAppend, SmaaScratch, TerrainBatching, Count };
-enum class PerfStage { Audio, Tracks, TerrainBlend, Trees, Shadows, TerrainSubmit, Count };
+enum class PerfOption { AudioGrowth, TrackUpload, TerrainLighting, TreeRange, ShadowAppend, SmaaScratch, TerrainBatching, TrackStreaming, Count };
+enum class PerfStage { Audio, Tracks, TerrainBlend, Trees, Shadows, TerrainSubmit, TrackPack, TrackLock, TrackCopy, TrackUnlock, TrackSubmit, Count };
 bool PerformanceRequested(PerfOption option);
 bool PerformanceMetricsRequested();
 int PerformanceEye();
@@ -33,7 +33,9 @@ class PerformanceStageScope {
     bool enabled;
     std::chrono::steady_clock::time_point start;
 public:
-    explicit PerformanceStageScope(PerfStage stage);
+    explicit PerformanceStageScope(PerfStage stage, bool startNow = true);
+    void Start();
+    void Stop();
     ~PerformanceStageScope();
 };
 void RecordPerformanceFrameInterval(double milliseconds);
