@@ -36,6 +36,7 @@
 #include <android/log.h>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
 #include "QuestAppVersion.h"
 extern Bool g_gxIntroBlackoutAllowed;
@@ -185,7 +186,10 @@ void W3DDisplay::drawQuestXRMenu()
 				m_benchmarkDisplayString->setFont(TheFontLibrary->getFont("Arial", 80, TRUE));
 				UnicodeString cornerText;
 				if (shellActive) {
-					cornerText.format(L"v%S", QUEST_XR_APP_VERSION);
+					// GeneralsX @tweak Codex 12/10/2026 Local identity is presentation-only.
+					const char *testLabel = std::getenv("GX_QUEST_TEST_LABEL");
+					if (testLabel && *testLabel) cornerText.format(L"v%S (%S)", QUEST_XR_APP_VERSION, testLabel);
+					else cornerText.format(L"v%S", QUEST_XR_APP_VERSION);
 				} else {
 					// GeneralsX @tweak Codex 30/09/2026 Keep the small wrist FPS
 					// label steady between half-second samples. Read only the

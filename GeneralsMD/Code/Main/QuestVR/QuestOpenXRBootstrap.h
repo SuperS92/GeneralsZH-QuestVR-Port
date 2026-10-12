@@ -85,6 +85,8 @@ public:
 private:
 	bool initializeLoader();
 	bool createInstance();
+	bool updateFrontendPassthrough(bool wanted);
+	void destroyFrontendPassthrough();
 	bool selectSystemAndViews();
 	bool queryVulkanRequirements();
 	bool createSwapchain();
@@ -140,6 +142,19 @@ private:
 	bool m_menuRenderingComplete = false;
 	bool m_recenterRequested = false;
 	// GeneralsX @feature Codex 10/10/2026 Optional room-fixed front-end screen.
+	// GeneralsX @feature Codex 12/10/2026 Optional front-end underlay, never world transparency.
+	bool m_passthroughRequested = false, m_passthroughEnabled = false;
+	bool m_passthroughFailed = false, m_passthroughRunning = false;
+	XrPassthroughFB m_passthrough = XR_NULL_HANDLE;
+	XrPassthroughLayerFB m_passthroughLayer = XR_NULL_HANDLE;
+	PFN_xrCreatePassthroughFB m_createPassthrough = nullptr;
+	PFN_xrDestroyPassthroughFB m_destroyPassthrough = nullptr;
+	PFN_xrPassthroughStartFB m_startPassthrough = nullptr;
+	PFN_xrPassthroughPauseFB m_pausePassthrough = nullptr;
+	PFN_xrCreatePassthroughLayerFB m_createPassthroughLayer = nullptr;
+	PFN_xrDestroyPassthroughLayerFB m_destroyPassthroughLayer = nullptr;
+	PFN_xrPassthroughLayerResumeFB m_resumePassthroughLayer = nullptr;
+	PFN_xrPassthroughLayerPauseFB m_pausePassthroughLayer = nullptr;
 	bool m_fixedFrontend = false;
 	bool m_frontendAnchorValid = false;
 	XrPosef m_frontendAnchor{};

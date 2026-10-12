@@ -114,6 +114,11 @@ public class SetupActivity extends Activity {
         return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getBoolean(PREF_QUEST_FLAT_SCREENS, true);
     }
+    // GeneralsX @feature Codex 12/10/2026 Optional front-end passthrough, default off.
+    static boolean getQuestFrontendPassthrough(android.content.Context ctx) {
+        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean("quest_frontend_passthrough", false);
+    }
     static boolean getQuestFlatIntro(android.content.Context ctx) {
         return getQuestFixedScreen(ctx);
     }
@@ -925,7 +930,8 @@ public class SetupActivity extends Activity {
     // resource needed, and it is the first thing any bug report needs.
     private String versionLabel() {
         try {
-            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            String version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            return BuildConfig.QUEST_TEST_LABEL.isEmpty() ? version : version + " · " + BuildConfig.QUEST_TEST_LABEL;
         } catch (Exception e) {
             return "";
         }
@@ -1722,6 +1728,11 @@ public class SetupActivity extends Activity {
             fixedScreen.setOnCheckedChangeListener((button, checked) ->
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .putBoolean(PREF_QUEST_FLAT_SCREENS, checked).apply());
+            SwitchCompat passthrough = UiKit.switchRow(screens, getString(R.string.quest_frontend_passthrough),
+                getString(R.string.quest_frontend_passthrough_desc));
+            passthrough.setChecked(getQuestFrontendPassthrough(this));
+            passthrough.setOnCheckedChangeListener((button, checked) -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit().putBoolean("quest_frontend_passthrough", checked).apply());
             int[] titles = {R.string.quest_perf_audio, R.string.quest_perf_tracks, R.string.quest_perf_terrain,
                 R.string.quest_perf_trees, R.string.quest_perf_shadows, R.string.quest_perf_smaa, R.string.quest_perf_metrics, R.string.quest_terrain_batching};
             int[] descriptions = {R.string.quest_perf_audio_desc, R.string.quest_perf_tracks_desc, R.string.quest_perf_terrain_desc,

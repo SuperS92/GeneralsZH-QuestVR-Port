@@ -319,6 +319,10 @@ bool Bootstrap::initialize()
 	shutdown();
 	const char *fixedScreen = std::getenv("GX_QUEST_FIXED_SCREEN");
 	m_fixedFrontend = fixedScreen && std::strcmp(fixedScreen, "1") == 0;
+	const char *passthrough = std::getenv("GX_QUEST_FRONTEND_PASSTHROUGH");
+	m_passthroughRequested = passthrough && std::strcmp(passthrough, "1") == 0;
+	__android_log_print(ANDROID_LOG_INFO, kLogTag, "Quest local build: %s; front-end passthrough requested=%d",
+		std::getenv("GX_QUEST_TEST_LABEL") ? std::getenv("GX_QUEST_TEST_LABEL") : "release", m_passthroughRequested);
 
 	if (!initializeLoader() || !createInstance() || !selectSystemAndViews() || !queryVulkanRequirements()) {
 		shutdown();
@@ -1074,6 +1078,7 @@ bool Bootstrap::pollEvents()
 					}
 					m_sessionRunning = true;
 				} else if (m_sessionState == XR_SESSION_STATE_STOPPING && m_sessionRunning) {
+					updateFrontendPassthrough(false);
 					result = xrEndSession(m_session);
 					if (XR_FAILED(result)) {
 						logResult("xrEndSession", result);
@@ -1790,6 +1795,83 @@ bool Bootstrap::beginFrame()
 	return true;
 }
 
+// GeneralsX @feature Codex 12/10/2026 Optional reconstruction underlay for flat front-end screens.
+bool Bootstrap::updateFrontendPassthrough(bool wanted)
+{
+    if (!wanted) {
+        if (m_passthroughRunning) {
+            const XrResult layer = m_pausePassthroughLayer(m_passthroughLayer);
+            const XrResult feature = m_pausePassthrough(m_passthrough);
+            m_passthroughRunning = false;
+            if (XR_FAILED(layer) || XR_FAILED(feature)) {
+                logResult("pause front-end passthrough", XR_FAILED(layer) ? layer : feature);
+                destroyFrontendPassthrough();
+                m_passthroughFailed = true;
+            }
+        }
+        return false;
+    }
+    if (!m_passthroughEnabled || m_passthroughFailed || !m_sessionRunning) return false;
+    if (m_passthroughRunning) return true;
+    if (m_passthrough == XR_NULL_HANDLE) {
+        XrSystemPassthroughPropertiesFB support{XR_TYPE_SYSTEM_PASSTHROUGH_PROPERTIES_FB};
+        XrSystemProperties properties{XR_TYPE_SYSTEM_PROPERTIES};
+        properties.next = &support;
+        if (XR_FAILED(xrGetSystemProperties(m_instance, m_systemId, &properties)) || !support.supportsPassthrough) {
+            m_passthroughFailed = true;
+            __android_log_print(ANDROID_LOG_WARN, kLogTag, "System passthrough unavailable; retain black background");
+            return false;
+        }
+        const auto load = [this](const char *name, auto *function) {
+            return XR_SUCCEEDED(xrGetInstanceProcAddr(m_instance, name,
+                reinterpret_cast<PFN_xrVoidFunction *>(function))) && *function != nullptr;
+        };
+        if (!load("xrCreatePassthroughFB", &m_createPassthrough)
+            || !load("xrDestroyPassthroughFB", &m_destroyPassthrough)
+            || !load("xrPassthroughStartFB", &m_startPassthrough)
+            || !load("xrPassthroughPauseFB", &m_pausePassthrough)
+            || !load("xrCreatePassthroughLayerFB", &m_createPassthroughLayer)
+            || !load("xrDestroyPassthroughLayerFB", &m_destroyPassthroughLayer)
+            || !load("xrPassthroughLayerResumeFB", &m_resumePassthroughLayer)
+            || !load("xrPassthroughLayerPauseFB", &m_pausePassthroughLayer)) {
+            m_passthroughFailed = true;
+            __android_log_print(ANDROID_LOG_WARN, kLogTag, "Passthrough functions unavailable; retain black background");
+            return false;
+        }
+        XrPassthroughCreateInfoFB info{XR_TYPE_PASSTHROUGH_CREATE_INFO_FB};
+        XrResult result = m_createPassthrough(m_session, &info, &m_passthrough);
+        if (XR_SUCCEEDED(result)) {
+            XrPassthroughLayerCreateInfoFB layer{XR_TYPE_PASSTHROUGH_LAYER_CREATE_INFO_FB};
+            layer.passthrough = m_passthrough;
+            layer.purpose = XR_PASSTHROUGH_LAYER_PURPOSE_RECONSTRUCTION_FB;
+            result = m_createPassthroughLayer(m_session, &layer, &m_passthroughLayer);
+        }
+        if (XR_FAILED(result)) {
+            logResult("create front-end passthrough", result);
+            destroyFrontendPassthrough(); m_passthroughFailed = true;
+            return false;
+        }
+    }
+    XrResult result = m_startPassthrough(m_passthrough);
+    if (XR_SUCCEEDED(result)) result = m_resumePassthroughLayer(m_passthroughLayer);
+    if (XR_FAILED(result)) {
+        logResult("start front-end passthrough", result);
+        destroyFrontendPassthrough(); m_passthroughFailed = true;
+        return false;
+    }
+    m_passthroughRunning = true;
+    __android_log_print(ANDROID_LOG_INFO, kLogTag, "Front-end passthrough active; gameplay remains opaque stereo");
+    return true;
+}
+
+void Bootstrap::destroyFrontendPassthrough()
+{
+    if (m_passthroughLayer != XR_NULL_HANDLE && m_destroyPassthroughLayer) m_destroyPassthroughLayer(m_passthroughLayer);
+    if (m_passthrough != XR_NULL_HANDLE && m_destroyPassthrough) m_destroyPassthrough(m_passthrough);
+    m_passthroughLayer = XR_NULL_HANDLE; m_passthrough = XR_NULL_HANDLE;
+    m_passthroughRunning = false;
+}
+
 bool Bootstrap::endFrame()
 {
 	if (!m_frameActive) {
@@ -1801,6 +1883,11 @@ bool Bootstrap::endFrame()
 		{XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW},
 	}};
 	XrCompositionLayerProjection projectionLayer{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
+	const bool frontendPassthrough = updateFrontendPassthrough(m_shouldRender && m_viewsValid
+		&& m_menuRenderingComplete && m_menuPresentation == QUEST_XR_MENU_FRONTEND && !m_eyeRenderingComplete);
+	XrCompositionLayerPassthroughFB passthroughLayer{XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB};
+	passthroughLayer.layerHandle = m_passthroughLayer;
+	passthroughLayer.flags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
 	XrCompositionLayerQuad menuLayer{XR_TYPE_COMPOSITION_LAYER_QUAD};
 	const XrCompositionLayerBaseHeader *layers[2] = {};
 	uint32_t layerCount = 0;
@@ -1880,7 +1967,10 @@ bool Bootstrap::endFrame()
 			projectionLayer.space = m_gameSpace;
 			projectionLayer.viewCount = m_viewCount;
 			projectionLayer.views = projectionViews.data();
-			layers[layerCount++] = reinterpret_cast<const XrCompositionLayerBaseHeader *>(&projectionLayer);
+			// Keep both eye buffers opaque in gameplay. Only replace the black front-end projection.
+			layers[layerCount++] = frontendPassthrough
+				? reinterpret_cast<const XrCompositionLayerBaseHeader *>(&passthroughLayer)
+				: reinterpret_cast<const XrCompositionLayerBaseHeader *>(&projectionLayer);
 
 			if (menuWaited && m_menuRenderingComplete) {
 				const MenuGeometry geometry = getMenuGeometry(m_menuPresentation,
@@ -1917,6 +2007,7 @@ bool Bootstrap::endFrame()
 	}
 
 	XrFrameEndInfo endInfo{XR_TYPE_FRAME_END_INFO};
+	if (layerCount == 0) updateFrontendPassthrough(false);
 	endInfo.displayTime = m_predictedDisplayTime;
 	endInfo.environmentBlendMode = m_blendMode;
 	endInfo.layerCount = layerCount;
@@ -2208,6 +2299,8 @@ void Bootstrap::detachGraphics()
 	if (m_localSpace != XR_NULL_HANDLE) {
 		xrDestroySpace(m_localSpace);
 	}
+	destroyFrontendPassthrough();
+	m_passthroughFailed = false;
 	if (m_session != XR_NULL_HANDLE) {
 		xrDestroySession(m_session);
 	}
@@ -2357,6 +2450,10 @@ bool Bootstrap::createInstance()
 		enabledExtensions.push_back(XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME);
 	}
 
+	m_passthroughEnabled = m_passthroughRequested && HasExtension(extensions, XR_FB_PASSTHROUGH_EXTENSION_NAME);
+	if (m_passthroughEnabled) enabledExtensions.push_back(XR_FB_PASSTHROUGH_EXTENSION_NAME);
+	if (m_passthroughRequested && !m_passthroughEnabled)
+		__android_log_print(ANDROID_LOG_WARN, kLogTag, "Passthrough extension unavailable; retain black background");
 	JNIEnv *environment = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
 	jobject activity = static_cast<jobject>(SDL_GetAndroidActivity());
 	JavaVM *vm = nullptr;
@@ -2381,6 +2478,14 @@ bool Bootstrap::createInstance()
 	createInfo.enabledExtensionNames = enabledExtensions.data();
 
 	result = xrCreateInstance(&createInfo, &m_instance);
+	if (XR_FAILED(result) && m_passthroughEnabled) {
+		logResult("optional passthrough instance; retry black background", result);
+		enabledExtensions.pop_back();
+		createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+		m_passthroughEnabled = false;
+		m_instance = XR_NULL_HANDLE;
+		result = xrCreateInstance(&createInfo, &m_instance);
+	}
 	if (XR_FAILED(result)) {
 		logResult("xrCreateInstance", result);
 		return false;

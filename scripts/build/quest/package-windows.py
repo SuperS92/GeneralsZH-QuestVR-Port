@@ -42,9 +42,12 @@ def main():
     parser.add_argument('--engine30', required=True, type=pathlib.Path)
     parser.add_argument('--engine60', required=True, type=pathlib.Path)
     parser.add_argument('--ecj', action='store_true', help='Use pinned Windows host compiler adapter')
+    parser.add_argument('--test-label', default='', help='Local display/artifact identity; Android version remains unchanged')
     parser.add_argument('--signing-config', type=pathlib.Path,
                         help='Ignored local JSON with keystore, password-file, alias and certificate digest')
     args = parser.parse_args()
+    if args.test_label and (len(args.test_label) > 32 or not all(c.isascii() and (c.isalnum() or c in ' _-') for c in args.test_label)):
+        raise SystemExit('Invalid local test label')
     tools = json.loads(args.tools.read_text(encoding='utf-8'))
     # GeneralsX @build Codex 09/10/2026 Reuse verified dependencies while isolating source/build outputs.
     dependency_root = pathlib.Path(tools.get('dependencyRoot', ROOT))
@@ -152,6 +155,7 @@ def main():
                '-PquestDependencyRoot=' + str(dependency_root),
                '-PquestAndroidBuildDir=' + str(pathlib.Path(tools.get('androidBuildRoot', ROOT / 'android/app/build'))),
                ':app:assembleQuestDebug']
+    command.insert(-1, '-PquestTestLabel=' + args.test_label)
     if args.ecj:
         fetch('https://repo.maven.apache.org/maven2/org/eclipse/jdt/ecj/3.45.0/ecj-3.45.0.jar', ecj, ECJ_SHA)
         command[1:1] = ['--init-script', str(pathlib.Path(__file__).with_name('ecj-windows.gradle'))]
@@ -210,12 +214,12 @@ def main():
         raise SystemExit('APK identity/version/architecture differs from the intended Quest artifact')
     release = ROOT / 'releases' / (stamp + '-' + sha(apk)[:12])
     release.mkdir(parents=True, exist_ok=False)
-    apk_name = 'GeneralsZH-QuestVR-' + version['versionName'] + '.apk'
+    apk_name = 'GeneralsZH-QuestVR-' + version['versionName'] + ('-' + args.test_label.replace(' ', '-') if args.test_label else '') + '.apk'
     shutil.copyfile(apk, release / apk_name)
     record = {'package': 'com.generalsx.questvr', 'versionName': version['versionName'], 'versionCode': version['versionCode'],
               'apkSha256': sha(apk), 'engines': records, 'libraries': closure,
               'fontsArchiveSha256': FONTS_SHA, 'javaCompiler': 'ECJ 3.45.0' if args.ecj else 'Javac',
-              'gitCommit': packaging_source, 'nativeSourceCommit': native_source,
+              'gitCommit': packaging_source, 'nativeSourceCommit': native_source, 'testLabel': args.test_label,
               'runtime': 'NOT_VERIFIED', 'crossplay': 'NOT_VERIFIED', 'signing': signing_label,
               'artifactQA': {'signatureV2': 'PASS', 'certificateSha256': expected_certificate, 'zipIntegrity': 'PASS',
                              'zipAlignment16KiB': 'PASS', 'actualIdentityVersionArm64': 'PASS'}}

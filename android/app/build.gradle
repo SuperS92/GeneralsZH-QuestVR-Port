@@ -29,6 +29,10 @@ android {
     defaultConfig {
         applicationId 'com.generalsx.zerohour'
         buildConfigField 'boolean', 'QUEST_VR', 'false'
+        // GeneralsX @build Codex 12/10/2026 Separate local identity; release/updater versions stay numeric.
+        def questTestLabel = project.findProperty('questTestLabel') ?: ''
+        if (!(questTestLabel ==~ /[A-Za-z0-9 _-]{0,32}/)) throw new GradleException('Invalid local test label')
+        buildConfigField 'String', 'QUEST_TEST_LABEL', '"' + questTestLabel + '"'
         // API 28 (Android 9): floor that still covers the Redmi Note 8 Pro
         // line while giving bionic glob(3) and stable Vulkan loader behavior.
         // The real graphics gate is the GPU driver, not the OS version — see
