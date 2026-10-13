@@ -12,7 +12,7 @@
 namespace QuestXR {
 namespace {
 constexpr const char *optionNames[] = {"GX_QUEST_PERF_AUDIO", "GX_QUEST_PERF_TRACKS",
-    "GX_QUEST_PERF_TERRAIN", "GX_QUEST_PERF_TREES", "GX_QUEST_PERF_SHADOWS", "GX_QUEST_PERF_SMAA", "GX_QUEST_TERRAIN_BATCHING", "GX_QUEST_TRACK_STREAMING", "GX_QUEST_HUD_TRANSFER"};
+    "GX_QUEST_PERF_TERRAIN", "GX_QUEST_PERF_TREES", "GX_QUEST_PERF_SHADOWS", "GX_QUEST_PERF_SMAA", "GX_QUEST_TERRAIN_BATCHING", "GX_QUEST_TRACK_STREAMING", "GX_QUEST_HUD_TRANSFER", "GX_QUEST_TERRAIN_CULLING"};
 constexpr const char *stageNames[] = {"audio", "tracks", "terrain_blend", "trees", "shadows", "terrain_submit",
     "track_pack", "track_lock", "track_copy", "track_unlock", "track_submit"};
 static_assert(sizeof(optionNames) / sizeof(optionNames[0]) == size_t(PerfOption::Count), "Option names must match");
@@ -38,6 +38,7 @@ uint64_t trackHits = 0, trackUploads = 0, trackSavedBytes = 0;
 uint64_t lightHits = 0, lightMisses = 0, shadowAppends = 0, shadowResets = 0;
 uint64_t treeOriginalBytes = 0, treeWrittenBytes = 0;
 uint64_t terrainDraws[2][2]{}, terrainPatches[2][2]{};
+uint64_t terrainAttempted[2][2]{}, terrainCulled[2][2]{}, terrainFallback[2][2]{};
 bool strictSwitch(const char *name) {
     const char *s = std::getenv(name);
     return s && std::strcmp(s, "1") == 0;
@@ -114,7 +115,15 @@ void RecordPerformanceFrameInterval(double milliseconds) {
             PerformanceRequested(PerfOption::TerrainBatching), eye, pass,
             (unsigned long long)terrainDraws[eye][pass], (unsigned long long)terrainPatches[eye][pass]);
     for (int eye = 0; eye < 2; ++eye) for (int pass = 0; pass < 2; ++pass)
+    {
+        __android_log_print(ANDROID_LOG_INFO, "GeneralsXR",
+            "Quest terrain cull: enabled=%d eye=%d shroud=%d attempted_patches=%llu culled_patches=%llu fallback_patches=%llu (120 frames)",
+            PerformanceRequested(PerfOption::TerrainCulling),eye,pass,
+            (unsigned long long)terrainAttempted[eye][pass],(unsigned long long)terrainCulled[eye][pass],
+            (unsigned long long)terrainFallback[eye][pass]);
         terrainDraws[eye][pass] = terrainPatches[eye][pass] = 0;
+        terrainAttempted[eye][pass] = terrainCulled[eye][pass] = terrainFallback[eye][pass] = 0;
+    }
     __android_log_print(ANDROID_LOG_INFO, "GeneralsXR",
         "Quest HUD traffic: compact_frames=%llu full_frames=%llu copied_pixels=%llu original_pixels=%llu (120 frames)",
         (unsigned long long)hudCompactFrames, (unsigned long long)hudFullFrames,
@@ -181,6 +190,13 @@ bool ContinueShadowBuffer(const void *owner, const void *vertices, const void *i
 }
 void InvalidateShadowBuffer() {
     shadowOwner = shadowVertices = shadowIndices = nullptr; shadowEye = -1;
+}
+void RecordTerrainCull(unsigned patches, bool shroud, bool culled, bool eligible) {
+    const int eye=PerformanceEye(), pass=shroud?1:0;
+    if (!PerformanceMetricsRequested() || eye<0) return;
+    terrainAttempted[eye][pass]+=patches;
+    if (culled) terrainCulled[eye][pass]+=patches;
+    if (!eligible) terrainFallback[eye][pass]+=patches;
 }
 void RecordTerrainSubmission(unsigned patches, bool shroud) {
     const int eye = PerformanceEye();

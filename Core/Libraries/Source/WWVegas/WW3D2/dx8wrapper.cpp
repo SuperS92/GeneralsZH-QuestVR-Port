@@ -54,6 +54,7 @@
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
 #include "../../../../GameEngineDevice/Include/VRDevice/QuestDrawCapture.h"
 #include "../../../../GameEngineDevice/Include/VRDevice/QuestSoftCutouts.h"
+#include "../../../../GameEngineDevice/Include/VRDevice/QuestTerrainCulling.h"
 #endif
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -2871,6 +2872,9 @@ void DX8Wrapper::Draw(
 				QuestXR_RecordDiagnosticDraw(D3DDevice, render_state.Textures, MAX_TEXTURE_STAGES);
 #endif
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+                // Keep wrapper state application and legacy draw/LOD statistics.
+                // Only actual native terrain GPU submissions are suppressed.
+                if (!QuestXR_SuppressTerrainDraw()) {
                 if (!QuestXR_DrawSoftCutout(D3DDevice, render_state.Textures, MAX_TEXTURE_STAGES,
                     primitive_type, min_vertex_index, vertex_count,
                     start_index + render_state.iba_offset, polygon_count))
@@ -2883,6 +2887,9 @@ void DX8Wrapper::Draw(
 					start_index+render_state.iba_offset,
 					polygon_count));
                 }
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+                }
+#endif
 			}
 			break;
 		case BUFFER_TYPE_SORTING:

@@ -36,6 +36,10 @@
 #include "Common/GameType.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "W3DDevice/GameClient/BaseHeightMap.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestTerrainCulling.h"
+#include <vector>
+#endif
 
 
 // Adjust the triangles to make cliff sides most attractive.  jba.
@@ -107,6 +111,8 @@ protected:
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
 	// GeneralsX @performance Codex 09/10/2026 Storage grouping preserves original per-patch mirrors.
 	unsigned m_questTerrainGroupSize = 1;
+	std::vector<QuestXR::TerrainPatchBounds> m_questTerrainBounds;
+	bool questTerrainOutside(Int tile, unsigned count, const QuestXR::TerrainFrustum &frustum, bool &eligible) const;
 	unsigned questTerrainVertexOffset(Int originX, Int originY) const;
 	unsigned questTerrainDrawPatches(Int tile) const;
 #endif

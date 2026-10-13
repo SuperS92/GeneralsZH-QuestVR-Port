@@ -243,9 +243,9 @@
     {
       "path": "Core/GameEngineDevice/Include/W3DDevice/GameClient/HeightMap.h",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Quest-only terrain group storage offsets; original patch geometry/updates retained",
+      "purpose": "Quest-only terrain group storage offsets; original patch geometry/updates retained; default-off Quest per-eye terrain bounds culling suppresses only native draws, retaining updates/state/statistics",
       "risk": "presentation/resource lifetime",
-      "owningTest": "index/span/range host fixtures; both native builds; map/light/stereo and replay/live gates",
+      "owningTest": "index/span/range host fixtures; both native builds; map/light/stereo and replay/live gates; full-write coverage, group/plane/edge/stereo culling oracle, dual native profiles, headset and replay/live PC gates",
       "removalCondition": "Upstream provides equivalent grouped terrain submission"
     },
     {

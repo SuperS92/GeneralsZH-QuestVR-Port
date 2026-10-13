@@ -49,6 +49,7 @@
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
 #include "VRDevice/QuestPerformance.h"
 #include "VRDevice/QuestTerrainBatching.h"
+#include "VRDevice/QuestTerrainCulling.h"
 #include <optional>
 #include <android/log.h>
 #include <algorithm>
@@ -155,6 +156,38 @@ public:
     QuestTerrainPatchLock &operator=(const QuestTerrainPatchLock &) = delete;
 };
 }
+// GeneralsX @performance Codex 13/10/2026 Use the actual asymmetric eye camera.
+namespace {
+QuestXR::TerrainFrustum questTerrainFrustum(CameraClass *camera, const Matrix3D &world) {
+    if (!camera || !QuestXR::PerformanceRequested(QuestXR::PerfOption::TerrainCulling)
+        || QuestXR::PerformanceEye() < 0 || ShaderClass::Is_Backface_Culling_Inverted()) return {};
+    // The auxiliary shroud pass uses identity. Nonidentity terrain transforms
+    // stay on the original path until separately validated.
+    for (unsigned row=0; row<3; ++row) for (unsigned column=0; column<4; ++column)
+        if (world[row][column] != (row==column ? 1.0f : 0.0f)) return {};
+    auto *scene = static_cast<RTS3DScene *>(camera->Get_User_Data());
+    if (!scene || scene->getCustomPassMode()!=SCENE_PASS_DEFAULT
+        || scene->Get_Extra_Pass_Polygon_Mode()!=SceneClass::EXTRA_PASS_DISABLE) return {};
+    const FrustumClass &source = camera->Get_Frustum();
+    std::array<QuestXR::TerrainPlane,6> planes;
+    std::array<QuestXR::TerrainPoint,8> corners;
+    for (unsigned i=0; i<6; ++i) planes[i] = {{source.Planes[i].N.X,
+        source.Planes[i].N.Y, source.Planes[i].N.Z}, source.Planes[i].D};
+    for (unsigned i=0; i<8; ++i) corners[i] = {source.Corners[i].X,source.Corners[i].Y,source.Corners[i].Z};
+    return QuestXR::PrepareTerrainFrustum(planes,corners,true);
+}
+}
+bool HeightMapRenderObjClass::questTerrainOutside(Int tile, unsigned count,
+    const QuestXR::TerrainFrustum &frustum, bool &eligible) const {
+    eligible = false;
+    QuestXR::TerrainBounds bounds;
+#ifdef PRE_TRANSFORM_VERTEX
+    if (m_xformedVertexBuffer) return false;
+#endif
+    eligible = frustum.valid && tile>=0
+        && QuestXR::TerrainGroupBounds(m_questTerrainBounds.data(),m_questTerrainBounds.size(),tile,count,bounds);
+    return eligible && QuestXR::TerrainOutside(bounds,frustum);
+}
 unsigned HeightMapRenderObjClass::questTerrainVertexOffset(Int originX, Int originY) const {
     QuestXR::TerrainPatchSpan span;
     const unsigned patch = originY / VERTEX_BUFFER_TILE_LENGTH * m_numVBTilesX + originX / VERTEX_BUFFER_TILE_LENGTH;
@@ -197,6 +230,9 @@ inline Int IABS(Int x) {	if (x>=0) return x; return -x;};
 //=============================================================================
 void HeightMapRenderObjClass::freeIndexVertexBuffers()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    m_questTerrainBounds.clear();
+#endif
 	REF_PTR_RELEASE(m_indexBuffer);
 
 	if (m_vertexBufferTiles) {
@@ -401,6 +437,12 @@ Int HeightMapRenderObjClass::updateVB(DX8VertexBufferClass	*pVB, VERTEX_FORMAT *
 #endif
 		VERTEX_FORMAT *vbHardware = (VERTEX_FORMAT*)lockVtxBuffer.Get_Vertex_Array();
 		VERTEX_FORMAT *vBase = data;
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        const int questPatch = originY / VERTEX_BUFFER_TILE_LENGTH * m_numVBTilesX + originX / VERTEX_BUFFER_TILE_LENGTH;
+        QuestXR::TerrainPatchBounds *questBounds = questPatch>=0 && size_t(questPatch)<m_questTerrainBounds.size()
+            ? &m_questTerrainBounds[questPatch] : nullptr;
+        static_assert(HEIGHTMAP_VERTEX_NUM/4==QuestXR::TerrainPatchBounds::Cells);
+#endif
 		// Note that we are building the vertex buffer data in the memory buffer, data.
 		// At the bottom, we will copy the final vertex data for one cell into the
 		// hardware vertex buffer.
@@ -612,6 +654,15 @@ Int HeightMapRenderObjClass::updateVB(DX8VertexBufferClass	*pVB, VERTEX_FORMAT *
 				// a couple of rows and its a lot faster to just copy the ones that change.
 				Int offset = pCurVertices - vBase;
 				memcpy(vbHardware+offset, pCurVertices, 4*sizeof(VERTEX_FORMAT));
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+                if (questBounds) {
+                    std::array<QuestXR::TerrainPoint,4> points;
+                    for (unsigned v=0; v<4; ++v) points[v]={pCurVertices[v].x,pCurVertices[v].y,pCurVertices[v].z};
+                    // Include the final positions after triangle flips and the original upload.
+                    // Bounds only grow during partial updates; unknown padding is never culled.
+                    questBounds->Observe(unsigned(offset)/4,points);
+                }
+#endif
 			}
 		}
 		return 0; //success.
@@ -1455,6 +1506,10 @@ Int HeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *pMap, 
 
 		m_vertexBufferTiles = NEW DX8VertexBufferClass*[m_numVertexBufferTiles];
 		m_vertexBufferBackup = NEW VERTEX_FORMAT [m_numVertexBufferTiles * HEIGHTMAP_VERTEX_NUM];
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+        if (QuestXR::PerformanceRequested(QuestXR::PerfOption::TerrainCulling))
+            m_questTerrainBounds.assign(m_numVertexBufferTiles,{});
+#endif
 
 		for (i=0; i<m_numVertexBufferTiles; i++) {
             unsigned vertices = HEIGHTMAP_VERTEX_NUM;
@@ -2028,6 +2083,9 @@ void HeightMapRenderObjClass::Render(RenderInfoClass & rinfo)
 	}
 
 	Matrix3D tm(Transform);
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    const auto questCullFrustum = questTerrainFrustum(&rinfo.Camera,tm);
+#endif
 #if 0 // There is some weirdness sometimes with the dx8 static buffers.
 			// This usually fixes terrain flashing.  jba.
 	static Int delay = 1;
@@ -2202,7 +2260,11 @@ void HeightMapRenderObjClass::Render(RenderInfoClass & rinfo)
 #endif
 				if (Is_Hidden() == 0) {
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
-                    QuestXR::RecordTerrainSubmission(drawPatches, false);
+                    bool questCullEligible;
+                    const bool questCulled = questTerrainOutside(j*m_numVBTilesX+i,drawPatches,questCullFrustum,questCullEligible);
+                    QuestXR::TerrainCullDrawScope cullDraw(questCulled);
+                    QuestXR::RecordTerrainCull(drawPatches,false,questCulled,questCullEligible);
+                    if (!questCulled) QuestXR::RecordTerrainSubmission(drawPatches, false);
 #endif
                     DX8Wrapper::Draw_Triangles(0, HEIGHTMAP_POLYGON_NUM * drawPatches, 0, HEIGHTMAP_VERTEX_NUM * drawPatches);
 				}
@@ -2311,6 +2373,9 @@ void HeightMapRenderObjClass::renderTerrainPass(CameraClass *pCamera)
     QuestXR::PerformanceStageScope submissionTime(QuestXR::PerfStage::TerrainSubmit);
 #endif
 	DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix3D(true));
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    const auto questCullFrustum = questTerrainFrustum(pCamera,Matrix3D(true));
+#endif
 
 	//Apply the shader and material
 
@@ -2344,7 +2409,11 @@ void HeightMapRenderObjClass::renderTerrainPass(CameraClass *pCamera)
 #endif
 			if (Is_Hidden() == 0) {
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
-                    QuestXR::RecordTerrainSubmission(drawPatches, true);
+                    bool questCullEligible;
+                    const bool questCulled = questTerrainOutside(j*m_numVBTilesX+i,drawPatches,questCullFrustum,questCullEligible);
+                    QuestXR::TerrainCullDrawScope cullDraw(questCulled);
+                    QuestXR::RecordTerrainCull(drawPatches,true,questCulled,questCullEligible);
+                    if (!questCulled) QuestXR::RecordTerrainSubmission(drawPatches, true);
 #endif
                     DX8Wrapper::Draw_Triangles(0, HEIGHTMAP_POLYGON_NUM * drawPatches, 0, HEIGHTMAP_VERTEX_NUM * drawPatches);
 			}

@@ -176,6 +176,10 @@ public class SetupActivity extends Activity {
         return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getBoolean("quest_hud_transfer", false);
     }
+    static boolean getQuestTerrainCulling(android.content.Context ctx) {
+        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean("quest_terrain_culling", false);
+    }
     static final String[] QUEST_PERF_KEYS = {"quest_perf_audio", "quest_perf_tracks", "quest_perf_terrain",
         "quest_perf_trees", "quest_perf_shadows", "quest_perf_smaa", "quest_perf_metrics", "quest_terrain_batching"};
     static final String[] QUEST_PERF_ENV = {"GX_QUEST_PERF_AUDIO", "GX_QUEST_PERF_TRACKS", "GX_QUEST_PERF_TERRAIN",
@@ -1784,6 +1788,12 @@ public class SetupActivity extends Activity {
                 getQuestHudTransfer(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .edit().putBoolean("quest_hud_transfer", index == 1).apply());
             UiKit.supporting(hudTransfer, getString(R.string.quest_hud_transfer_desc));
+            LinearLayout terrainCulling = UiKit.card(root);
+            UiKit.sectionHeader(terrainCulling, R.drawable.ic_gzh_display, getString(R.string.quest_terrain_culling), false);
+            UiKit.segmented(terrainCulling, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
+                getQuestTerrainCulling(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit().putBoolean("quest_terrain_culling", index == 1).apply());
+            UiKit.supporting(terrainCulling, getString(R.string.quest_terrain_culling_desc));
             int[] titles = {R.string.quest_perf_audio, R.string.quest_perf_tracks, R.string.quest_perf_terrain,
                 R.string.quest_perf_trees, R.string.quest_perf_shadows, R.string.quest_perf_smaa, R.string.quest_perf_metrics, R.string.quest_terrain_batching};
             int[] descriptions = {R.string.quest_perf_audio_desc, R.string.quest_perf_tracks_desc, R.string.quest_perf_terrain_desc,

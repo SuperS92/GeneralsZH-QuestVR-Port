@@ -434,4 +434,6 @@
     <string name="quest_fence_contours_desc">GlÃ¤ttet unterstÃ¼tzte Zaunmuster und transparente Kanten. ZÃ¤une kÃ¶nnen weicher oder dÃ¼nner aussehen. VollstÃ¤ndiger Neustart nÃ¶tig.</string>
     <string name="quest_hud_transfer">HUD-Übertragung (experimentell)</string>
     <string name="quest_hud_transfer_desc">Überträgt den kleinen HUD-Bereich in einen kleineren Ausgabepuffer. Breite und Schärfe bleiben gleich; größere Fenster verwenden den vollen Puffer. Standardmäßig aus. Spiel und Launcher vollständig neu starten.</string>
+    <string name="quest_terrain_culling">Gelände-Sichtfeld (experimentell)</string>
+    <string name="quest_terrain_culling_desc">Überspringt Geländegruppen vollständig außerhalb des Augenbildes. Spiel und Launcher nach Änderungen vollständig neu starten.</string>
 </resources>

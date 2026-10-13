@@ -7,7 +7,7 @@
 #include <vector>
 namespace QuestXR {
 // GeneralsX @performance Codex 05/10/2026 Independent, default-off presentation experiments.
-enum class PerfOption { AudioGrowth, TrackUpload, TerrainLighting, TreeRange, ShadowAppend, SmaaScratch, TerrainBatching, TrackStreaming, HudTransfer, Count };
+enum class PerfOption { AudioGrowth, TrackUpload, TerrainLighting, TreeRange, ShadowAppend, SmaaScratch, TerrainBatching, TrackStreaming, HudTransfer, TerrainCulling, Count };
 enum class PerfStage { Audio, Tracks, TerrainBlend, Trees, Shadows, TerrainSubmit, TrackPack, TrackLock, TrackCopy, TrackUnlock, TrackSubmit, Count };
 bool PerformanceRequested(PerfOption option);
 bool PerformanceMetricsRequested();
@@ -53,6 +53,7 @@ bool ContinueShadowBuffer(const void *owner, const void *vertices, const void *i
 void InvalidateShadowBuffer();
 void RecordTreeRange(size_t originalBytes, size_t writtenBytes);
 void RecordTerrainSubmission(unsigned patches, bool shroud);
+void RecordTerrainCull(unsigned patches, bool shroud, bool culled, bool eligible);
 void RecordHudTransfer(unsigned width, unsigned fullHeight, unsigned copiedHeight, bool compact);
 template<class T> void AppendPerfInput(std::vector<uint8_t> &bytes, const T &value) {
     const auto *p = reinterpret_cast<const uint8_t *>(&value);

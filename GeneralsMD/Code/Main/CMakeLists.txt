@@ -200,6 +200,6 @@ if(ANDROID)
 endif()
 
 if(SAGE_USE_OPENXR)
-    target_sources(z_generals PRIVATE QuestVR/QuestOpenXRBootstrap.cpp QuestVR/QuestHudTransfer.cpp QuestVR/QuestSpatialAA.cpp QuestVR/QuestSMAA.cpp QuestVR/QuestEyeCapture.cpp QuestVR/QuestDrawCapture.cpp QuestVR/QuestTerrainDetailTest.cpp QuestVR/QuestTerrainMipFilter.cpp QuestVR/QuestGraphicsChoices.cpp QuestVR/QuestCutoutMips.cpp QuestVR/QuestSoftCutouts.cpp QuestVR/QuestPerformance.cpp QuestVR/QuestTreeWind.cpp QuestVR/QuestTreeContours.cpp QuestVR/QuestTerrainFarMips.cpp QuestVR/QuestFenceContours.cpp)
+    target_sources(z_generals PRIVATE QuestVR/QuestOpenXRBootstrap.cpp QuestVR/QuestHudTransfer.cpp QuestVR/QuestTerrainCulling.cpp QuestVR/QuestSpatialAA.cpp QuestVR/QuestSMAA.cpp QuestVR/QuestEyeCapture.cpp QuestVR/QuestDrawCapture.cpp QuestVR/QuestTerrainDetailTest.cpp QuestVR/QuestTerrainMipFilter.cpp QuestVR/QuestGraphicsChoices.cpp QuestVR/QuestCutoutMips.cpp QuestVR/QuestSoftCutouts.cpp QuestVR/QuestPerformance.cpp QuestVR/QuestTreeWind.cpp QuestVR/QuestTreeContours.cpp QuestVR/QuestTerrainFarMips.cpp QuestVR/QuestFenceContours.cpp)
     target_link_libraries(z_generals PRIVATE OpenXR::openxr_loader vulkan)
 endif()

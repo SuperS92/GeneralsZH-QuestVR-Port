@@ -441,4 +441,6 @@
     <string name="quest_track_streaming_desc">Tries to avoid waits when updating vehicle track buffers. Keeps tracks visible. Default off. Fully restart the game and launcher.</string>
     <string name="quest_hud_transfer">HUD transfer (experimental)</string>
     <string name="quest_hud_transfer_desc">Transfers the compact HUD into a smaller output buffer. Keeps pixel width and sharpness; larger windows use the full buffer. Default off. Fully restart the game and launcher.</string>
+    <string name="quest_terrain_culling">Terrain view culling (experimental)</string>
+    <string name="quest_terrain_culling_desc">Skip terrain groups entirely outside each eye view. Fully restart the game and launcher after changes.</string>
 </resources>
