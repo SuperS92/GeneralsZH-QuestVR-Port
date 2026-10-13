@@ -10,6 +10,7 @@ and scene advancement remain unchanged. Observe successful original RGB565
 surface copies into the particular fog texture; unknown texels, failed copies
 and reset/released resources cannot qualify a region. Build a bounded reusable
 prefix map of uploaded white texels, without a GPU readback or disk writes.
+Keep observation and draw scopes local to their render thread.
 
 Only explicit ordinary terrain fog draws qualify. Confirm the actual native
 texture/vertex/index bindings, fixed-function shader, multiplicative blending,

@@ -12,11 +12,12 @@ struct Mirror {
     const void *pixels=nullptr;
     unsigned width=0,height=0,sourceWidth=0,sourceHeight=0,pitch=0;
     bool uploading=false;
-} mirror;
+};
+thread_local Mirror mirror;
 thread_local const QuestXR::TerrainPatchBounds *drawBounds=nullptr;
 thread_local unsigned drawCount=0;
 thread_local IDirect3DVertexBuffer8 *drawVertices=nullptr;
-QuestXR::ShroudPassStats counters;
+thread_local QuestXR::ShroudPassStats counters;
 bool requested() { return QuestXR::PerformanceRequested(QuestXR::PerfOption::NeutralShroud); }
 void attempted(unsigned skipped,unsigned runs) {
     if (!QuestXR::PerformanceMetricsRequested()) return;
