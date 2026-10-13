@@ -351,6 +351,14 @@
       "risk": "launcher presentation only",
       "owningTest": "Quest/phone Java compilation; headset navigation and return check",
       "removalCondition": "Upstream supplies six-destination navigation"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/W3DShroud.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Default-off scoped observer of successful original RGB565 fog uploads; invalidate mirror on reset/release; visibility/interpolation/upload timing unchanged",
+      "risk": "Optional presentation metadata; unknown/failed copies remain nonneutral",
+      "owningTest": "CPU mask/upload-failure/footprint/index oracles; compiled optional D3D9 GPU bridge fixture currently pending; dual native, source boundary, Quest fog/transition/FPS and replay/live PC gates",
+      "removalCondition": "Upstream provides equivalent verified neutral-pass rejection or trial is rejected"
     }
   ],
   "followUpUpstreamEdits": [

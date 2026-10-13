@@ -43,7 +43,7 @@ exe = work / 'capture-smoke.exe'
 subprocess.run([str(compiler / 'clang++.exe'), '-std=c++17', '-static', '-D__ANDROID__', '-DSAGE_USE_OPENXR', '-DQUEST_DRAW_CAPTURE_HOST', '-DQUEST_SOFT_CUTOUT_HOST', '-DQUEST_FENCE_CONTOUR_HOST',
     '-I' + str(work / 'include'), '-I' + str(root / 'scripts/qa/quest/host-shims'),
     '-I' + str(root / 'Core/GameEngineDevice/Include'), '-I' + str(source.parent),
-    str(source), str(aa), str(smaa), str(performance), str(draw), str(terrain), str(mips), str(choices), str(cutouts), str(soft), str(wind), str(contours), str(far_mips), str(fences), str(test), str(work / 'libvulkan.a'), '-o', str(exe)], check=True)
+    str(source), str(aa), str(smaa), str(performance), str(source.with_name('QuestShroudPass.cpp')), str(draw), str(terrain), str(mips), str(choices), str(cutouts), str(soft), str(wind), str(contours), str(far_mips), str(fences), str(test), str(work / 'libvulkan.a'), '-o', str(exe)], check=True)
 sessions = work / datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
 result = subprocess.run([str(exe), sessions.as_posix()], capture_output=True, text=True, timeout=60)
 (work / 'result.log').write_text(result.stdout + result.stderr, encoding='utf-8')

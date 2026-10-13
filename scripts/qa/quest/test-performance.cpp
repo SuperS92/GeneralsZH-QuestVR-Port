@@ -33,6 +33,12 @@ int main() {
     _putenv_s("GX_QUEST_TERRAIN_CULLING", "1");
     require(PerformanceRequested(PerfOption::TerrainCulling), "Terrain culling enables independently");
     _putenv_s("GX_QUEST_TERRAIN_CULLING", "");
+    require(!PerformanceRequested(PerfOption::NeutralShroud), "Neutral shroud defaults off");
+    _putenv_s("GX_QUEST_NEUTRAL_SHROUD", "true");
+    require(!PerformanceRequested(PerfOption::NeutralShroud), "Neutral shroud requires exact 1");
+    _putenv_s("GX_QUEST_NEUTRAL_SHROUD", "1");
+    require(PerformanceRequested(PerfOption::NeutralShroud), "Neutral shroud enables independently");
+    _putenv_s("GX_QUEST_NEUTRAL_SHROUD", "");
     for (bool planar : {false, true}) for (size_t sampleBytes : {size_t(1),size_t(2),size_t(4)})
         for (size_t channels : {size_t(1),size_t(2),size_t(6)}) {
         std::vector<uint8_t> original, geometric;

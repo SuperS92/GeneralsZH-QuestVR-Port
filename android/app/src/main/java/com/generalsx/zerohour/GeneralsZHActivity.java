@@ -451,6 +451,7 @@ public class GeneralsZHActivity extends SDLActivity {
                 android.system.Os.setenv("GX_QUEST_TRACK_STREAMING", SetupActivity.getQuestTrackStreaming(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_HUD_TRANSFER", SetupActivity.getQuestHudTransfer(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_TERRAIN_CULLING", SetupActivity.getQuestTerrainCulling(this) ? "1" : "0", true);
+                android.system.Os.setenv("GX_QUEST_NEUTRAL_SHROUD", SetupActivity.getQuestNeutralShroud(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_TEST_LABEL", BuildConfig.QUEST_TEST_LABEL, true);
                 android.system.Os.setenv("GX_QUEST_FIXED_SCREEN", SetupActivity.getQuestFixedScreen(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_FLAT_INTRO", SetupActivity.getQuestFlatIntro(this) ? "1" : "0", true);

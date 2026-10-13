@@ -11,7 +11,7 @@ compiler=pathlib.Path(tools['hostCxxRuntime'])/'clang++.exe'
 exe=work/'performance-smoke.exe'
 subprocess.run([str(compiler),'-std=c++17','-static','-D__ANDROID__','-DSAGE_USE_OPENXR',
     '-I'+str(root/'Core/GameEngineDevice/Include'),'-I'+str(root/'scripts/qa/quest/host-shims'),
-    str(root/'GeneralsMD/Code/Main/QuestVR/QuestPerformance.cpp'),str(root/'scripts/qa/quest/test-performance.cpp'),
+    str(root/'GeneralsMD/Code/Main/QuestVR/QuestPerformance.cpp'),str(root/'GeneralsMD/Code/Main/QuestVR/QuestShroudPass.cpp'),str(root/'scripts/qa/quest/test-performance.cpp'),
     '-o',str(exe)],check=True)
 result=subprocess.run([str(exe)],capture_output=True,text=True,timeout=30)
 log=result.stdout+result.stderr; print(log)

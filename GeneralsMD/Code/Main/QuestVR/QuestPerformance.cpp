@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "VRDevice/QuestPerformance.h"
+#include "VRDevice/QuestShroudPass.h"
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
 #include <android/log.h>
 #include <algorithm>
@@ -12,7 +13,7 @@
 namespace QuestXR {
 namespace {
 constexpr const char *optionNames[] = {"GX_QUEST_PERF_AUDIO", "GX_QUEST_PERF_TRACKS",
-    "GX_QUEST_PERF_TERRAIN", "GX_QUEST_PERF_TREES", "GX_QUEST_PERF_SHADOWS", "GX_QUEST_PERF_SMAA", "GX_QUEST_TERRAIN_BATCHING", "GX_QUEST_TRACK_STREAMING", "GX_QUEST_HUD_TRANSFER", "GX_QUEST_TERRAIN_CULLING"};
+    "GX_QUEST_PERF_TERRAIN", "GX_QUEST_PERF_TREES", "GX_QUEST_PERF_SHADOWS", "GX_QUEST_PERF_SMAA", "GX_QUEST_TERRAIN_BATCHING", "GX_QUEST_TRACK_STREAMING", "GX_QUEST_HUD_TRANSFER", "GX_QUEST_TERRAIN_CULLING", "GX_QUEST_NEUTRAL_SHROUD"};
 constexpr const char *stageNames[] = {"audio", "tracks", "terrain_blend", "trees", "shadows", "terrain_submit",
     "track_pack", "track_lock", "track_copy", "track_unlock", "track_submit"};
 static_assert(sizeof(optionNames) / sizeof(optionNames[0]) == size_t(PerfOption::Count), "Option names must match");
@@ -129,6 +130,13 @@ void RecordPerformanceFrameInterval(double milliseconds) {
         (unsigned long long)hudCompactFrames, (unsigned long long)hudFullFrames,
         (unsigned long long)hudCopiedPixels, (unsigned long long)hudFullPixels);
     hudCopiedPixels = hudFullPixels = hudCompactFrames = hudFullFrames = 0;
+    const auto shroudStats=TakeShroudPassStats();
+    __android_log_print(ANDROID_LOG_INFO,"GeneralsXR",
+        "Quest neutral shroud: enabled=%d attempted_patches=%llu skipped_patches=%llu native_runs=%llu contract_fallback=%llu unknown_bounds=%llu upload_failures=%llu contract_mask=0x%x last_state=%u expected=%u actual=%u (120 frames)",
+        PerformanceRequested(PerfOption::NeutralShroud),(unsigned long long)shroudStats.attempted,
+        (unsigned long long)shroudStats.skipped,(unsigned long long)shroudStats.submittedRuns,
+        (unsigned long long)shroudStats.contractFallback,(unsigned long long)shroudStats.unknownBounds,
+        (unsigned long long)shroudStats.uploadFailures,shroudStats.contractMask,shroudStats.lastState,shroudStats.lastExpected,shroudStats.lastActual);
     frames = 0; stageMs = {}; stageCalls = {};
     trackHits = trackUploads = trackSavedBytes = lightHits = lightMisses = 0;
     shadowAppends = shadowResets = treeOriginalBytes = treeWrittenBytes = 0;

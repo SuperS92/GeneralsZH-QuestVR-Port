@@ -47,6 +47,10 @@
 // Use angle brackets (not quotes) to skip local d3d8.h stub and get DXVK headers
 // DXVK's d3d8.h includes d3d8types.h internally - no manual includes needed
 #include <d3d8.h>
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+bool QuestXR_CopyShroudRects(IDirect3DDevice8 *device,IDirect3DSurface8 *source,const RECT *rectangles,
+    unsigned count,IDirect3DSurface8 *destination,const POINT *points,HRESULT &result);
+#endif
 #include "matrix4.h"
 #include "statistics.h"
 #include "wwstring.h"
@@ -1015,6 +1019,14 @@ WWINLINE void DX8Wrapper::_Copy_DX8_Rects(
   CONST POINT* pDestPointsArray
 )
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @performance Codex 13/10/2026 Keep copy results with the scoped shroud observer.
+    HRESULT questCopyResult;
+    if (QuestXR_CopyShroudRects(D3DDevice,pSourceSurface,pSourceRectsArray,cRects,
+        pDestinationSurface,pDestPointsArray,questCopyResult)) {
+        DX8_ErrorCode(questCopyResult);Increment_DX8_CallCount();return;
+    }
+#endif
 	DX8CALL(CopyRects(
   pSourceSurface,
   pSourceRectsArray,

@@ -25,7 +25,7 @@ subprocess.run([str(compiler / 'llvm-dlltool.exe'), '-m', 'i386:x86-64', '-d', s
 exe = work / 'aa-smoke.exe'
 command = [str(compiler / 'clang++.exe'), '-std=c++17', '-static', '-D__ANDROID__', '-DSAGE_USE_OPENXR',
     '-I' + str(work / 'include'), '-I' + str(root / 'scripts/qa/quest/host-shims'),
-    '-I' + str(source.parent), '-I' + str(root / 'Core/GameEngineDevice/Include'), str(source), str(smaa), str(performance), str(test), str(work / 'libvulkan.a'), '-o', str(exe)]
+    '-I' + str(source.parent), '-I' + str(root / 'Core/GameEngineDevice/Include'), str(source), str(smaa), str(performance), str(source.with_name('QuestShroudPass.cpp')), str(test), str(work / 'libvulkan.a'), '-o', str(exe)]
 subprocess.run(command, check=True)
 checksums=[]
 for enabled in ('0','1'):

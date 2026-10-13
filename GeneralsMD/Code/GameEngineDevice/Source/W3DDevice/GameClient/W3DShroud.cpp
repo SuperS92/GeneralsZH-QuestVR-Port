@@ -41,6 +41,9 @@
 #include "WW3D2/textureloader.h"
 #include "Common/GlobalData.h"
 #include "GameLogic/PartitionManager.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestShroudPass.h"
+#endif
 
 
 //-----------------------------------------------------------------------------
@@ -202,6 +205,9 @@ void W3DShroud::init(WorldHeightMap *pMap, Real worldCellSizeX, Real worldCellSi
 ///Called on map reset.
 void W3DShroud::reset()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::ForgetShroudTexture(m_pDstTexture ? m_pDstTexture->Peek_D3D_Texture() : nullptr);
+#endif
 	//Free old shroud data since it may no longer fit new map.
 	if (m_pSrcTexture)
 	{
@@ -222,6 +228,9 @@ void W3DShroud::reset()
 ///Release any resources that can't survive a D3D device reset.
 void W3DShroud::ReleaseResources()
 {
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::ForgetShroudTexture(m_pDstTexture ? m_pDstTexture->Peek_D3D_Texture() : nullptr);
+#endif
 	REF_PTR_RELEASE (m_pDstTexture);
 }
 
@@ -704,6 +713,11 @@ void W3DShroud::render(CameraClass *cam)
 	interpolateFogLevels(&srcRect);
 #endif
 
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @performance Codex 13/10/2026 Observe original successful RGB565 uploads only.
+    QuestXR::ShroudUploadScope questShroudUpload(m_pSrcTexture,pDestSurface->Peek_D3D_Surface(),
+        m_pDstTexture->Peek_D3D_Texture(),m_srcTextureData,m_srcTexturePitch,m_numCellsX,m_numCellsY+1);
+#endif
 	if (m_clearDstTexture)
 	{	//we need to clear unused parts of the destination texture to a known
 		//color in order to keep map border in the state we want.

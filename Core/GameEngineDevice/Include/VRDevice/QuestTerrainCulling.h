@@ -25,13 +25,16 @@ struct TerrainPatchBounds {
     std::array<uint64_t,Cells/64> written{};
     unsigned cells = 0;
     bool unsafe = false;
+    bool uploaded = false;
     void Observe(unsigned cell, const std::array<TerrainPoint,4> &vertices) {
+        uploaded = false;
         if (cell >= Cells) { unsafe = true; return; }
         for (auto p : vertices) if (!bounds.Include(p)) unsafe = true;
         const uint64_t bit = uint64_t(1) << (cell % 64);
         if (!(written[cell/64] & bit)) { written[cell/64] |= bit; ++cells; }
     }
     bool Complete() const { return !unsafe && bounds.valid && cells == Cells; }
+    void CompleteUpload(bool success) { uploaded = success;if(!success)unsafe=true; }
 };
 inline bool TerrainGroupBounds(const TerrainPatchBounds *patches, size_t total,
     size_t first, size_t count, TerrainBounds &out) {

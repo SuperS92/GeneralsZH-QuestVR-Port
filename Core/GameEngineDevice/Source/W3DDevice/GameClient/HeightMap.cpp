@@ -50,6 +50,7 @@
 #include "VRDevice/QuestPerformance.h"
 #include "VRDevice/QuestTerrainBatching.h"
 #include "VRDevice/QuestTerrainCulling.h"
+#include "VRDevice/QuestShroudPass.h"
 #include <optional>
 #include <android/log.h>
 #include <algorithm>
@@ -123,9 +124,12 @@ class QuestTerrainPatchLock {
     DX8VertexBufferClass *buffer = nullptr;
     VERTEX_FORMAT *vertices = nullptr;
     bool locked = false;
+    QuestXR::TerrainPatchBounds *observer = nullptr;
     std::optional<DX8VertexBufferClass::WriteLockClass> original;
 public:
-    QuestTerrainPatchLock(DX8VertexBufferClass *vb, unsigned group, unsigned offset) {
+    QuestTerrainPatchLock(DX8VertexBufferClass *vb, unsigned group, unsigned offset,
+        QuestXR::TerrainPatchBounds *bounds = nullptr) : observer(bounds) {
+        if (observer) observer->uploaded=false;
         if (group == 1) {
             original.emplace(vb);
             vertices = static_cast<VERTEX_FORMAT *>(original->Get_Vertex_Array());
@@ -147,7 +151,11 @@ public:
     }
     ~QuestTerrainPatchLock() {
         if (buffer) {
-            if (locked) DX8_ErrorCode(buffer->Get_DX8_Vertex_Buffer()->Unlock());
+            if (locked) {
+                const HRESULT result=buffer->Get_DX8_Vertex_Buffer()->Unlock();
+                if(observer)observer->CompleteUpload(SUCCEEDED(result));
+                DX8_ErrorCode(result);
+            }
             buffer->Release_Ref();
         }
     }
@@ -430,7 +438,10 @@ Int HeightMapRenderObjClass::updateVB(DX8VertexBufferClass	*pVB, VERTEX_FORMAT *
 #endif
 
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
-        QuestTerrainPatchLock lockVtxBuffer(pVB, m_questTerrainGroupSize, questTerrainVertexOffset(originX, originY));
+        const int questPatch = originY / VERTEX_BUFFER_TILE_LENGTH * m_numVBTilesX + originX / VERTEX_BUFFER_TILE_LENGTH;
+        QuestXR::TerrainPatchBounds *questBounds = questPatch>=0 && size_t(questPatch)<m_questTerrainBounds.size()
+            ? &m_questTerrainBounds[questPatch] : nullptr;
+        QuestTerrainPatchLock lockVtxBuffer(pVB, m_questTerrainGroupSize, questTerrainVertexOffset(originX, originY),questBounds);
         if (!lockVtxBuffer.Get_Vertex_Array()) return -1;
 #else
 		DX8VertexBufferClass::WriteLockClass lockVtxBuffer(pVB);
@@ -438,9 +449,6 @@ Int HeightMapRenderObjClass::updateVB(DX8VertexBufferClass	*pVB, VERTEX_FORMAT *
 		VERTEX_FORMAT *vbHardware = (VERTEX_FORMAT*)lockVtxBuffer.Get_Vertex_Array();
 		VERTEX_FORMAT *vBase = data;
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
-        const int questPatch = originY / VERTEX_BUFFER_TILE_LENGTH * m_numVBTilesX + originX / VERTEX_BUFFER_TILE_LENGTH;
-        QuestXR::TerrainPatchBounds *questBounds = questPatch>=0 && size_t(questPatch)<m_questTerrainBounds.size()
-            ? &m_questTerrainBounds[questPatch] : nullptr;
         static_assert(HEIGHTMAP_VERTEX_NUM/4==QuestXR::TerrainPatchBounds::Cells);
 #endif
 		// Note that we are building the vertex buffer data in the memory buffer, data.
@@ -1507,7 +1515,8 @@ Int HeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *pMap, 
 		m_vertexBufferTiles = NEW DX8VertexBufferClass*[m_numVertexBufferTiles];
 		m_vertexBufferBackup = NEW VERTEX_FORMAT [m_numVertexBufferTiles * HEIGHTMAP_VERTEX_NUM];
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
-        if (QuestXR::PerformanceRequested(QuestXR::PerfOption::TerrainCulling))
+        if (QuestXR::PerformanceRequested(QuestXR::PerfOption::TerrainCulling)
+            || QuestXR::PerformanceRequested(QuestXR::PerfOption::NeutralShroud))
             m_questTerrainBounds.assign(m_numVertexBufferTiles,{});
 #endif
 
@@ -2413,6 +2422,14 @@ void HeightMapRenderObjClass::renderTerrainPass(CameraClass *pCamera)
                     const bool questCulled = questTerrainOutside(j*m_numVBTilesX+i,drawPatches,questCullFrustum,questCullEligible);
                     QuestXR::TerrainCullDrawScope cullDraw(questCulled);
                     QuestXR::RecordTerrainCull(drawPatches,true,questCulled,questCullEligible);
+                    const int questFirstPatch=j*m_numVBTilesX+i;
+                    const bool questShroudEligible=QuestXR::PerformanceRequested(QuestXR::PerfOption::NeutralShroud)
+                        && QuestXR::PerformanceEye()>=0 && !ShaderClass::Is_Backface_Culling_Inverted()
+                        && static_cast<RTS3DScene*>(pCamera->Get_User_Data())->getCustomPassMode()==SCENE_PASS_DEFAULT
+                        && static_cast<SceneClass*>(pCamera->Get_User_Data())->Get_Extra_Pass_Polygon_Mode()==SceneClass::EXTRA_PASS_DISABLE
+                        && questFirstPatch>=0 && size_t(questFirstPatch)+drawPatches<=m_questTerrainBounds.size();
+                    QuestXR::ShroudDrawScope neutralShroud(questShroudEligible?m_questTerrainBounds.data()+questFirstPatch:nullptr,
+                        drawPatches,questShroudEligible?getVertexBufferTile(i,j)->Get_DX8_Vertex_Buffer():nullptr);
                     if (!questCulled) QuestXR::RecordTerrainSubmission(drawPatches, true);
 #endif
                     DX8Wrapper::Draw_Triangles(0, HEIGHTMAP_POLYGON_NUM * drawPatches, 0, HEIGHTMAP_VERTEX_NUM * drawPatches);
