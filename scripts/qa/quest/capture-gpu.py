@@ -121,7 +121,10 @@ def main():
         def stream(parts,path):
             try:
                 with path.open('w',encoding='utf-8') as out:
-                    process=subprocess.Popen(command+parts,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace')
+                    # GeneralsX @bugfix Codex 13/10/2026 Collection is noninteractive.
+                    # Do not let Windows ADB workers read the parent's console.
+                    # The explicitly requested remote PTY still flushes profiler output.
+                    process=subprocess.Popen(command+parts,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace')
                     processes.append(process)
                     try:
                         for line in process.stdout: out.write(utc()+' '+line);out.flush()

@@ -33,3 +33,13 @@ eyes, shadows, fog and campaign transitions before accepting the setting.
 Compare the same saved scene with Off and On in normal 90-second GPU captures.
 No performance gain is assumed until the captures show it. A complete PC match
 and replay checks remain required before any public promotion.
+
+## First headset result
+
+The stationary Off/On pair shows no clear gain: mean 50.3 / 50.6 FPS, median 51
+in both runs, and App GPU median 17.31 / 17.40 ms. About three percent of patches
+are skipped across the eyes. Incomplete border groups retain the original path;
+coarse group bounds also retain visible groups. No visible defects were reported.
+Keep the trial off. The On hardware-counter worker has a Windows console-input
+error at shutdown; runtime/native timing is available across the requested
+interval. This is one view and does not establish a general performance result.
