@@ -79,7 +79,7 @@
 +          ID3D9VkInteropTexture* pTexture) {
 +    D3D9DeviceLock lock = m_device->LockDevice();
 +    if (!pTexture || !m_device->m_flags.test(D3D9DeviceFlag::InScene)
-+        || !m_device->m_state.depthStencil)
++        || m_device->m_state.depthStencil == nullptr)
 +      return D3DERR_INVALIDCALL;
 +    auto texture = static_cast<D3D9VkInteropTexture*>(pTexture)->GetCommonTexture();
 +    if (texture != m_device->m_state.depthStencil->GetCommonTexture()
@@ -89,7 +89,7 @@
 +        || !(texture->Desc()->Usage & D3DUSAGE_DEPTHSTENCIL))
 +      return D3DERR_INVALIDCALL;
 +    auto view = m_device->m_state.depthStencil->GetDepthStencilView();
-+    if (!view) return D3DERR_INVALIDCALL;
++    if (view == nullptr) return D3DERR_INVALIDCALL;
 +    m_device->EmitCs([cView = std::move(view)](DxvkContext* ctx) {
 +      ctx->discardImageView(cView, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
 +    });
