@@ -228,6 +228,17 @@ struct DxvkVulkanInteropDevice : IUnknown
 	virtual void STDMETHODCALLTYPE ReleaseSubmissionQueue() = 0;
 };
 
+// Quest-owned IID; append to the complete inherited vtable without changing its ABI.
+struct DxvkQuestDepthInterop : DxvkVulkanInteropDevice {
+    virtual void STDMETHODCALLTYPE LockDevice() = 0;
+    virtual void STDMETHODCALLTYPE UnlockDevice() = 0;
+    virtual bool STDMETHODCALLTYPE WaitForResource(void *resource, DWORD flags) = 0;
+    virtual HRESULT STDMETHODCALLTYPE CreateImage(const void *description, void **resource) = 0;
+    virtual HRESULT STDMETHODCALLTYPE DiscardCompletedEyeDepth(void *texture) = 0;
+};
+constexpr GUID kQuestDepthInteropId = {
+    0x7a643eb1, 0x922e, 0x4876, {0x9a, 0x90, 0x69, 0xa3, 0xc8, 0x84, 0x29, 0x76}};
+
 class DxvkQueueGuard final
 {
 public:
@@ -378,6 +389,11 @@ bool Bootstrap::attachGraphics(IDirect3DDevice8 *device, uint32_t menuWidth, uin
 	interop->GetVulkanHandles(&m_vkInstance, &m_vkPhysicalDevice, &m_vkDevice);
 	interop->GetSubmissionQueue(&m_vkQueue, &m_vkQueueIndex, &m_vkQueueFamilyIndex);
 	m_dxvkInterop = interop;
+    if (PerformanceRequested(PerfOption::DepthDiscard))
+        interop->QueryInterface(kQuestDepthInteropId, &m_depthDiscardInterop);
+    __android_log_print(ANDROID_LOG_INFO, kLogTag,
+        "Quest eye depth discard bridge: requested=%d available=%d (full restart)",
+        PerformanceRequested(PerfOption::DepthDiscard), m_depthDiscardInterop != nullptr);
 	if (m_vkInstance == VK_NULL_HANDLE || m_vkPhysicalDevice == VK_NULL_HANDLE
 		|| m_vkDevice == VK_NULL_HANDLE || m_vkQueue == VK_NULL_HANDLE) {
 		__android_log_print(ANDROID_LOG_ERROR, kLogTag, "DXVK returned incomplete Vulkan handles");
@@ -576,6 +592,32 @@ bool Bootstrap::createEyeTargets(IDirect3DDevice8 *device)
 			"OpenXR eye anti-aliasing: 2x MSAA with DXVK resolve");
 	}
 	return true;
+}
+
+bool Bootstrap::discardCompletedEyeDepth(IDirect3DDevice8 *device, IDirect3DSurface8 *depth, unsigned eye)
+{
+    if (!device || !depth || depth != m_depthSurface || eye >= m_viewCount || eye >= 2
+        || !m_frameActive || !m_shouldRender || !m_depthDiscardInterop || m_msaaEyeSurface)
+        return false;
+    IDirect3DSurface8 *boundColor = nullptr, *boundDepth = nullptr;
+    const HRESULT colorResult = device->GetRenderTarget(&boundColor);
+    const HRESULT depthResult = device->GetDepthStencilSurface(&boundDepth);
+    const bool bound = SUCCEEDED(colorResult) && SUCCEEDED(depthResult)
+        && boundColor == m_eyeSurfaces[eye] && boundDepth == depth;
+    if (boundColor) boundColor->Release();
+    if (boundDepth) boundDepth->Release();
+    if (!bound) return false;
+    D3DSURFACE_DESC desc{};
+    if (FAILED(depth->GetDesc(&desc)) || desc.Format != D3DFMT_D24S8
+        || desc.MultiSampleType != D3DMULTISAMPLE_NONE || desc.Width != m_recommendedEyeWidth
+        || desc.Height != m_recommendedEyeHeight) return false;
+    DxvkVulkanInteropTexture *texture = nullptr;
+    if (FAILED(depth->QueryInterface(kD3D9VkInteropTextureId, reinterpret_cast<void **>(&texture)))
+        || !texture) return false;
+    const HRESULT result = static_cast<DxvkQuestDepthInterop *>(m_depthDiscardInterop)
+        ->DiscardCompletedEyeDepth(texture);
+    texture->Release();
+    return SUCCEEDED(result);
 }
 
 bool Bootstrap::queryEyeImage(uint32_t eye, VkImage &image, VkImageLayout &layout,
@@ -2367,6 +2409,10 @@ void Bootstrap::detachGraphics()
 	m_timestampQueryValid.clear();
 	m_timestampPeriodNs = 0.0f;
 	m_timestampValidBits = 0;
+    if (m_depthDiscardInterop) {
+        static_cast<DxvkQuestDepthInterop *>(m_depthDiscardInterop)->Release();
+        m_depthDiscardInterop = nullptr;
+    }
 	if (m_dxvkInterop != nullptr) {
 		static_cast<DxvkVulkanInteropDevice *>(m_dxvkInterop)->Release();
 		m_dxvkInterop = nullptr;
@@ -2735,4 +2781,10 @@ extern "C" bool QuestXR_GetControllerState(uint32_t hand, QuestXRControllerState
 	return state != nullptr && QuestXR::GetBootstrap().getControllerState(hand, *state);
 }
 
+#endif
+
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+bool QuestXR_QueueEyeDepthDiscard(IDirect3DDevice8 *device, IDirect3DSurface8 *depth, unsigned eye) {
+    return QuestXR::GetBootstrap().discardCompletedEyeDepth(device, depth, eye);
+}
 #endif

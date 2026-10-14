@@ -126,6 +126,11 @@ def main():
               'runtime': 'NOT_VERIFIED', 'crossplay': 'NOT_VERIFIED',
               'appVersion': json.loads((ROOT / 'docs/WORKDIR/quest/APP_VERSION.json').read_text()) if args.profile == 'quest' else None}
     record['publicBuild'] = args.public_build
+    if args.profile == 'quest':
+        # GeneralsX @build Codex 14/10/2026 Bind the locally layered backend to its source patches.
+        record['questDxvkPatchSha256'] = {
+            path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted((source / 'Patches').glob('quest-*.patch'))}
     manifest = evidence / (prefix + '.json')
     manifest.write_text(json.dumps(record, indent=2), encoding='utf-8')
     run(command, source, evidence / (prefix + '-configure.log'))

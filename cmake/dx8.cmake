@@ -646,12 +646,16 @@ elseif(ANDROID)
 
   # Quest graphics patches are layered after all current MYSOREZ patches.
   if(SAGE_USE_OPENXR)
-    foreach(QUEST_DXVK_PATCH quest-v044-dxvk-interop.patch quest-dxvk-d3d8-bridge-exposure.patch)
-      execute_process(COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply --reverse --check
+    foreach(QUEST_DXVK_PATCH quest-v044-dxvk-interop.patch quest-dxvk-d3d8-bridge-exposure.patch quest-dxvk-completed-eye-depth.patch)
+      set(QUEST_PATCH_WHITESPACE_ARGS)
+      if(QUEST_DXVK_PATCH STREQUAL "quest-dxvk-completed-eye-depth.patch")
+        set(QUEST_PATCH_WHITESPACE_ARGS --ignore-space-change)
+      endif()
+      execute_process(COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply --reverse --check ${QUEST_PATCH_WHITESPACE_ARGS}
         "${CMAKE_SOURCE_DIR}/Patches/${QUEST_DXVK_PATCH}"
         RESULT_VARIABLE QUEST_BRIDGE_PRESENT ERROR_QUIET)
       if(NOT QUEST_BRIDGE_PRESENT EQUAL 0)
-        execute_process(COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply
+        execute_process(COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply ${QUEST_PATCH_WHITESPACE_ARGS}
           "${CMAKE_SOURCE_DIR}/Patches/${QUEST_DXVK_PATCH}"
           COMMAND_ERROR_IS_FATAL ANY)
       endif()

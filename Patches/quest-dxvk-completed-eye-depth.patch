@@ -1,0 +1,102 @@
+--- a/src/d3d9/d3d9_interfaces.h
++++ b/src/d3d9/d3d9_interfaces.h
+@@ -248,6 +248,15 @@
+           IDirect3DResource9**      ppResult) = 0;
+ };
+ 
++#ifdef SAGE_USE_OPENXR
++// Quest-owned extension; the existing interop interface and vtable remain intact.
++MIDL_INTERFACE("7a643eb1-922e-4876-9a90-69a3c8842976")
++ID3D9VkInteropDeviceQuest : public ID3D9VkInteropDevice {
++  virtual HRESULT STDMETHODCALLTYPE DiscardCompletedEyeDepth(
++          ID3D9VkInteropTexture* pTexture) = 0;
++};
++#endif
++
+ /**
+  * \brief D3D9 current output metadata
+  */
+@@ -282,6 +291,9 @@
+ };
+ 
+ #ifndef _MSC_VER
++#ifdef SAGE_USE_OPENXR
++__CRT_UUID_DECL(ID3D9VkInteropDeviceQuest, 0x7a643eb1,0x922e,0x4876,0x9a,0x90,0x69,0xa3,0xc8,0x84,0x29,0x76);
++#endif
+ __CRT_UUID_DECL(ID3D9VkInteropInterface,   0x3461a81b,0xce41,0x485b,0xb6,0xb5,0xfc,0xf0,0x8b,0xa6,0xa6,0xbd);
+ __CRT_UUID_DECL(ID3D9VkInteropInterface1,  0xd6589ed4,0x7a37,0x4096,0xba,0xc2,0x22,0x3b,0x25,0xae,0x31,0xd2);
+ __CRT_UUID_DECL(ID3D9VkInteropTexture,     0xd56344f5,0x8d35,0x46fd,0x80,0x6d,0x94,0xc3,0x51,0xb4,0x72,0xc1);
+--- a/src/d3d9/d3d9_interop.h
++++ b/src/d3d9/d3d9_interop.h
+@@ -76,7 +76,11 @@
+ 
+   };
+ 
++#ifdef SAGE_USE_OPENXR
++  class D3D9VkInteropDevice final : public ID3D9VkInteropDeviceQuest {
++#else
+   class D3D9VkInteropDevice final : public ID3D9VkInteropDevice {
++#endif
+ 
+   public:
+ 
+@@ -123,6 +127,10 @@
+             IDirect3DResource9*  pResource,
+             DWORD                MapFlags);
+ 
++#ifdef SAGE_USE_OPENXR
++    HRESULT STDMETHODCALLTYPE DiscardCompletedEyeDepth(ID3D9VkInteropTexture* pTexture);
++#endif
++
+     HRESULT STDMETHODCALLTYPE CreateImage(
+             const D3D9VkExtImageDesc* desc,
+             IDirect3DResource9**      ppResult);
+--- a/src/d3d9/d3d9_device.cpp
++++ b/src/d3d9/d3d9_device.cpp
+@@ -238,6 +238,12 @@
+       return S_OK;
+     }
+ 
++#ifdef SAGE_USE_OPENXR
++    if (riid == __uuidof(ID3D9VkInteropDeviceQuest)) {
++      *ppvObject = ref(&m_d3d9Interop);
++      return S_OK;
++    }
++#endif
+     if (riid == __uuidof(ID3D9VkInteropDevice)) {
+       *ppvObject = ref(&m_d3d9Interop);
+       return S_OK;
+--- a/src/d3d9/d3d9_interop.cpp
++++ b/src/d3d9/d3d9_interop.cpp
+@@ -223,6 +223,31 @@
+         cOldLayout, cNewLayout);
+     });
+   }
++
++#ifdef SAGE_USE_OPENXR
++  // GeneralsX @performance Codex 14/10/2026 Explicit completed-eye lifetime only.
++  HRESULT STDMETHODCALLTYPE D3D9VkInteropDevice::DiscardCompletedEyeDepth(
++          ID3D9VkInteropTexture* pTexture) {
++    D3D9DeviceLock lock = m_device->LockDevice();
++    if (!pTexture || !m_device->m_flags.test(D3D9DeviceFlag::InScene)
++        || !m_device->m_state.depthStencil)
++      return D3DERR_INVALIDCALL;
++    auto texture = static_cast<D3D9VkInteropTexture*>(pTexture)->GetCommonTexture();
++    if (texture != m_device->m_state.depthStencil->GetCommonTexture()
++        || texture->Desc()->Format != D3D9Format::D24S8
++        || texture->Desc()->MultiSample != D3DMULTISAMPLE_NONE
++        || texture->Desc()->MipLevels != 1 || texture->Desc()->ArraySize != 1
++        || !(texture->Desc()->Usage & D3DUSAGE_DEPTHSTENCIL))
++      return D3DERR_INVALIDCALL;
++    auto view = m_device->m_state.depthStencil->GetDepthStencilView();
++    if (!view) return D3DERR_INVALIDCALL;
++    m_device->EmitCs([cView = std::move(view)](DxvkContext* ctx) {
++      ctx->discardImageView(cView, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
++    });
++    // Queued on the original command stream, not proof of a retroactive store-op change.
++    return D3D_OK;
++  }
++#endif
+ 
+   void STDMETHODCALLTYPE D3D9VkInteropDevice::FlushRenderingCommands() {
+     m_device->Flush();

@@ -440,4 +440,6 @@
     <string name="quest_terrain_culling_desc">Skip terrain groups entirely outside each eye view. Fully restart the game and launcher after changes.</string>
     <string name="quest_neutral_shroud">Fog-of-war pass (experimental)</string>
     <string name="quest_neutral_shroud_desc">Skip neutral fog draws on fully lit terrain patches. Fully restart the game and launcher after changes.</string>
+    <string name="quest_depth_discard">Eye depth buffer (experimental)</string>
+    <string name="quest_depth_discard_desc">Discard depth and stencil only after a complete eye image. Fully restart the game and launcher after changes.</string>
 </resources>

@@ -65,6 +65,7 @@ public:
 	}
 	::IDirect3DSurface8 *getEyeSurface(uint32_t eye) const;
 	bool resolveEyeSurface(::IDirect3DDevice8 *device, uint32_t eye) const;
+    bool discardCompletedEyeDepth(::IDirect3DDevice8 *device, ::IDirect3DSurface8 *depth, unsigned eye);
 	::IDirect3DSurface8 *getDepthSurface() const { return m_depthSurface; }
 	void markEyeRenderingComplete() { m_eyeRenderingComplete = true; }
 	::IDirect3DSurface8 *getMenuSurface() const { return m_menuSurface; }
@@ -195,6 +196,7 @@ private:
 	float m_timestampPeriodNs = 0.0f;
 	uint32_t m_timestampValidBits = 0;
 	void *m_dxvkInterop = nullptr;
+    void *m_depthDiscardInterop = nullptr;
 	SpatialAA m_spatialAA;
 	EyeCapture m_eyeCapture;
 	std::array<QuestXRDiagnosticCamera, 2> m_diagnosticCameras{};

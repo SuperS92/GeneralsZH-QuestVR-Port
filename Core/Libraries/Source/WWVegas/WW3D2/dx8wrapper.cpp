@@ -56,6 +56,7 @@
 #include "../../../../GameEngineDevice/Include/VRDevice/QuestSoftCutouts.h"
 #include "../../../../GameEngineDevice/Include/VRDevice/QuestTerrainCulling.h"
 #include "../../../../GameEngineDevice/Include/VRDevice/QuestShroudPass.h"
+#include "../../../../GameEngineDevice/Include/VRDevice/QuestDepthDiscard.h"
 #endif
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -2416,6 +2417,10 @@ void DX8Wrapper::End_Scene(bool flip_frames)
 		D3DVIEWPORT8 fullVp = {0, 0, (DWORD)s_bbW, (DWORD)s_bbH, 0.0f, 1.0f};
 		D3DDevice->SetViewport(&fullVp);
 	}
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    // GeneralsX @performance Codex 14/10/2026 Sorting and pillarbox draws have finished.
+    QuestXR::DiscardCompletedEyeDepth(D3DDevice, flip_frames);
+#endif
 	DX8CALL(EndScene());
 
 	// GeneralsX @build BenderAI 10/02/2026 - Embedded browser Windows-only

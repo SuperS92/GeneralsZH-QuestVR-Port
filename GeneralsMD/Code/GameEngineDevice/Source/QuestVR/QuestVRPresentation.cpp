@@ -29,6 +29,7 @@
 #include "VRDevice/QuestDrawCapture.h"
 #include "VRDevice/QuestSoftCutouts.h"
 #include "VRDevice/QuestPerformance.h"
+#include "VRDevice/QuestDepthDiscard.h"
 #include "VRDevice/QuestTreeWind.h"
 #include "VRDevice/QuestVRInput.h"
 #include "VRDevice/QuestVRKeyboard.h"
@@ -421,7 +422,11 @@ void W3DDisplay::drawQuestXRStereo(W3DView *view)
 			const auto worldDone = std::chrono::steady_clock::now();
 			QuestVRInput_Render(m_questXRCamera);
 			const auto pointerDone = std::chrono::steady_clock::now();
-			WW3D::End_Render(false);
+            {
+                // GeneralsX @performance Codex 14/10/2026 Only after this eye's full world/pointer draw.
+                QuestXR::EyeDepthDiscardScope completedEye(DX8Wrapper::_Get_D3D_Device8(), depthSurface, eye);
+                WW3D::End_Render(false); // Original sorting flush runs before the EndScene hook.
+            }
 			renderedEye = true;
 			worldCpuMs[eye] = std::chrono::duration<double, std::milli>(
 				worldDone - worldStart).count();

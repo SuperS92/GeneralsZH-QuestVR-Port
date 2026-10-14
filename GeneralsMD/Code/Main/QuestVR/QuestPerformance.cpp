@@ -13,7 +13,7 @@
 namespace QuestXR {
 namespace {
 constexpr const char *optionNames[] = {"GX_QUEST_PERF_AUDIO", "GX_QUEST_PERF_TRACKS",
-    "GX_QUEST_PERF_TERRAIN", "GX_QUEST_PERF_TREES", "GX_QUEST_PERF_SHADOWS", "GX_QUEST_PERF_SMAA", "GX_QUEST_TERRAIN_BATCHING", "GX_QUEST_TRACK_STREAMING", "GX_QUEST_HUD_TRANSFER", "GX_QUEST_TERRAIN_CULLING", "GX_QUEST_NEUTRAL_SHROUD"};
+    "GX_QUEST_PERF_TERRAIN", "GX_QUEST_PERF_TREES", "GX_QUEST_PERF_SHADOWS", "GX_QUEST_PERF_SMAA", "GX_QUEST_TERRAIN_BATCHING", "GX_QUEST_TRACK_STREAMING", "GX_QUEST_HUD_TRANSFER", "GX_QUEST_TERRAIN_CULLING", "GX_QUEST_NEUTRAL_SHROUD", "GX_QUEST_DEPTH_DISCARD"};
 constexpr const char *stageNames[] = {"audio", "tracks", "terrain_blend", "trees", "shadows", "terrain_submit",
     "track_pack", "track_lock", "track_copy", "track_unlock", "track_submit"};
 static_assert(sizeof(optionNames) / sizeof(optionNames[0]) == size_t(PerfOption::Count), "Option names must match");

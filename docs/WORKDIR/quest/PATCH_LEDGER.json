@@ -195,9 +195,9 @@
     {
       "path": "cmake/dx8.cmake",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Optional build wiring; ordinary target remains available",
+      "purpose": "Optional build wiring; ordinary target remains available; explicit Quest-only completed-eye depth interop overlay with a separate IID and unchanged existing interop ABI",
       "risk": "build/identity",
-      "owningTest": "control and Quest builds",
+      "owningTest": "control and Quest builds; patch applicability/idempotence, matching backend hashes across native modes",
       "removalCondition": "Upstream provides equivalent optional platform support"
     },
     {

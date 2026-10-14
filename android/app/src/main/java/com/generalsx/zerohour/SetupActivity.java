@@ -184,6 +184,11 @@ public class SetupActivity extends Activity {
         return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getBoolean("quest_neutral_shroud", false);
     }
+    // GeneralsX @performance Codex 14/10/2026 Independent completed-eye depth lifetime trial.
+    static boolean getQuestDepthDiscard(android.content.Context ctx) {
+        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean("quest_depth_discard", false);
+    }
     static final String[] QUEST_PERF_KEYS = {"quest_perf_audio", "quest_perf_tracks", "quest_perf_terrain",
         "quest_perf_trees", "quest_perf_shadows", "quest_perf_smaa", "quest_perf_metrics", "quest_terrain_batching"};
     static final String[] QUEST_PERF_ENV = {"GX_QUEST_PERF_AUDIO", "GX_QUEST_PERF_TRACKS", "GX_QUEST_PERF_TERRAIN",
@@ -1804,6 +1809,12 @@ public class SetupActivity extends Activity {
                 getQuestNeutralShroud(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .edit().putBoolean("quest_neutral_shroud", index == 1).apply());
             UiKit.supporting(neutralShroud, getString(R.string.quest_neutral_shroud_desc));
+            LinearLayout depthDiscard = UiKit.card(root);
+            UiKit.sectionHeader(depthDiscard, R.drawable.ic_gzh_display, getString(R.string.quest_depth_discard), false);
+            UiKit.segmented(depthDiscard, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
+                getQuestDepthDiscard(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit().putBoolean("quest_depth_discard", index == 1).apply());
+            UiKit.supporting(depthDiscard, getString(R.string.quest_depth_discard_desc));
             int[] titles = {R.string.quest_perf_audio, R.string.quest_perf_tracks, R.string.quest_perf_terrain,
                 R.string.quest_perf_trees, R.string.quest_perf_shadows, R.string.quest_perf_smaa, R.string.quest_perf_metrics, R.string.quest_terrain_batching};
             int[] descriptions = {R.string.quest_perf_audio_desc, R.string.quest_perf_tracks_desc, R.string.quest_perf_terrain_desc,

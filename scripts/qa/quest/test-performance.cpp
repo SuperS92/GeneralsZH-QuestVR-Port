@@ -39,6 +39,12 @@ int main() {
     _putenv_s("GX_QUEST_NEUTRAL_SHROUD", "1");
     require(PerformanceRequested(PerfOption::NeutralShroud), "Neutral shroud enables independently");
     _putenv_s("GX_QUEST_NEUTRAL_SHROUD", "");
+    require(!PerformanceRequested(PerfOption::DepthDiscard), "Depth discard defaults off");
+    _putenv_s("GX_QUEST_DEPTH_DISCARD", "true");
+    require(!PerformanceRequested(PerfOption::DepthDiscard), "Depth discard requires exact 1");
+    _putenv_s("GX_QUEST_DEPTH_DISCARD", "1");
+    require(PerformanceRequested(PerfOption::DepthDiscard), "Depth discard enables independently");
+    _putenv_s("GX_QUEST_DEPTH_DISCARD", "");
     for (bool planar : {false, true}) for (size_t sampleBytes : {size_t(1),size_t(2),size_t(4)})
         for (size_t channels : {size_t(1),size_t(2),size_t(6)}) {
         std::vector<uint8_t> original, geometric;

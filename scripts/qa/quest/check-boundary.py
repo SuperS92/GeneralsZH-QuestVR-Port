@@ -43,6 +43,7 @@ def main():
     extra = {'AGENTS.md', 'CREDITS.md', 'docs/HOWTO/QUEST_SETUP.md',
              'docs/HOWTO/QUEST_CONTROLS.md', '.github/ISSUE_TEMPLATE/feature-request.yaml', 'Patches/quest-v044-dxvk-interop.patch', 'cmake/quest-vr.cmake',
              'Patches/quest-dxvk-d3d8-bridge-exposure.patch',
+             'Patches/quest-dxvk-completed-eye-depth.patch',
              'android/app/src/quest/AndroidManifest.xml',
              'android/app/src/quest/res/values/strings.xml',
              'android/app/src/quest/res/values-de/strings.xml',

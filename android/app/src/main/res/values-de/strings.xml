@@ -438,4 +438,6 @@
     <string name="quest_terrain_culling_desc">Überspringt Geländegruppen vollständig außerhalb des Augenbildes. Spiel und Launcher nach Änderungen vollständig neu starten.</string>
     <string name="quest_neutral_shroud">Kriegsnebel-Pass (experimentell)</string>
     <string name="quest_neutral_shroud_desc">Überspringt wirkungslose Nebelpassagen auf vollständig hellen Geländeabschnitten. Spiel und Launcher nach Änderungen vollständig neu starten.</string>
+    <string name="quest_depth_discard">Augen-Tiefenpuffer (experimentell)</string>
+    <string name="quest_depth_discard_desc">Verwirft Tiefe und Stencil erst nach einem vollständigen Augenbild. Spiel und Launcher nach Änderungen vollständig neu starten.</string>
 </resources>
