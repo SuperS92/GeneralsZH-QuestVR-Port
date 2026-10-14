@@ -1,0 +1,14 @@
+--- a/src/d3d8/d3d8_format.h
++++ b/src/d3d8/d3d8_format.h
+@@ -81,7 +81,10 @@
+       case D3DFMT_A8R8G8B8:
+       case D3DFMT_X8R8G8B8:
+       case D3DFMT_A2B10G10R10:
+-      //case D3DFMT_A8B8G8R8:
++#ifdef SAGE_USE_OPENXR
++      // Owned RGBA8 eye/menu targets use DXVK's existing D3D9 format mapping.
++      case static_cast<D3DFORMAT>(32): // D3D9 A8B8G8R8
++#endif
+       //case D3DFMT_X8B8G8R8:
+       case D3DFMT_G16R16:
+       case D3DFMT_X8L8V8U8:

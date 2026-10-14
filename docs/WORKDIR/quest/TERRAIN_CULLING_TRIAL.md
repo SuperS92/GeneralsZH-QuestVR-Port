@@ -1,5 +1,11 @@
 # Terrain eye-view culling trial
 
+Retired from the active launcher after Test 07. The stationary Test 05 pair had
+no clear performance gain. Ignore old preferences/environment flags; retain the
+shared patch bounds required by the separate neutral fog trial and keep the
+historical classifier/source evidence for review. The notes below describe
+the original Test 05 experiment.
+
 Local Test 05 adds **Terrain view culling (experimental)**, default off.
 Restart the entire game and launcher after changes. Keep track streaming and
 compact HUD transfer on for the comparison, with scale 1.5, shadows on and AA off.

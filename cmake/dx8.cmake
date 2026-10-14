@@ -646,9 +646,9 @@ elseif(ANDROID)
 
   # Quest graphics patches are layered after all current MYSOREZ patches.
   if(SAGE_USE_OPENXR)
-    foreach(QUEST_DXVK_PATCH quest-v044-dxvk-interop.patch quest-dxvk-d3d8-bridge-exposure.patch quest-dxvk-completed-eye-depth.patch)
+    foreach(QUEST_DXVK_PATCH quest-v044-dxvk-interop.patch quest-dxvk-d3d8-bridge-exposure.patch quest-dxvk-completed-eye-depth.patch quest-dxvk-rgba-eye-targets.patch)
       set(QUEST_PATCH_WHITESPACE_ARGS)
-      if(QUEST_DXVK_PATCH STREQUAL "quest-dxvk-completed-eye-depth.patch")
+      if(QUEST_DXVK_PATCH STREQUAL "quest-dxvk-completed-eye-depth.patch" OR QUEST_DXVK_PATCH STREQUAL "quest-dxvk-rgba-eye-targets.patch")
         set(QUEST_PATCH_WHITESPACE_ARGS --ignore-space-change)
       endif()
       execute_process(COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply --reverse --check ${QUEST_PATCH_WHITESPACE_ARGS}

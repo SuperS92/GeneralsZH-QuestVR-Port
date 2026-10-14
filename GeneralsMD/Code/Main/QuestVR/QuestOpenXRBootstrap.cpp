@@ -11,6 +11,7 @@
 #include <d3d8.h>
 #include "QuestOpenXRBootstrap.h"
 #include "VRDevice/QuestHudTransfer.h"
+#include "VRDevice/QuestColorCopy.h"
 #include "VRDevice/QuestPerformance.h"
 #include "VRDevice/QuestXRInterface.h"
 #include "VRDevice/QuestVRMath.h"
@@ -485,7 +486,7 @@ bool Bootstrap::attachGraphics(IDirect3DDevice8 *device, uint32_t menuWidth, uin
 		m_blendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 	}
 
-	if (!createActions() || !createEyeTargets(device) || !createSwapchain()
+	if (!createActions() || !createEyeTargets(device, menuWidth, menuHeight) || !createSwapchain()
 		|| !createMenuTarget(device, menuWidth, menuHeight)
 		|| !createCommandResources()) {
 		detachGraphics();
@@ -499,7 +500,7 @@ bool Bootstrap::attachGraphics(IDirect3DDevice8 *device, uint32_t menuWidth, uin
 	return true;
 }
 
-bool Bootstrap::createEyeTargets(IDirect3DDevice8 *device)
+bool Bootstrap::createEyeTargets(IDirect3DDevice8 *device, uint32_t menuWidth, uint32_t menuHeight)
 {
 	VkPhysicalDeviceProperties properties{};
 	vkGetPhysicalDeviceProperties(m_vkPhysicalDevice, &properties);
@@ -508,20 +509,46 @@ bool Bootstrap::createEyeTargets(IDirect3DDevice8 *device)
 		__android_log_print(ANDROID_LOG_ERROR, kLogTag, "Eye resolution exceeds Vulkan image limit");
 		return false;
 	}
-	HRESULT hr = D3D_OK;
+    // GeneralsX @performance Codex 14/10/2026 Probe only owned RGBA8 presentation targets.
+    const bool requested = PerformanceRequested(PerfOption::DirectColorCopy);
+    const char *aa = std::getenv("GX_QUEST_SPATIAL_AA");
+    const bool aaOff = !aa || std::strcmp(aa,"0")==0;
+    bool runtimeRgba = false, nativeRgba = false;
+    if (requested && aaOff && !kEnableExperimentalEyeMsaa) {
+        uint32_t count = 0;
+        if (XR_SUCCEEDED(xrEnumerateSwapchainFormats(m_session,0,&count,nullptr)) && count) {
+            std::vector<int64_t> formats(count);
+            if (XR_SUCCEEDED(xrEnumerateSwapchainFormats(m_session,count,&count,formats.data())))
+                runtimeRgba = containsFormat(formats.data(),count,VK_FORMAT_R8G8B8A8_UNORM);
+        }
+        VkImageFormatProperties format{};
+        VkFormatProperties support{};
+        vkGetPhysicalDeviceFormatProperties(m_vkPhysicalDevice,VK_FORMAT_R8G8B8A8_UNORM,&support);
+        nativeRgba = vkGetPhysicalDeviceImageFormatProperties(m_vkPhysicalDevice,VK_FORMAT_R8G8B8A8_UNORM,
+            VK_IMAGE_TYPE_2D,VK_IMAGE_TILING_OPTIMAL,VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+                | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            0,&format)==VK_SUCCESS && (format.sampleCounts & VK_SAMPLE_COUNT_1_BIT)
+                && (support.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT)
+                && format.maxExtent.width>=std::max(m_recommendedEyeWidth,menuWidth)
+                && format.maxExtent.height>=std::max(m_recommendedEyeHeight,menuHeight);
+    }
+    m_eyeColorFormat = ChooseEyeColorFormat(requested,aaOff,runtimeRgba,nativeRgba,kEnableExperimentalEyeMsaa);
+    HRESULT hr = D3D_OK;
+    for (;;) {
+        bool complete = true;
 	for (uint32_t eye = 0; eye < m_viewCount; ++eye) {
 		hr = device->CreateTexture(m_recommendedEyeWidth, m_recommendedEyeHeight, 1,
-			D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_eyeTextures[eye]);
+			D3DUSAGE_RENDERTARGET, static_cast<D3DFORMAT>(m_eyeColorFormat), D3DPOOL_DEFAULT, &m_eyeTextures[eye]);
 		if (FAILED(hr) || m_eyeTextures[eye] == nullptr) {
 			__android_log_print(ANDROID_LOG_ERROR, kLogTag,
 				"CreateTexture for OpenXR eye %u failed: 0x%08x", eye, static_cast<unsigned int>(hr));
-			return false;
+			complete = false; break;
 		}
 		hr = m_eyeTextures[eye]->GetSurfaceLevel(0, &m_eyeSurfaces[eye]);
 		if (FAILED(hr) || m_eyeSurfaces[eye] == nullptr) {
 			__android_log_print(ANDROID_LOG_ERROR, kLogTag,
 				"GetSurfaceLevel for OpenXR eye %u failed: 0x%08x", eye, static_cast<unsigned int>(hr));
-			return false;
+			complete = false; break;
 		}
 
 		VkImage image = VK_NULL_HANDLE;
@@ -530,7 +557,7 @@ bool Bootstrap::createEyeTargets(IDirect3DDevice8 *device)
 		if (!queryEyeImage(eye, image, layout, &sourceFormat)) {
 			__android_log_print(ANDROID_LOG_ERROR, kLogTag,
 				"DXVK D3D8 texture bridge unavailable for OpenXR eye %u", eye);
-			return false;
+			complete = false; break;
 		}
 		if (eye == 0) {
 			m_sourceColorFormat = sourceFormat;
@@ -538,9 +565,23 @@ bool Bootstrap::createEyeTargets(IDirect3DDevice8 *device)
 			__android_log_print(ANDROID_LOG_ERROR, kLogTag,
 				"DXVK eye targets use inconsistent Vulkan formats: %d and %d",
 				static_cast<int>(m_sourceColorFormat), static_cast<int>(sourceFormat));
-			return false;
+			complete = false; break;
 		}
 	}
+
+        if (complete) break;
+        for (uint32_t eye=0;eye<m_viewCount;++eye) {
+            if (m_eyeSurfaces[eye]) { m_eyeSurfaces[eye]->Release();m_eyeSurfaces[eye]=nullptr; }
+            if (m_eyeTextures[eye]) { m_eyeTextures[eye]->Release();m_eyeTextures[eye]=nullptr; }
+        }
+        m_sourceColorFormat=VK_FORMAT_UNDEFINED;
+        if (m_eyeColorFormat==kLegacyEyeColorFormat) return false;
+        m_eyeColorFormat=kLegacyEyeColorFormat;
+        __android_log_print(ANDROID_LOG_INFO,kLogTag,"Quest direct color copy: RGBA allocation/interop unsupported; original BGRA fallback");
+    }
+    __android_log_print(ANDROID_LOG_INFO,kLogTag,
+        "Quest direct color copy: requested=%d active=%d aa_off=%d runtime_rgba=%d native_rgba=%d d3d_format=%u source_format=%d (full restart)",
+        requested,m_eyeColorFormat==kRgbaEyeColorFormat,aaOff,runtimeRgba,nativeRgba,m_eyeColorFormat,static_cast<int>(m_sourceColorFormat));
 
 	// GeneralsX @feature Codex 23/09/2026 Render each eye into one reusable
 	// 2x-MSAA surface, then let DXVK resolve it into the eye's single-sample
@@ -650,8 +691,9 @@ bool Bootstrap::queryTextureImage(IDirect3DTexture8 *texture, uint32_t width, ui
 	hr = interopTexture->GetVulkanImageInfo(&image, &layout, &imageInfo);
 	interopTexture->Release();
 	if (FAILED(hr) || image == VK_NULL_HANDLE
-		|| (imageInfo.format != VK_FORMAT_B8G8R8A8_UNORM
-			&& imageInfo.format != VK_FORMAT_B8G8R8A8_SRGB)
+        || (m_eyeColorFormat==kRgbaEyeColorFormat
+            ? imageInfo.format!=VK_FORMAT_R8G8B8A8_UNORM
+            : (imageInfo.format!=VK_FORMAT_B8G8R8A8_UNORM && imageInfo.format!=VK_FORMAT_B8G8R8A8_SRGB))
 		|| (imageInfo.usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) == 0
 		|| imageInfo.extent.width != width
 		|| imageInfo.extent.height != height) {
@@ -690,7 +732,7 @@ bool Bootstrap::createMenuTarget(IDirect3DDevice8 *device, uint32_t width, uint3
 		"OpenXR menu target uses logical SAGE canvas %ux%u", m_menuWidth, m_menuHeight);
 
 	HRESULT hr = device->CreateTexture(m_menuWidth, m_menuHeight, 1, D3DUSAGE_RENDERTARGET,
-		D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_menuTexture);
+		static_cast<D3DFORMAT>(m_eyeColorFormat), D3DPOOL_DEFAULT, &m_menuTexture);
 	if (FAILED(hr) || m_menuTexture == nullptr) {
 		__android_log_print(ANDROID_LOG_ERROR, kLogTag,
 			"CreateTexture for OpenXR menu failed: 0x%08x", static_cast<unsigned int>(hr));
@@ -1583,31 +1625,8 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 			if (captureEyes) m_eyeCapture.copy(commandBuffer, eye, filteredEyes,
 				transferSource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, false);
 
-			if (!filteredEyes && m_colorRequiresBlit) {
-				VkImageBlit blit{};
-				blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				blit.srcSubresource.layerCount = 1;
-				blit.srcOffsets[1] = {
-					static_cast<int32_t>(m_recommendedEyeWidth),
-					static_cast<int32_t>(m_recommendedEyeHeight), 1};
-				blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				blit.dstSubresource.baseArrayLayer = eye;
-				blit.dstSubresource.layerCount = 1;
-				blit.dstOffsets[1] = blit.srcOffsets[1];
-				vkCmdBlitImage(commandBuffer, transferSource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-					m_swapchainImages[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					1, &blit, VK_FILTER_NEAREST);
-			} else {
-				VkImageCopy copy{};
-				copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				copy.srcSubresource.layerCount = 1;
-				copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				copy.dstSubresource.baseArrayLayer = eye;
-				copy.dstSubresource.layerCount = 1;
-				copy.extent = {m_recommendedEyeWidth, m_recommendedEyeHeight, 1};
-				vkCmdCopyImage(commandBuffer, transferSource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-					m_swapchainImages[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
-			}
+            CopyEyeColorImage(commandBuffer,transferSource,m_swapchainImages[imageIndex],
+                m_recommendedEyeWidth,m_recommendedEyeHeight,eye,!filteredEyes && m_colorRequiresBlit);
 
 			VkImageMemoryBarrier sourceRestore = sourceToTransfer;
 			sourceRestore.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
@@ -2396,6 +2415,7 @@ void Bootstrap::detachGraphics()
 	m_menuButtonLongFired = false;
 	m_predictedDisplayTime = 0;
 	m_colorFormat = 0;
+    m_eyeColorFormat = kLegacyEyeColorFormat;
 	m_sourceColorFormat = VK_FORMAT_UNDEFINED;
 	m_colorRequiresBlit = false;
 	m_swapchainImages.clear();

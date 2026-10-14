@@ -195,9 +195,9 @@
     {
       "path": "cmake/dx8.cmake",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Optional build wiring; ordinary target remains available; explicit Quest-only completed-eye depth interop overlay with a separate IID and unchanged existing interop ABI",
+      "purpose": "Optional build wiring; ordinary target remains available; explicit Quest-only completed-eye depth interop overlay with a separate IID and unchanged existing interop ABI; Quest-only four-byte stride overlay for owned RGBA eye/menu textures using the existing DXVK format mapping",
       "risk": "build/identity",
-      "owningTest": "control and Quest builds; patch applicability/idempotence, matching backend hashes across native modes",
+      "owningTest": "control and Quest builds; patch applicability/idempotence, matching backend hashes across native modes; direct color host GPU byte comparisons and native source/patch identity checks",
       "removalCondition": "Upstream provides equivalent optional platform support"
     },
     {

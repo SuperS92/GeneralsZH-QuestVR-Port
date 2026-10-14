@@ -436,10 +436,10 @@
     <string name="quest_fence_contours_desc">Softens supported railing patterns and transparent edges. Fences may look softer or thinner. Full restart required.</string>
     <string name="quest_hud_transfer">HUD transfer (experimental)</string>
     <string name="quest_hud_transfer_desc">Transfers the compact HUD into a smaller output buffer. Keeps pixel width and sharpness; larger windows use the full buffer. Default off. Fully restart the game and launcher.</string>
-    <string name="quest_terrain_culling">Terrain view culling (experimental)</string>
-    <string name="quest_terrain_culling_desc">Skip terrain groups entirely outside each eye view. Fully restart the game and launcher after changes.</string>
     <string name="quest_neutral_shroud">Fog-of-war pass (experimental)</string>
     <string name="quest_neutral_shroud_desc">Skip neutral fog draws on fully lit terrain patches. Fully restart the game and launcher after changes.</string>
     <string name="quest_depth_discard">Eye depth buffer (experimental)</string>
     <string name="quest_depth_discard_desc">Discard depth and stencil only after a complete eye image. Fully restart the game and launcher after changes.</string>
+    <string name="quest_direct_color_copy">Direct image copy (experimental)</string>
+    <string name="quest_direct_color_copy_desc">Use matching RGBA eye images without color conversion when anti-aliasing is off. Fully restart the game and launcher after changes.</string>
 </resources>

@@ -92,7 +92,7 @@ private:
 	bool selectSystemAndViews();
 	bool queryVulkanRequirements();
 	bool createSwapchain();
-	bool createEyeTargets(::IDirect3DDevice8 *device);
+	bool createEyeTargets(::IDirect3DDevice8 *device, uint32_t menuWidth, uint32_t menuHeight);
 	bool createMenuTarget(::IDirect3DDevice8 *device, uint32_t width, uint32_t height);
 	bool createActions();
 	bool syncActions();
@@ -170,6 +170,7 @@ private:
 	std::array<XrView, 2> m_views = {{{XR_TYPE_VIEW}, {XR_TYPE_VIEW}}};
 	int64_t m_colorFormat = 0;
 	VkFormat m_sourceColorFormat = VK_FORMAT_UNDEFINED;
+    uint32_t m_eyeColorFormat = 21;
 	bool m_colorRequiresBlit = false;
 	std::vector<VkImage> m_swapchainImages;
 	std::array<::IDirect3DTexture8 *, 2> m_eyeTextures = {};

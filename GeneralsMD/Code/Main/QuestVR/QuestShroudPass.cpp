@@ -65,7 +65,7 @@ bool contract(IDirect3DDevice8 *device,D3DMATRIX &view,D3DMATRIX &texture) {
     if(FAILED(result) || !indices || base) return false;
     reason=32;IDirect3DSurface8 *target=nullptr;D3DSURFACE_DESC desc{};
     result=device->GetRenderTarget(&target);if(SUCCEEDED(result) && target) result=target->GetDesc(&desc);
-    if(target) target->Release();if(FAILED(result) || !target || desc.Format!=D3DFMT_A8R8G8B8) return false;
+    if(target) target->Release();if(FAILED(result) || !target || (desc.Format!=D3DFMT_A8R8G8B8 && desc.Format!=static_cast<D3DFORMAT>(32))) return false;
     reason=64;D3DMATRIX world{};
     if(FAILED(device->GetTransform(D3DTS_WORLD,&world)) || FAILED(device->GetTransform(D3DTS_VIEW,&view))
         || FAILED(device->GetTransform(D3DTS_TEXTURE0,&texture))) return false;

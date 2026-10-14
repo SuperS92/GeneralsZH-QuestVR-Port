@@ -31,7 +31,7 @@ int main() {
     _putenv_s("GX_QUEST_TERRAIN_CULLING", "true");
     require(!PerformanceRequested(PerfOption::TerrainCulling), "Terrain culling requires exact 1");
     _putenv_s("GX_QUEST_TERRAIN_CULLING", "1");
-    require(PerformanceRequested(PerfOption::TerrainCulling), "Terrain culling enables independently");
+    require(!PerformanceRequested(PerfOption::TerrainCulling), "Retired terrain culling ignores stale exact-1 settings");
     _putenv_s("GX_QUEST_TERRAIN_CULLING", "");
     require(!PerformanceRequested(PerfOption::NeutralShroud), "Neutral shroud defaults off");
     _putenv_s("GX_QUEST_NEUTRAL_SHROUD", "true");
@@ -45,6 +45,12 @@ int main() {
     _putenv_s("GX_QUEST_DEPTH_DISCARD", "1");
     require(PerformanceRequested(PerfOption::DepthDiscard), "Depth discard enables independently");
     _putenv_s("GX_QUEST_DEPTH_DISCARD", "");
+    require(!PerformanceRequested(PerfOption::DirectColorCopy), "Direct copy defaults off");
+    _putenv_s("GX_QUEST_DIRECT_COLOR_COPY", "true");
+    require(!PerformanceRequested(PerfOption::DirectColorCopy), "Direct copy needs exact 1");
+    _putenv_s("GX_QUEST_DIRECT_COLOR_COPY", "1");
+    require(PerformanceRequested(PerfOption::DirectColorCopy), "Direct copy enables independently");
+    _putenv_s("GX_QUEST_DIRECT_COLOR_COPY", "");
     for (bool planar : {false, true}) for (size_t sampleBytes : {size_t(1),size_t(2),size_t(4)})
         for (size_t channels : {size_t(1),size_t(2),size_t(6)}) {
         std::vector<uint8_t> original, geometric;
