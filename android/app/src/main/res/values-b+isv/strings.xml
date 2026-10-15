@@ -440,4 +440,8 @@
     <string name="quest_depth_discard_desc">Discard depth and stencil only after a complete eye image. Fully restart the game and launcher after changes.</string>
     <string name="quest_direct_color_copy">Direct image copy (experimental)</string>
     <string name="quest_direct_color_copy_desc">Use matching RGBA eye images without color conversion when anti-aliasing is off. Fully restart the game and launcher after changes.</string>
+    <string name="quest_transfer_batch">Skupny prenos obrazov (eksperimentalno)</string>
+    <string name="quest_transfer_batch_desc">Sojedinjuje prenos obrazov očij i HUD bez izměny pikselov ili razrěšenja. Poslě izměn potpuno zapustite igru i launcher znova.</string>
+    <string name="quest_shadow_coverage">Kraje těnjev (eksperimentalno)</string>
+    <string name="quest_shadow_coverage_desc">Prilagođuje posledny sloj těnjev oblasti oka VR. Igru i launcher potpuno zapustite znova.</string>
 </resources>

@@ -440,4 +440,8 @@
     <string name="quest_depth_discard_desc">Discard depth and stencil only after a complete eye image. Fully restart the game and launcher after changes.</string>
     <string name="quest_direct_color_copy">Direct image copy (experimental)</string>
     <string name="quest_direct_color_copy_desc">Use matching RGBA eye images without color conversion when anti-aliasing is off. Fully restart the game and launcher after changes.</string>
+    <string name="quest_transfer_batch">انتقال گروهی تصویر (آزمایشی)</string>
+    <string name="quest_transfer_batch_desc">انتقال تصویر چشم‌ها و رابط را بدون تغییر پیکسل یا وضوح گروه‌بندی می‌کند. پس از تغییر، بازی و راه‌انداز را کاملاً بازراه‌اندازی کنید.</string>
+    <string name="quest_shadow_coverage">لبه‌های سایه (آزمایشی)</string>
+    <string name="quest_shadow_coverage_desc">لایه نهایی سایه را با نمای چشم واقعیت مجازی هماهنگ می‌کند. بازی و راه‌انداز را کاملاً بازراه‌اندازی کنید.</string>
 </resources>

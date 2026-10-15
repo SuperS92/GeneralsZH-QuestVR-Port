@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
+#include <utility>
 static void require(bool value, const char *message) {
     if (!value) { std::fprintf(stderr, "FAIL: %s\n", message); std::exit(1); }
 }
@@ -51,6 +52,15 @@ int main() {
     _putenv_s("GX_QUEST_DIRECT_COLOR_COPY", "1");
     require(PerformanceRequested(PerfOption::DirectColorCopy), "Direct copy enables independently");
     _putenv_s("GX_QUEST_DIRECT_COLOR_COPY", "");
+    for (const auto &test : {std::make_pair(PerfOption::TransferBatch,"GX_QUEST_TRANSFER_BATCH"),
+        std::make_pair(PerfOption::ShadowCoverage,"GX_QUEST_SHADOW_COVERAGE")}) {
+        require(!PerformanceRequested(test.first), "New trials default off");
+        _putenv_s(test.second,"true");
+        require(!PerformanceRequested(test.first), "New trials require exact 1");
+        _putenv_s(test.second,"1");
+        require(PerformanceRequested(test.first), "New trials enable independently");
+        _putenv_s(test.second,"");
+    }
     for (bool planar : {false, true}) for (size_t sampleBytes : {size_t(1),size_t(2),size_t(4)})
         for (size_t channels : {size_t(1),size_t(2),size_t(6)}) {
         std::vector<uint8_t> original, geometric;

@@ -189,6 +189,15 @@ public class SetupActivity extends Activity {
         return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getBoolean("quest_direct_color_copy", false);
     }
+    // GeneralsX @performance Codex 15/10/2026 Independent local render trials.
+    static boolean getQuestTransferBatch(android.content.Context ctx) {
+        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean("quest_transfer_batch", false);
+    }
+    static boolean getQuestShadowCoverage(android.content.Context ctx) {
+        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean("quest_shadow_coverage", false);
+    }
     static final String[] QUEST_PERF_KEYS = {"quest_perf_audio", "quest_perf_tracks", "quest_perf_terrain",
         "quest_perf_trees", "quest_perf_shadows", "quest_perf_smaa", "quest_perf_metrics", "quest_terrain_batching"};
     static final String[] QUEST_PERF_ENV = {"GX_QUEST_PERF_AUDIO", "GX_QUEST_PERF_TRACKS", "GX_QUEST_PERF_TERRAIN",
@@ -1815,6 +1824,18 @@ public class SetupActivity extends Activity {
                 getQuestDirectColorCopy(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .edit().putBoolean("quest_direct_color_copy", index == 1).apply());
             UiKit.supporting(directColor, getString(R.string.quest_direct_color_copy_desc));
+            LinearLayout transferBatch = UiKit.card(root);
+            UiKit.sectionHeader(transferBatch, R.drawable.ic_gzh_display, getString(R.string.quest_transfer_batch), false);
+            UiKit.segmented(transferBatch, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
+                getQuestTransferBatch(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit().putBoolean("quest_transfer_batch", index == 1).apply());
+            UiKit.supporting(transferBatch, getString(R.string.quest_transfer_batch_desc));
+            LinearLayout shadowCoverage = UiKit.card(root);
+            UiKit.sectionHeader(shadowCoverage, R.drawable.ic_gzh_display, getString(R.string.quest_shadow_coverage), false);
+            UiKit.segmented(shadowCoverage, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
+                getQuestShadowCoverage(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit().putBoolean("quest_shadow_coverage", index == 1).apply());
+            UiKit.supporting(shadowCoverage, getString(R.string.quest_shadow_coverage_desc));
             int[] titles = {R.string.quest_perf_audio, R.string.quest_perf_tracks, R.string.quest_perf_terrain,
                 R.string.quest_perf_trees, R.string.quest_perf_shadows, R.string.quest_perf_smaa, R.string.quest_perf_metrics, R.string.quest_terrain_batching};
             int[] descriptions = {R.string.quest_perf_audio_desc, R.string.quest_perf_tracks_desc, R.string.quest_perf_terrain_desc,

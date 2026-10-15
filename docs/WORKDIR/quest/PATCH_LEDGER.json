@@ -359,6 +359,14 @@
       "risk": "Optional presentation metadata; unknown/failed copies remain nonneutral",
       "owningTest": "CPU mask/upload-failure/footprint/index oracles; compiled optional D3D9 GPU bridge fixture currently pending; dual native, source boundary, Quest fog/transition/FPS and replay/live PC gates",
       "removalCondition": "Upstream provides equivalent verified neutral-pass rejection or trial is rejected"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Shadow/W3DVolumetricShadow.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Optional Quest final stencil-shadow tint quad uses the verified owned eye viewport; preserve all volume draws, stencil arithmetic, culling and non-Quest geometry",
+      "risk": "presentation bounds only; may fill previously omitted edge pixels",
+      "owningTest": "viewport integer oracle; both native profiles; headset shadow-edge comparison and replay/live PC gates",
+      "removalCondition": "Upstream obtains the final shadow quad bounds from the active viewport"
     }
   ],
   "followUpUpstreamEdits": [

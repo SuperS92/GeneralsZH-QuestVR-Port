@@ -12,6 +12,7 @@
 #include "QuestOpenXRBootstrap.h"
 #include "VRDevice/QuestHudTransfer.h"
 #include "VRDevice/QuestColorCopy.h"
+#include "VRDevice/QuestTransferBatch.h"
 #include "VRDevice/QuestPerformance.h"
 #include "VRDevice/QuestXRInterface.h"
 #include "VRDevice/QuestVRMath.h"
@@ -1574,6 +1575,36 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 			m_timestampQueryPool, firstQuery);
 	}
 
+    // GeneralsX @performance Codex 15/10/2026 Keep the original filtered/capture/front-end path.
+    bool batchedTransfer = false;
+    if (PerformanceRequested(PerfOption::TransferBatch) && copyEyeTargets && m_viewCount==2
+        && !filteredEyes && !captureEyes) {
+        ColorTransferBatch batch;
+        batch.eyes=eyeImages; batch.layouts=eyeLayouts;
+        batch.eyeDestination=m_swapchainImages[imageIndex];
+        batch.eyeWidth=m_recommendedEyeWidth; batch.eyeHeight=m_recommendedEyeHeight;
+        batch.convertFormat=m_colorRequiresBlit; batch.copyMenu=copyMenu;
+        if (copyMenu) {
+            batch.menu=menuImage; batch.menuLayout=menuLayout;
+            batch.menuDestination=menuImages[menuImageIndex];
+            batch.menuWidth=m_menuWidth; batch.menuHeight=m_menuHeight; batch.hud=hudPlan;
+        }
+        batchedTransfer=RecordColorTransferBatch(commandBuffer,batch);
+        if (batchedTransfer && copyMenu)
+            RecordHudTransfer(m_menuWidth,m_menuHeight,hudPlan.destinationHeight,hudPlan.compact);
+    }
+    // Count actual use rather than successful initialization or preference alone.
+    static unsigned batchFrames=0, legacyFrames=0, transferReports=0;
+    if (PerformanceMetricsRequested()) {
+        if (batchedTransfer) ++batchFrames; else ++legacyFrames;
+        if (batchFrames+legacyFrames==120) {
+            __android_log_print(ANDROID_LOG_INFO,kLogTag,
+                "Quest transfer batch: enabled=%d batched=%u legacy=%u report=%u (120 frames)",
+                PerformanceRequested(PerfOption::TransferBatch),batchFrames,legacyFrames,++transferReports);
+            batchFrames=legacyFrames=0;
+        }
+    }
+    if (!batchedTransfer) {
 	VkImageSubresourceRange allLayers{};
 	allLayers.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	allLayers.levelCount = 1;
@@ -1712,6 +1743,7 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1,
 			&menuToCompositor);
 	}
+    }
 	if (m_timestampQueryPool != VK_NULL_HANDLE) {
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 			m_timestampQueryPool, imageIndex * 2 + 1);

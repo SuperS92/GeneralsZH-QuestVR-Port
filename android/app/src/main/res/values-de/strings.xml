@@ -440,4 +440,8 @@
     <string name="quest_depth_discard_desc">Verwirft Tiefe und Stencil erst nach einem vollständigen Augenbild. Spiel und Launcher nach Änderungen vollständig neu starten.</string>
     <string name="quest_direct_color_copy">Direkte Bildkopie (experimentell)</string>
     <string name="quest_direct_color_copy_desc">Nutzt passende RGBA-Augenbilder ohne Farbkonvertierung, wenn Kantenglättung aus ist. Spiel und Launcher nach Änderungen vollständig neu starten.</string>
+    <string name="quest_transfer_batch">Bildübergabe bündeln (experimentell)</string>
+    <string name="quest_transfer_batch_desc">Übergaben der Augenbilder und des HUDs bündeln. Pixel und Auflösung bleiben gleich. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
+    <string name="quest_shadow_coverage">Schattenränder (experimentell)</string>
+    <string name="quest_shadow_coverage_desc">Abschließende Schattenfläche an das VR-Augenbild anpassen. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
 </resources>

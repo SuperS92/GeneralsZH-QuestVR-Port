@@ -447,4 +447,8 @@
     <string name="quest_depth_discard_desc">Discard depth and stencil only after a complete eye image. Fully restart the game and launcher after changes.</string>
     <string name="quest_direct_color_copy">Direct image copy (experimental)</string>
     <string name="quest_direct_color_copy_desc">Use matching RGBA eye images without color conversion when anti-aliasing is off. Fully restart the game and launcher after changes.</string>
+    <string name="quest_transfer_batch">Batched image transfer (experimental)</string>
+    <string name="quest_transfer_batch_desc">Group eye and HUD transfers without changing pixels or resolution. Fully restart the game and launcher after changes.</string>
+    <string name="quest_shadow_coverage">Shadow edges (experimental)</string>
+    <string name="quest_shadow_coverage_desc">Match the final shadow tint to the VR eye viewport. Fully restart the game and launcher after changes.</string>
 </resources>

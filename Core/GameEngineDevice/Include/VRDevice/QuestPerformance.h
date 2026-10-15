@@ -7,7 +7,7 @@
 #include <vector>
 namespace QuestXR {
 // GeneralsX @performance Codex 05/10/2026 Independent, default-off presentation experiments.
-enum class PerfOption { AudioGrowth, TrackUpload, TerrainLighting, TreeRange, ShadowAppend, SmaaScratch, TerrainBatching, TrackStreaming, HudTransfer, TerrainCulling, NeutralShroud, DepthDiscard, DirectColorCopy, Count };
+enum class PerfOption { AudioGrowth, TrackUpload, TerrainLighting, TreeRange, ShadowAppend, SmaaScratch, TerrainBatching, TrackStreaming, HudTransfer, TerrainCulling, NeutralShroud, DepthDiscard, DirectColorCopy, TransferBatch, ShadowCoverage, Count };
 enum class PerfStage { Audio, Tracks, TerrainBlend, Trees, Shadows, TerrainSubmit, TrackPack, TrackLock, TrackCopy, TrackUnlock, TrackSubmit, Count };
 bool PerformanceRequested(PerfOption option);
 bool PerformanceMetricsRequested();

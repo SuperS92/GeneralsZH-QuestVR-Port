@@ -63,6 +63,9 @@
 #include "wwshade/shdsubmesh.h"
 #endif
 #include "GXTrace.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestShadowCoverage.h"
+#endif
 #include <chrono>
 
 #if defined(__ANDROID__)
@@ -3395,10 +3398,18 @@ void W3DVolumetricShadowManager::renderStencilShadows()
 	width=TheTacticalView->getWidth();
 	height=TheTacticalView->getHeight();
 
-    v[0].p = D3DXVECTOR4( xpos+width, ypos+height, 0.0f, 1.0f );
-    v[1].p = D3DXVECTOR4( xpos+width, 0, 0.0f, 1.0f );
-    v[2].p = D3DXVECTOR4(  xpos, ypos+height, 0.0f, 1.0f );
-    v[3].p = D3DXVECTOR4(  xpos,  0, 0.0f, 1.0f );
+    // GeneralsX @bugfix Codex 15/10/2026 The UI canvas can be shorter than an OpenXR eye target.
+    float left=float(xpos), top=0.0f, right=float(xpos+width), bottom=float(ypos+height);
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::ShadowCoverageRect coverage;
+    if (!ShaderClass::Is_Backface_Culling_Inverted() && QuestXR::GetEyeShadowCoverage(m_pDev,coverage)) {
+        left=coverage.left; top=coverage.top; right=coverage.right; bottom=coverage.bottom;
+    }
+#endif
+    v[0].p = D3DXVECTOR4(right,bottom,0.0f,1.0f);
+    v[1].p = D3DXVECTOR4(right,top,0.0f,1.0f);
+    v[2].p = D3DXVECTOR4(left,bottom,0.0f,1.0f);
+    v[3].p = D3DXVECTOR4(left,top,0.0f,1.0f);
     v[0].color = TheW3DShadowManager->getShadowColor();
     v[1].color = TheW3DShadowManager->getShadowColor();
     v[2].color = TheW3DShadowManager->getShadowColor();

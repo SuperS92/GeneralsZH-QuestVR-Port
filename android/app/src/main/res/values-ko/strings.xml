@@ -440,4 +440,8 @@
     <string name="quest_depth_discard_desc">Discard depth and stencil only after a complete eye image. Fully restart the game and launcher after changes.</string>
     <string name="quest_direct_color_copy">Direct image copy (experimental)</string>
     <string name="quest_direct_color_copy_desc">Use matching RGBA eye images without color conversion when anti-aliasing is off. Fully restart the game and launcher after changes.</string>
+    <string name="quest_transfer_batch">이미지 일괄 전송 (실험적)</string>
+    <string name="quest_transfer_batch_desc">픽셀과 해상도 변경 없이 양안 및 HUD 전송을 묶습니다. 변경 후 게임과 런처를 완전히 다시 시작하세요.</string>
+    <string name="quest_shadow_coverage">그림자 가장자리 (실험적)</string>
+    <string name="quest_shadow_coverage_desc">마지막 그림자 영역을 VR 눈 화면에 맞춥니다. 변경 후 게임과 런처를 완전히 다시 시작하세요.</string>
 </resources>
