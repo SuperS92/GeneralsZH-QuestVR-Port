@@ -43,13 +43,38 @@ resolve and apply; bridge CPU timings include producer flushing and queue
 synchronization. Compare these with whole-app GPU time rather than adding
 overlapping measurements. Timestamp sums use the latest completed eye samples.
 
-Host fixtures cover 96 actual GPU frame cases: RGBA/BGRA, D32/D24S8, direct and
+Host fixtures now cover 128 actual GPU frame cases: RGBA/BGRA, D32/D24S8, direct and
 copied depth, separate eyes, exact alpha and reset output, stale-history rejection
 and temporal attenuation. An independent row-vector camera oracle checks 1000
 world points, including Y orientation, half-pixel offset and depth mapping.
+Known-pixel GPU oracles cover orthographic motion and perspective reprojection
+with distinct same-eye depths, including the shared surface overwritten between
+eyes. Test-only interception checks actual barriers and descriptors against each
+image's creation usage; this is a narrow contract check, not full validation.
 These fixtures do not validate the D3D8/OpenXR bridge on Quest or its cost.
 
 Hardware gates: same-scene Off/On, stationary and moving head/camera, moving
 units, fine fences/trees, shadows/water/effects, pointer/HUD, campaign transitions,
 recenter and suspend/resume. Use normal native GPU capture, without detailed
 trace mode. Replay and a complete live PC match remain required before release.
+
+## Test 10 feedback and Test 11 correction
+
+Headset logs confirm activation and sustained history use: 6720 eye submissions,
+37 resets and three busy skips in the reviewed run. The maintainer reports no
+artifacts, but no clear improvement or only a very subtle one. Do not call this
+a successful quality/performance result. Logged GPU spans include dependency
+waits; they do not establish incremental filter cost without a controlled pair.
+
+Correct the private depth copy to SHADER_READ_ONLY_OPTIMAL. It is a sampled
+transfer destination, not a depth attachment; the previous depth-attachment
+read-only layout violated [VUID 01210](https://docs.vulkan.org/refpages/latest/refpages/source/VkImageMemoryBarrier.html).
+The strengthened actual-call test rejects the old Test 10 implementation and
+passes the corrected one. This fixes the contract; a visible quality gain from
+this correction alone is not established.
+
+Test 10 also used more restrictive history caps than the pinned RDR reference:
+8 still frames / 4 moving / 2 subpixel penalty, versus 10 / 5 / 1. Test 11 uses
+the reference values, preserving full-image coverage and the same sample count.
+It logs reset reasons separately. Check for useful stabilization, blur and
+moving-object trails before requesting another performance comparison.

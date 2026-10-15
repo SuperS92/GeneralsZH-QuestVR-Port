@@ -8,6 +8,7 @@
 static void require(bool ok,const char *why){if(!ok){std::fprintf(stderr,"FAIL: %s\n",why);std::exit(1);}}
 static void check(VkResult result){require(result==VK_SUCCESS,"Vulkan operation");}
 #include "test-taa-math.h"
+#include "taa-vulkan-contract.h"
 struct Allocation {VkImage image{};VkDeviceMemory memory{};};
 int main() {
     using namespace QuestXR;testMath();
@@ -24,6 +25,7 @@ int main() {
     VkDeviceQueueCreateInfo queueInfo{VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};queueInfo.queueFamilyIndex=family;queueInfo.queueCount=1;queueInfo.pQueuePriorities=&priority;
     VkDeviceCreateInfo deviceInfo{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};deviceInfo.queueCreateInfoCount=1;deviceInfo.pQueueCreateInfos=&queueInfo;
     VkDevice device{};check(vkCreateDevice(physical,&deviceInfo,nullptr,&device));VkQueue queue{};vkGetDeviceQueue(device,family,0,&queue);
+    TaaContract::initialize(device);
     VkPhysicalDeviceMemoryProperties memories{};vkGetPhysicalDeviceMemoryProperties(physical,&memories);
     auto allocate=[&](VkMemoryRequirements r,VkMemoryPropertyFlags flags){
         unsigned type=0;while(type<memories.memoryTypeCount&&(!(r.memoryTypeBits&(1u<<type))||(memories.memoryTypes[type].propertyFlags&flags)!=flags))++type;
@@ -72,13 +74,27 @@ int main() {
         TaaCamera camera;camera.valid=true;camera.width=w;camera.height=h;
         for(unsigned i=0;i<4;++i)camera.view[i*5]=camera.projection[i*5]=1;
         std::vector<unsigned> center;
-        for(unsigned frame=1;frame<=12;++frame) {
-            const bool reset=frame==1||frame==10; if(frame==10)taa.invalidate();
+        for(unsigned frame=1;frame<=16;++frame) {
+            const bool reset=frame==1||frame==10||frame==13||frame==15; if(frame==10||frame==13||frame==15)taa.invalidate();
+            if(frame==14)camera.view[12]=2.0f/w; // one pixel right in the current image
+            if(frame==15) {
+                camera.view[12]=0;
+                std::fill(camera.projection,camera.projection+16,0);
+                camera.projection[0]=camera.projection[5]=1;
+                camera.projection[10]=1.25f;camera.projection[11]=1;camera.projection[14]=-.25f;
+            }
+            if(frame==16)camera.view[12]=1.0f/w; // depth .25 shifts 2 pixels; depth .75 shifts 1
             for(unsigned eye=0;eye<2;++eye) {
                 for(unsigned y=0;y<h;++y)for(unsigned x=0;x<w;++x) {
                     auto p=pixels+eye*bytes+(y*w+x)*4;std::memset(p,0,4);
                     const unsigned channel=format==VK_FORMAT_B8G8R8A8_UNORM?(eye?0:2):(eye?2:0);
                     p[channel]=frame>=10?77:((x+y)%2?180:80)+(frame%2?20:-20);p[3]=unsigned((x*13+y*7+frame*11)%256);
+                    if(frame>=13) {
+                        const int worldX=int(x)-(frame==14?1:frame==16?(eye?1:2):0);
+                        const int base=worldX==7&&y==6?140:worldX==8&&y==6?20:
+                            (worldX==6&&y==6)||(worldX==7&&y==5)?255:0;
+                        p[channel]=static_cast<unsigned char>(std::max(0,base-(frame==14||frame==16?20:0)));
+                    }
                 }
                 begin();barrier(eyes[eye].image,VK_IMAGE_ASPECT_COLOR_BIT,eyes[eye].layout,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
                 VkBufferImageCopy copy{};copy.bufferOffset=eye*bytes;copy.imageSubresource={VK_IMAGE_ASPECT_COLOR_BIT,0,0,1};copy.imageExtent={w,h,1};
@@ -106,7 +122,14 @@ int main() {
                 if(reset)require(!std::memcmp(actual,original,4),"First/reset frame raw bytes exact");
                 const unsigned channel=format==VK_FORMAT_B8G8R8A8_UNORM?(eye?0:2):(eye?2:0);
                 for(unsigned c=0;c<3;++c)if(c!=channel)require(actual[c]<=1,"Separate eye history and color channels");
-                if(frame>=10)require(std::abs(int(actual[channel])-77)<=1,"Flat replacement rejects stale history");
+                if(frame>=10&&frame<=12)require(std::abs(int(actual[channel])-77)<=1,"Flat replacement rejects stale history");
+                if((frame==14&&i==6*w+8)||(frame==16&&i==6*w+(eye?8:9))) {
+                    // Independent two-frame oracle: correct previous pixel=140,
+                    // current=120, wrong un-reprojected previous pixel=20.
+                    // Quantized confidence gives output about 125, versus about
+                    // 95 for wrong coordinates or 120 for a disabled/reset pass.
+                    require(actual[channel]>=124&&actual[channel]<=127,"GPU camera/depth reprojection selects the correct same-eye earlier pixel");
+                }
             }
             const unsigned channel=format==VK_FORMAT_B8G8R8A8_UNORM?2:0;
             if(frame==8||frame==9)center.push_back(pixels[2*bytes+((h/2)*w+w/2)*4+channel]);

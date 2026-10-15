@@ -12,7 +12,7 @@ for folder in ('vulkan','vk_video'):
     shutil.copytree(sysroot/folder,work/'include'/folder,dirs_exist_ok=True)
 source=root/'GeneralsMD/Code/Main/QuestVR/QuestTemporalAA.cpp'
 test=root/'scripts/qa/quest/test-temporal-aa.cpp'
-functions=sorted(set(re.findall(r'\b(vk[A-Z]\w*)\s*\(',source.read_text()+test.read_text())))
+functions=sorted(set(re.findall(r'\b(vk[A-Z]\w*)\s*\(',source.read_text()+test.read_text()+test.with_name('taa-vulkan-contract.h').read_text())))
 definition=work/'vulkan.def';definition.write_text('LIBRARY vulkan-1.dll\nEXPORTS\n'+'\n'.join(functions)+'\n')
 compiler=pathlib.Path(tools['hostCxxRuntime'])
 subprocess.run([str(compiler/'llvm-dlltool.exe'),'-m','i386:x86-64','-d',str(definition),'-l',str(work/'libvulkan.a')],check=True)
@@ -26,7 +26,10 @@ if result.returncode:raise SystemExit(result.returncode)
 report={'status':'HOST_GPU_TAA_PASS','cases':int(re.search(r'PASS (\d+) GPU frame cases',log)[1]),
     'checks':['Independent row-vector D3D projection oracle: 1000 points','RGBA/BGRA, separate eyes',
     'D32/D24S8 direct sampled depth and private depth copy','Every pixel alpha preserved',
-    'First/reset raw bytes exact','Flat replacement rejects stale history','Temporal attenuation of alternating texture'],
+    'First/reset raw bytes exact','Flat replacement rejects stale history','Temporal attenuation of alternating texture',
+    'Actual GPU orthographic and perspective camera reprojection with independent expected pixels',
+    'Shared depth overwritten between eyes: distinct .25/.75 depth selects the correct different reprojection offsets',
+    'Actual image barriers and descriptors checked against creation usage; VUID 01208 through 01213'],
     'questBridge':'NOT_VERIFIED','questPerformance':'NOT_MEASURED','validationLayers':'NOT_REQUESTED',
     'logs':['work/temporal-aa-smoke/result.log']}
 (root/'work/evidence/temporal-aa-host.json').write_text(json.dumps(report,indent=2),encoding='utf-8')

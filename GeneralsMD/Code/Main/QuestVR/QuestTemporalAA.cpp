@@ -6,7 +6,9 @@
 #include <vector>
 namespace QuestXR {
 namespace {
-struct Push {float reproject[16]{};uint32_t info[4]{};float tune[4]{8,4,2,0};};
+// GeneralsX @tweak Codex 16/10/2026 Match pinned RDR Lite defaults. Test 10's
+// 8/4/2 cap rejected more history at subpixel motion than the 10/5/1 reference.
+struct Push {float reproject[16]{};uint32_t info[4]{};float tune[4]{10,5,1,0};};
 static_assert(sizeof(Push)==96,"Shader push layout");
 VkImageAspectFlags depthAspects(VkFormat format) {
     return VK_IMAGE_ASPECT_DEPTH_BIT | (format==VK_FORMAT_D32_SFLOAT?0:VK_IMAGE_ASPECT_STENCIL_BIT);
@@ -169,7 +171,9 @@ bool TemporalAA::initialize(VkPhysicalDevice physical,VkDevice device,uint32_t f
         if(vkAllocateDescriptorSets(device,&allocate,eye.sets.data())!=VK_SUCCESS)return fail();
         for(unsigned h=0;h<2;++h) {
             const VkDescriptorImageInfo images[]={{m_sampler,eye.sourceView,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
-                {m_depthSampler,m_depthView,VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL},
+                // The private copy is sampled, not an attachment. VUID 01210
+                // forbids DEPTH_STENCIL_READ_ONLY for that image usage.
+                {m_depthSampler,m_depthView,m_copyDepth?VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL},
                 {m_sampler,eye.images[h].view,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}};
             VkWriteDescriptorSet writes[3]{};
             for(unsigned b=0;b<3;++b){writes[b].sType=VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;writes[b].dstSet=eye.sets[h];writes[b].dstBinding=b;
@@ -197,7 +201,11 @@ bool TemporalAA::process(VkQueue queue,unsigned index,const TaaCamera &camera,ui
     if(!ready()||!queue||index>1||camera.width!=m_width||camera.height!=m_height)return false;
     auto &eye=m_eyes[index];Push push{};TaaMath::History next;
     const auto reason=TaaMath::Plan(camera,eye.history,frame,time,push.reproject,next);
-    if(reason==TaaMath::Reset::Invalid){eye.history.valid=false;return false;}
+    if(reason==TaaMath::Reset::Invalid){
+        eye.history.valid=false;
+        if(++m_invalid<=3)__android_log_print(ANDROID_LOG_WARN,"GeneralsXR","Quest TAA invalid camera/depth plan: eye=%u frame=%llu",index,(unsigned long long)frame);
+        return false;
+    }
     const unsigned slotIndex=index*3+m_nextSlot[index]%3;auto &slot=m_slots[slotIndex];
     const auto status=vkGetFenceStatus(m_device,slot.fence);
     if(status!=VK_SUCCESS) {eye.history.valid=false;++m_busy;if(status!=VK_NOT_READY)m_failed=true;return false;}
@@ -220,11 +228,11 @@ bool TemporalAA::process(VkQueue queue,unsigned index,const TaaCamera &camera,ui
     if(m_copyDepth) {
         barrier(cmd,m_depth.image,aspects,m_depth.layout,VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT|VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_TRANSFER_READ_BIT);
-        barrier(cmd,m_privateDepth.image,aspects,m_depthInitialized?VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:VK_IMAGE_LAYOUT_UNDEFINED,
+        barrier(cmd,m_privateDepth.image,aspects,m_depthInitialized?VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,m_depthInitialized?VK_ACCESS_SHADER_READ_BIT:0,VK_ACCESS_TRANSFER_WRITE_BIT);
         VkImageCopy copy{};copy.srcSubresource=copy.dstSubresource={VK_IMAGE_ASPECT_DEPTH_BIT,0,0,1};copy.extent={m_width,m_height,1};
         vkCmdCopyImage(cmd,m_depth.image,VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,m_privateDepth.image,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,1,&copy);
-        barrier(cmd,m_privateDepth.image,aspects,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT);
+        barrier(cmd,m_privateDepth.image,aspects,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT);
         barrier(cmd,m_depth.image,aspects,VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,m_depth.layout,VK_ACCESS_TRANSFER_READ_BIT,
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
     } else barrier(cmd,m_depth.image,aspects,m_depth.layout,VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
@@ -263,10 +271,15 @@ bool TemporalAA::process(VkQueue queue,unsigned index,const TaaCamera &camera,ui
     if(vkQueueSubmit(queue,1,&submit,slot.fence)!=VK_SUCCESS){m_failed=true;return false;}
     ++m_nextSlot[index];eye.history=next;eye.output=input;eye.initialized=true;m_depthInitialized=true;slot.timed=m_queries!=VK_NULL_HANDLE;
     ++m_processed;if(push.info[2])++m_resets;
+    ++m_resetReasons[unsigned(reason)];
     if(m_processed%240==0)__android_log_print(ANDROID_LOG_INFO,"GeneralsXR",
         "Quest TAA Lite: eyes=%llu resets=%llu busy=%llu gpu_left_ms=%.3f gpu_right_ms=%.3f gpu_pair_ms=%.3f depth_copy=%d memory_bytes=%llu full=1",
         (unsigned long long)m_processed,(unsigned long long)m_resets,(unsigned long long)m_busy,m_eyeGpu[0],m_eyeGpu[1],
         m_eyeGpu[0]>=0&&m_eyeGpu[1]>=0?m_eyeGpu[0]+m_eyeGpu[1]:-1,m_copyDepth,(unsigned long long)m_bytes);
+    if(m_processed%240==0)__android_log_print(ANDROID_LOG_INFO,"GeneralsXR",
+        "Quest TAA history: reused_eyes=%llu first=%llu gap=%llu camera=%llu projection=%llu invalid=%llu tune=10,5,1 (GPU span includes dependencies)",
+        (unsigned long long)m_resetReasons[0],(unsigned long long)m_resetReasons[1],(unsigned long long)m_resetReasons[2],
+        (unsigned long long)m_resetReasons[3],(unsigned long long)m_resetReasons[4],(unsigned long long)m_invalid);
     return true;
 }
 void TemporalAA::destroy() {

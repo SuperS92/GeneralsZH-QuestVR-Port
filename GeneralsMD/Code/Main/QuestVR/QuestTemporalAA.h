@@ -63,6 +63,7 @@ private:
     double m_lastGpu=-1;
     double m_eyeGpu[2]{-1,-1};
     uint64_t m_bytes=0,m_processed=0,m_resets=0,m_busy=0;
+    uint64_t m_resetReasons[6]{},m_invalid=0;
     bool m_copyDepth=false,m_depthInitialized=false,m_failed=false;
 };
 }

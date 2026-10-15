@@ -61,3 +61,10 @@ Add default-off full-image TAA Lite with camera/depth reprojection. Keep Android
 version 1.4.0.9 / 10409 and the public updater unchanged. See [render boundary,
 cost and validation](TAA_LITE_TRIAL.md). Test 09 shadow coverage is confirmed on
 hardware; its image-transfer grouping has no measured benefit and stays off.
+
+## Test 11
+
+Correct the sampled depth-copy layout, match the pinned RDR Lite history caps,
+and separate history reset reasons in diagnostics. Keep full-image coverage,
+default Off, Android 1.4.0.9 / 10409 and the existing updater. Stronger host
+usage/layout and camera/depth pixel oracles pass; headset quality is pending.
