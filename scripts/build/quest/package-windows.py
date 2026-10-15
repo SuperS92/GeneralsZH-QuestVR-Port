@@ -127,7 +127,7 @@ def main():
             subprocess.run(command + [str(patch)], check=True)
     assets = ROOT / 'android/app/src/main/assets/gamedata'
     # GeneralsX @build Codex 16/10/2026 Retain the adapted shader's MIT notice in every APK.
-    notices = assets.parent / 'licenses'
+    notices = assets / 'licenses'
     notices.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(ROOT / 'docs/WORKDIR/quest/licenses/RDR1-Quest-MIT.txt',
                     notices / 'RDR1-Quest-MIT.txt')
