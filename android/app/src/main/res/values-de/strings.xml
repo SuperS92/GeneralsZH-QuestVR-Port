@@ -444,4 +444,6 @@
     <string name="quest_transfer_batch_desc">Übergaben der Augenbilder und des HUDs bündeln. Pixel und Auflösung bleiben gleich. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
     <string name="quest_shadow_coverage">Schattenränder (experimentell)</string>
     <string name="quest_shadow_coverage_desc">Abschließende Schattenfläche an das VR-Augenbild anpassen. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
+    <string name="quest_taa_lite">TAA Lite (experimentell)</string>
+    <string name="quest_taa_lite_desc">Zeitliche Kantenglättung für die Spielwelt. Andere Kantenglättung auf Aus stellen. Kann bewegte Objekte verwischen. Standardmäßig aus; Spiel und Launcher vollständig neu starten.</string>
 </resources>

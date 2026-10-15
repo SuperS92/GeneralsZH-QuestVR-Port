@@ -14,6 +14,7 @@
 #include <vulkan/vulkan.h>
 #include "VRDevice/QuestXRInterface.h"
 #include "QuestSpatialAA.h"
+#include "QuestTemporalAA.h"
 #include "VRDevice/QuestHudTransfer.h"
 #include "QuestEyeCapture.h"
 
@@ -66,6 +67,8 @@ public:
 	::IDirect3DSurface8 *getEyeSurface(uint32_t eye) const;
 	bool resolveEyeSurface(::IDirect3DDevice8 *device, uint32_t eye) const;
     bool discardCompletedEyeDepth(::IDirect3DDevice8 *device, ::IDirect3DSurface8 *depth, unsigned eye);
+    bool captureTaaCamera(::IDirect3DDevice8 *device, unsigned eye, TaaCamera &camera) const;
+    bool applyTaa(::IDirect3DDevice8 *device, unsigned eye, const TaaCamera &camera);
 	::IDirect3DSurface8 *getDepthSurface() const { return m_depthSurface; }
 	void markEyeRenderingComplete() { m_eyeRenderingComplete = true; }
 	::IDirect3DSurface8 *getMenuSurface() const { return m_menuSurface; }
@@ -199,6 +202,9 @@ private:
 	void *m_dxvkInterop = nullptr;
     void *m_depthDiscardInterop = nullptr;
 	SpatialAA m_spatialAA;
+    TemporalAA m_temporalAA;
+    bool m_taaAttempted = false, m_taaUnavailable = false;
+    uint64_t m_taaFrame = 0;
 	EyeCapture m_eyeCapture;
 	std::array<QuestXRDiagnosticCamera, 2> m_diagnosticCameras{};
 	bool m_spatialAaAttempted = false;

@@ -14,6 +14,7 @@
 #include "VRDevice/QuestColorCopy.h"
 #include "VRDevice/QuestTransferBatch.h"
 #include "VRDevice/QuestPerformance.h"
+#include "VRDevice/QuestTaaBridge.h"
 #include "VRDevice/QuestXRInterface.h"
 #include "VRDevice/QuestVRMath.h"
 #include "VRDevice/QuestDrawCapture.h"
@@ -660,6 +661,94 @@ bool Bootstrap::discardCompletedEyeDepth(IDirect3DDevice8 *device, IDirect3DSurf
         ->DiscardCompletedEyeDepth(texture);
     texture->Release();
     return SUCCEEDED(result);
+}
+
+// GeneralsX @feature Codex 16/10/2026 The filter consumes the original same-eye
+// world color/depth before the pointer, without another scene or EndScene call.
+bool Bootstrap::captureTaaCamera(IDirect3DDevice8 *device, unsigned eye, TaaCamera &camera) const
+{
+    camera = {};
+    if (!QuestXR_TaaRequested() || m_taaUnavailable || !device || eye >= 2
+        || !m_frameActive || !m_shouldRender || m_msaaEyeSurface) return false;
+    IDirect3DSurface8 *color = nullptr, *depth = nullptr;
+    const HRESULT colorHr = device->GetRenderTarget(&color);
+    const HRESULT depthHr = device->GetDepthStencilSurface(&depth);
+    const bool bound = SUCCEEDED(colorHr) && SUCCEEDED(depthHr)
+        && color == m_eyeSurfaces[eye] && depth == m_depthSurface;
+    if (color) color->Release();
+    if (depth) depth->Release();
+    D3DVIEWPORT8 viewport{};
+    D3DMATRIX view{}, projection{};
+    if (!bound || FAILED(device->GetViewport(&viewport))
+        || viewport.X || viewport.Y || viewport.Width != m_recommendedEyeWidth
+        || viewport.Height != m_recommendedEyeHeight || viewport.MinZ != 0 || viewport.MaxZ != 1
+        || FAILED(device->GetTransform(D3DTS_VIEW, &view))
+        || FAILED(device->GetTransform(D3DTS_PROJECTION, &projection))) {
+        static bool reported = false;
+        if (!reported) {
+            reported = true;
+            __android_log_print(ANDROID_LOG_WARN, kLogTag,
+                "Quest TAA camera unavailable: bound=%d viewport=%u,%u %ux%u depth=%.3f..%.3f; keeping original rendering",
+                bound, viewport.X, viewport.Y, viewport.Width, viewport.Height, viewport.MinZ, viewport.MaxZ);
+        }
+        return false;
+    }
+    static_assert(sizeof(view) == sizeof(camera.view), "D3D camera array layout");
+    std::memcpy(camera.view, &view, sizeof view);
+    std::memcpy(camera.projection, &projection, sizeof projection);
+    camera.width = viewport.Width; camera.height = viewport.Height; camera.valid = true;
+    return true;
+}
+
+bool Bootstrap::applyTaa(IDirect3DDevice8 *device, unsigned eye, const TaaCamera &camera)
+{
+    if (!camera.valid || !QuestXR_TaaRequested() || m_taaUnavailable || !m_dxvkInterop) return false;
+    TaaCamera bound;
+    if (!captureTaaCamera(device, eye, bound)) { m_temporalAA.invalidate(); return false; }
+    const auto query = [](IUnknown *source, TaaImage &image) {
+        if (!source) return false;
+        DxvkVulkanInteropTexture *texture = nullptr;
+        if (FAILED(source->QueryInterface(kD3D9VkInteropTextureId, reinterpret_cast<void **>(&texture))) || !texture) return false;
+        const auto result = texture->GetVulkanImageInfo(&image.image, &image.layout, &image.info);
+        texture->Release(); return SUCCEEDED(result) && image.image;
+    };
+    std::array<TaaImage,2> eyes{}; TaaImage depth;
+    if (!query(m_eyeTextures[0], eyes[0]) || !query(m_eyeTextures[1], eyes[1]) || !query(m_depthSurface, depth)) {
+        m_taaUnavailable = true;
+        __android_log_print(ANDROID_LOG_WARN, kLogTag, "Quest TAA Lite unavailable: color/depth interop query; keeping original rendering");
+        return false;
+    }
+    const auto start = monotonicNanoseconds();
+    // The pinned D3D8 adapter drains pending primitive batches in SetViewport's
+    // StateChange, even for the identical viewport. D3D9 interop alone cannot
+    // drain an earlier D3D8 batch. Do not add an EndScene/BeginScene pair.
+    const D3DVIEWPORT8 viewport{0, 0, camera.width, camera.height, 0, 1};
+    if (FAILED(device->SetViewport(&viewport))) { m_temporalAA.invalidate(); return false; }
+    auto *interop = static_cast<DxvkVulkanInteropDevice *>(m_dxvkInterop);
+    interop->FlushRenderingCommands();
+    // This lock first drains DXVK's submission worker. Native work and the next
+    // original DXVK draw therefore share one ordered graphics queue.
+    DxvkQueueGuard guard(m_dxvkInterop);
+    if (!m_taaAttempted) {
+        m_taaAttempted = true;
+        m_taaUnavailable = !m_temporalAA.initialize(m_vkPhysicalDevice, m_vkDevice, m_vkQueueFamilyIndex, eyes, depth);
+        __android_log_print(ANDROID_LOG_INFO, kLogTag, "Quest TAA Lite requested=1 active=%d full_image=1 jitter=0 motion_vectors=0; original path on failure", !m_taaUnavailable);
+    }
+    if (m_taaUnavailable) return false;
+    if (!m_temporalAA.matches(eyes, depth)) {
+        m_taaUnavailable = true; m_temporalAA.invalidate();
+        __android_log_print(ANDROID_LOG_WARN, kLogTag, "Quest TAA resources changed; keeping original rendering until graphics reattachment");
+        return false;
+    }
+    const bool applied = m_temporalAA.process(m_vkQueue, eye, camera, m_taaFrame, uint64_t(m_predictedDisplayTime));
+    if (!m_temporalAA.ready()) m_taaUnavailable = true;
+    static unsigned reports = 0; static double cpuMs = 0;
+    cpuMs += double(monotonicNanoseconds() - start) / 1000000.0;
+    if (++reports == 240) {
+        __android_log_print(ANDROID_LOG_INFO, kLogTag, "Quest TAA bridge: cpu_eye_ms=%.3f (includes producer flush/queue synchronization)", cpuMs / reports);
+        reports = 0; cpuMs = 0;
+    }
+    return applied;
 }
 
 bool Bootstrap::queryEyeImage(uint32_t eye, VkImage &image, VkImageLayout &layout,
@@ -1458,6 +1547,7 @@ bool Bootstrap::recenterGameSpace()
 	m_gameSpace = replacement;
 	m_frontendAnchorValid = false;
 	__android_log_print(ANDROID_LOG_INFO, kLogTag, "OpenXR game space recentered");
+    m_temporalAA.invalidate();
 	return true;
 }
 
@@ -1825,6 +1915,7 @@ bool Bootstrap::beginFrame()
 		return false;
 	}
 	m_frameActive = true;
+	++m_taaFrame;
 	m_shouldRender = frameState.shouldRender == XR_TRUE;
 	if (!m_shouldRender) {
 		++m_suppressedRenderFrames;
@@ -2298,6 +2389,7 @@ bool Bootstrap::getControllerState(uint32_t hand, QuestXRControllerState &state)
 
 void Bootstrap::setMenuPresentation(uint32_t presentation)
 {
+	if (presentation == QUEST_XR_MENU_FRONTEND) m_temporalAA.invalidate();
 	if (presentation == QUEST_XR_MENU_FRONTEND && m_menuPresentation != presentation)
 		m_frontendAnchorValid = false; // returning from play places the screen in front again
 	m_menuPresentation = presentation == QUEST_XR_MENU_FRONTEND
@@ -2338,6 +2430,9 @@ void Bootstrap::detachGraphics()
 	}
 	m_eyeCapture.destroy(); // Queue completed above; drain the file writer before teardown.
 	m_spatialAA.destroy();
+    m_temporalAA.destroy();
+    m_taaAttempted = m_taaUnavailable = false;
+    m_taaFrame = 0;
 	m_spatialAaAttempted = false;
 	for (VkFence fence : m_commandFences) {
 		if (fence != VK_NULL_HANDLE) {
@@ -2836,6 +2931,23 @@ extern "C" bool QuestXR_GetControllerState(uint32_t hand, QuestXRControllerState
 #endif
 
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+extern "C" bool QuestXR_TaaRequested() {
+    const char *spatial = std::getenv("GX_QUEST_SPATIAL_AA");
+    const bool requested = QuestXR::PerformanceRequested(QuestXR::PerfOption::TaaLite);
+    const bool compatible = !spatial || std::strcmp(spatial, "0") == 0;
+    static bool reported = false;
+    if (requested && !compatible && !reported) {
+        reported = true;
+        __android_log_print(ANDROID_LOG_WARN, "GeneralsXR", "Quest TAA Lite disabled: set other anti-aliasing to Off for this trial");
+    }
+    return requested && compatible;
+}
+extern "C" bool QuestXR_CaptureTaaCamera(IDirect3DDevice8 *device, unsigned eye, QuestXR::TaaCamera *camera) {
+    return camera && QuestXR::GetBootstrap().captureTaaCamera(device, eye, *camera);
+}
+extern "C" bool QuestXR_ApplyTaa(IDirect3DDevice8 *device, unsigned eye, const QuestXR::TaaCamera *camera) {
+    return camera && QuestXR::GetBootstrap().applyTaa(device, eye, *camera);
+}
 bool QuestXR_QueueEyeDepthDiscard(IDirect3DDevice8 *device, IDirect3DSurface8 *depth, unsigned eye) {
     return QuestXR::GetBootstrap().discardCompletedEyeDepth(device, depth, eye);
 }

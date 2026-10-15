@@ -10,6 +10,8 @@ Earlier platform work also comes from [ammaarreshi/Generals-Mac-iOS-iPad](https:
 
 Terrain batching was informed by [Cesarus85/Generals-Zero-Hour-XR](https://github.com/Cesarus85/Generals-Zero-Hour-XR).
 
+The optional TAA Lite shader adapts the camera/depth approach from [RDR1 Quest](https://github.com/dubrovskiy-yevhen-stakelogic/rdr1-quest), under its [MIT license](docs/WORKDIR/quest/licenses/RDR1-Quest-MIT.txt).
+
 Developed with assistance from OpenAI Codex.
 
 ## Runtime and source dependencies

@@ -29,6 +29,7 @@
 #include "VRDevice/QuestDrawCapture.h"
 #include "VRDevice/QuestSoftCutouts.h"
 #include "VRDevice/QuestPerformance.h"
+#include "VRDevice/QuestTaaBridge.h"
 #include "VRDevice/QuestDepthDiscard.h"
 #include "VRDevice/QuestTreeWind.h"
 #include "VRDevice/QuestVRInput.h"
@@ -404,6 +405,11 @@ void W3DDisplay::drawQuestXRStereo(W3DView *view)
 		}
 		if (WW3D::Begin_Render(true, true, Vector3(0.03f, 0.06f, 0.12f)) == WW3D_ERROR_OK) {
 			m_questXRCamera->Apply();
+            QuestXR::TaaCamera taaCamera;
+            if (QuestXR_TaaRequested()) {
+                DX8Wrapper::Apply_Render_State_Changes();
+                QuestXR_CaptureTaaCamera(DX8Wrapper::_Get_D3D_Device8(), eye, &taaCamera);
+            }
 			const auto worldStart = std::chrono::steady_clock::now();
 			// GeneralsX @performance Codex 18/09/2026 On_Frame_Update advances
 			// particle emitters and buffers. Advance them for the first successful
@@ -419,6 +425,7 @@ void W3DDisplay::drawQuestXRStereo(W3DView *view)
             }
 			QuestXR::SetDrawCaptureEye(-1);
 			advancedSceneThisFrame = true;
+            if (taaCamera.valid) QuestXR_ApplyTaa(DX8Wrapper::_Get_D3D_Device8(), eye, &taaCamera);
 			const auto worldDone = std::chrono::steady_clock::now();
 			QuestVRInput_Render(m_questXRCamera);
 			const auto pointerDone = std::chrono::steady_clock::now();

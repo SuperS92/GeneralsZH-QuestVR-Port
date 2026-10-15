@@ -444,4 +444,6 @@
     <string name="quest_transfer_batch_desc">Об’єднує передачу зображень очей і HUD без зміни пікселів чи роздільності. Повністю перезапустіть гру й лаунчер.</string>
     <string name="quest_shadow_coverage">Краї тіней (експериментально)</string>
     <string name="quest_shadow_coverage_desc">Узгоджує завершальний шар тіней з областю VR-ока. Повністю перезапустіть гру й лаунчер.</string>
+    <string name="quest_taa_lite">TAA Lite (experimental)</string>
+    <string name="quest_taa_lite_desc">Temporal anti-aliasing for the game world. Set other anti-aliasing to Off. May leave trails on moving objects. Default off; fully restart the game and launcher.</string>
 </resources>

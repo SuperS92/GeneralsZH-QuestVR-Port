@@ -444,4 +444,6 @@
     <string name="quest_transfer_batch_desc">Agrupa las transferencias de los ojos y del HUD sin cambiar píxeles ni resolución. Reinicia el juego y el lanzador tras los cambios.</string>
     <string name="quest_shadow_coverage">Bordes de sombras (experimental)</string>
     <string name="quest_shadow_coverage_desc">Ajusta la capa final de sombras a la vista VR. Reinicia el juego y el lanzador tras los cambios.</string>
+    <string name="quest_taa_lite">TAA Lite (experimental)</string>
+    <string name="quest_taa_lite_desc">Temporal anti-aliasing for the game world. Set other anti-aliasing to Off. May leave trails on moving objects. Default off; fully restart the game and launcher.</string>
 </resources>

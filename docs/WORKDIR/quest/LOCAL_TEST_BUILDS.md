@@ -54,3 +54,10 @@ HUD output trial, retaining pixel width and full output for expanding/front-end
 UI. See [scope and validation](HUD_TRANSFER_TRIAL.md). Vehicle track streaming
 remains independent. Android version and updater stay at the current public
 release; the display/artifact label is Test 04.
+
+## Test 10
+
+Add default-off full-image TAA Lite with camera/depth reprojection. Keep Android
+version 1.4.0.9 / 10409 and the public updater unchanged. See [render boundary,
+cost and validation](TAA_LITE_TRIAL.md). Test 09 shadow coverage is confirmed on
+hardware; its image-transfer grouping has no measured benefit and stays off.

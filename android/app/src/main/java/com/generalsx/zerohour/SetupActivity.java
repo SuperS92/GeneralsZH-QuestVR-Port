@@ -190,6 +190,10 @@ public class SetupActivity extends Activity {
             .getBoolean("quest_direct_color_copy", false);
     }
     // GeneralsX @performance Codex 15/10/2026 Independent local render trials.
+    static boolean getQuestTaaLite(android.content.Context ctx) {
+        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean("quest_taa_lite", false);
+    }
     static boolean getQuestTransferBatch(android.content.Context ctx) {
         return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getBoolean("quest_transfer_batch", false);
@@ -1824,6 +1828,12 @@ public class SetupActivity extends Activity {
                 getQuestDirectColorCopy(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .edit().putBoolean("quest_direct_color_copy", index == 1).apply());
             UiKit.supporting(directColor, getString(R.string.quest_direct_color_copy_desc));
+            LinearLayout taaLite = UiKit.card(root);
+            UiKit.sectionHeader(taaLite, R.drawable.ic_gzh_display, getString(R.string.quest_taa_lite), false);
+            UiKit.segmented(taaLite, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
+                getQuestTaaLite(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit().putBoolean("quest_taa_lite", index == 1).apply());
+            UiKit.supporting(taaLite, getString(R.string.quest_taa_lite_desc));
             LinearLayout transferBatch = UiKit.card(root);
             UiKit.sectionHeader(transferBatch, R.drawable.ic_gzh_display, getString(R.string.quest_transfer_batch), false);
             UiKit.segmented(transferBatch, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},

@@ -444,4 +444,6 @@
     <string name="quest_transfer_batch_desc">انتقال تصویر چشم‌ها و رابط را بدون تغییر پیکسل یا وضوح گروه‌بندی می‌کند. پس از تغییر، بازی و راه‌انداز را کاملاً بازراه‌اندازی کنید.</string>
     <string name="quest_shadow_coverage">لبه‌های سایه (آزمایشی)</string>
     <string name="quest_shadow_coverage_desc">لایه نهایی سایه را با نمای چشم واقعیت مجازی هماهنگ می‌کند. بازی و راه‌انداز را کاملاً بازراه‌اندازی کنید.</string>
+    <string name="quest_taa_lite">TAA Lite (experimental)</string>
+    <string name="quest_taa_lite_desc">Temporal anti-aliasing for the game world. Set other anti-aliasing to Off. May leave trails on moving objects. Default off; fully restart the game and launcher.</string>
 </resources>

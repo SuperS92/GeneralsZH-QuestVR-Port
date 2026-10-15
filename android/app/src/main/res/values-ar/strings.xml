@@ -444,4 +444,6 @@
     <string name="quest_transfer_batch_desc">يجمع نقل صور العينين وواجهة العرض دون تغيير البكسلات أو الدقة. أعد تشغيل اللعبة والمشغّل بالكامل بعد التغيير.</string>
     <string name="quest_shadow_coverage">حواف الظلال (تجريبي)</string>
     <string name="quest_shadow_coverage_desc">يضبط طبقة الظلال النهائية لتطابق مجال عرض العين في الواقع الافتراضي. أعد تشغيل اللعبة والمشغّل بالكامل.</string>
+    <string name="quest_taa_lite">TAA Lite (experimental)</string>
+    <string name="quest_taa_lite_desc">Temporal anti-aliasing for the game world. Set other anti-aliasing to Off. May leave trails on moving objects. Default off; fully restart the game and launcher.</string>
 </resources>
