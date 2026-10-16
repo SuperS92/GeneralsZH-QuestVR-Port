@@ -445,7 +445,8 @@
     <string name="quest_shadow_coverage">Krawędzie cieni (eksperymentalne)</string>
     <string name="quest_shadow_coverage_desc">Dopasowuje końcową warstwę cieni do widoku oka VR. Uruchom ponownie grę i launcher.</string>
     <string name="quest_taa_lite">TAA (experimental)</string>
-    <string name="quest_taa_lite_desc">Lite uses simpler color math and history sampling. Full keeps the previous filter. Both cover the whole image and may cost FPS or leave motion trails. Set other anti-aliasing to Off. Fully restart the game and launcher.</string>
+    <string name="quest_taa_lite_desc">Lite wygładza środek widoku. Medium i Full wygładzają cały obraz. Mogą pojawić się smugi w ruchu. Wyłącz pozostały antyaliasing. Po zmianach całkowicie uruchom ponownie grę i launcher.</string>
     <string name="quest_taa_quality_lite">Lite</string>
+    <string name="quest_taa_quality_medium">Medium</string>
     <string name="quest_taa_quality_full">Full</string>
 </resources>

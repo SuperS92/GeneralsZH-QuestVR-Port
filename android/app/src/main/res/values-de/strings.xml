@@ -445,7 +445,8 @@
     <string name="quest_shadow_coverage">Schattenränder (experimentell)</string>
     <string name="quest_shadow_coverage_desc">Abschließende Schattenfläche an das VR-Augenbild anpassen. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
     <string name="quest_taa_lite">TAA (experimentell)</string>
-    <string name="quest_taa_lite_desc">Lite nutzt einfachere Farbberechnungen und Historienfilterung. Full behält den bisherigen Filter. Beide bearbeiten das ganze Bild und können FPS kosten oder Bewegungsspuren zeigen. Andere Kantenglättung auf Aus stellen. Vollständiger Neustart nötig.</string>
+    <string name="quest_taa_lite_desc">Lite glättet den mittleren Bildbereich. Medium und Full glätten das ganze Bild. Bewegungsspuren sind möglich. Andere Kantenglättung ausschalten. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
     <string name="quest_taa_quality_lite">Lite</string>
+    <string name="quest_taa_quality_medium">Medium</string>
     <string name="quest_taa_quality_full">Full</string>
 </resources>

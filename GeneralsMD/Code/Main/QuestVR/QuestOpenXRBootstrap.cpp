@@ -2938,6 +2938,7 @@ extern "C" unsigned QuestXR_TaaMode() {
     if(mode) {
         if(std::strcmp(mode,"1")==0)return 1;
         if(std::strcmp(mode,"2")==0)return 2;
+        if(std::strcmp(mode,"3")==0)return 3;
         return 0;
     }
     return QuestXR::PerformanceRequested(QuestXR::PerfOption::TaaLite)?2:0;

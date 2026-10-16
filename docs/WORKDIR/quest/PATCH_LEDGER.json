@@ -179,9 +179,9 @@
     {
       "path": "android/app/src/main/java/com/generalsx/zerohour/SetupActivity.java",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Quest guards for private import/storage, driver choice and engine updates; show Quest PC-profile migration data action even without a newer package version; clear only ReplayCheck diagnostic markers on normal private Quest launches; default-off Off/Gentle/SMAA choice and old opt-in migration; merged default-on flat-screen preference and direct six-item Quest navigation; default-off front-end passthrough switch and separate local build label; default-off vehicle-track streaming and shared Online navigation; default-off Quest compact HUD transfer control",
+      "purpose": "Quest guards for private import/storage, driver choice and engine updates; show Quest PC-profile migration data action even without a newer package version; clear only ReplayCheck diagnostic markers on normal private Quest launches; default-off Off/Gentle/SMAA choice and old opt-in migration; merged default-on flat-screen preference and direct six-item Quest navigation; default-off front-end passthrough switch and separate local build label; default-off vehicle-track streaming and shared Online navigation; default-off Quest compact HUD transfer control; stable Off/Lite/Medium/Full temporal-filter choices with generic descriptions",
       "risk": "Android app isolation",
-      "owningTest": "Java compile and merged manifest; import/relaunch hardware gate; normal-play versus replay detailed trace lifecycle hardware gate",
+      "owningTest": "Java compile and merged manifest; import/relaunch hardware gate; normal-play versus replay detailed trace lifecycle hardware gate; preference-ID preservation and all locale resource parity",
       "removalCondition": "Upstream provides equivalent optional platform support"
     },
     {

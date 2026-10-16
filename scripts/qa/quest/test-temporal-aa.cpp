@@ -50,7 +50,7 @@ int main() {
         vkCmdPipelineBarrier(cmd,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,0,0,nullptr,0,nullptr,1,&info);
     };
     unsigned cases=0;
-    for(auto quality:{TaaQuality::Full,TaaQuality::Lite})
+    for(auto quality:{TaaQuality::Full,TaaQuality::Medium,TaaQuality::Lite})
     for(auto format:{VK_FORMAT_R8G8B8A8_UNORM,VK_FORMAT_B8G8R8A8_UNORM})for(auto depthFormat:{VK_FORMAT_D32_SFLOAT,VK_FORMAT_D24_UNORM_S8_UINT})for(bool copyDepth:{false,true}) {
         VkFormatProperties support{};vkGetPhysicalDeviceFormatProperties(physical,depthFormat,&support);
         if(!(support.optimalTilingFeatures&VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))continue;
@@ -105,7 +105,13 @@ int main() {
                 const VkClearDepthStencilValue value{eye?.75f:.25f,73};const VkImageSubresourceRange range{ds,0,1,0,1};
                 vkCmdClearDepthStencilImage(cmd,depth.image,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,&value,1,&range);
                 barrier(depth.image,ds,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,depth.layout);submit();
+                const auto barriersBefore=TaaContract::barrierCalls,copiesBefore=TaaContract::copyCalls,pixelsBefore=TaaContract::copyPixels;
                 require(taa.process(queue,eye,camera,frame,1000000000ull+frame*16000000ull),"Actual same-eye TAA submission");
+                if(quality==TaaQuality::Lite) {
+                    require(TaaContract::barrierCalls-barriersBefore<=4,"Lite groups independent dependencies into at most four barriers");
+                    if(reset||!copyDepth)require(TaaContract::copyCalls==copiesBefore,"Lite reset/sampled-depth path has no private depth copy");
+                    else require(TaaContract::copyCalls==copiesBefore+1&&TaaContract::copyPixels-pixelsBefore<w*h,"Lite copies fewer depth texels with complete gather coverage");
+                }
             }
             // Readback is test-only; the production filter has no host wait here.
             check(vkQueueWaitIdle(queue));begin();
@@ -121,6 +127,13 @@ int main() {
                 auto original=pixels+eye*bytes+i*4,actual=pixels+(2+eye)*bytes+i*4;
                 require(actual[3]==original[3],"Original alpha exact for every pixel");
                 if(reset)require(!std::memcmp(actual,original,4),"First/reset frame raw bytes exact");
+                if(quality==TaaQuality::Lite) {
+                    const unsigned x=i%w,y=i/w,mx=w*15/100,my=h*15/100;
+                    if(x<mx||x>=w-mx||y<my||y>=h-my)
+                        require(!std::memcmp(actual,original,4),"Lite leaves every peripheral pixel byte-exact");
+                    if(frame<10 && (x==mx||x==w-mx-1||y==my||y==h-my-1))
+                        require(!std::memcmp(actual,original,4),"Lite never samples undefined history outside its centered region");
+                }
                 const unsigned channel=format==VK_FORMAT_B8G8R8A8_UNORM?(eye?0:2):(eye?2:0);
                 for(unsigned c=0;c<3;++c)if(c!=channel)require(actual[c]<=1,"Separate eye history and color channels");
                 if(frame>=10&&frame<=12)require(std::abs(int(actual[channel])-77)<=1,"Flat replacement rejects stale history");

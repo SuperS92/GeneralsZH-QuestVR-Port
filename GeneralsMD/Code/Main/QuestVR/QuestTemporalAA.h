@@ -6,7 +6,8 @@
 #include <array>
 namespace QuestXR {
 // GeneralsX @feature Codex 16/10/2026 Preserve the Test 11 filter alongside the cheaper trial.
-enum class TaaQuality : unsigned { Lite=1, Full=2 };
+// Stable IDs preserve existing preferences: the former Lite is now Medium.
+enum class TaaQuality : unsigned { Medium=1, Full=2, Lite=3 };
 struct TaaImage {
     VkImage image=VK_NULL_HANDLE;
     VkImageLayout layout=VK_IMAGE_LAYOUT_UNDEFINED;
@@ -42,6 +43,8 @@ private:
     VkImageView makeView(VkImage image,VkFormat format,VkImageAspectFlags aspect);
     VkRenderPass makePass(VkFormat format,bool load);
     VkPipeline makePipeline(VkRenderPass pass,const uint32_t *fragment,size_t bytes,bool alpha);
+    void recordLite(VkCommandBuffer command,unsigned eye,unsigned output,unsigned input,
+        const float *reproject,bool reset);
     VkDevice m_device{};
     VkPhysicalDevice m_physical{};
     VkPipeline m_resolve{},m_apply{};

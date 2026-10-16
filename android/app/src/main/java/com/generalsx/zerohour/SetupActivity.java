@@ -196,7 +196,7 @@ public class SetupActivity extends Activity {
         android.content.SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         int mode = prefs.contains("quest_taa_mode") ? prefs.getInt("quest_taa_mode", 0)
             : prefs.getBoolean("quest_taa_lite", false) ? 2 : 0;
-        return mode >= 0 && mode <= 2 ? mode : 0;
+        return mode >= 0 && mode <= 3 ? mode : 0;
     }
     static boolean getQuestTaaLite(android.content.Context ctx) {
         return getQuestTaaMode(ctx) != 0;
@@ -1836,10 +1836,15 @@ public class SetupActivity extends Activity {
             UiKit.supporting(directColor, getString(R.string.quest_direct_color_copy_desc));
             LinearLayout taaLite = UiKit.card(root);
             UiKit.sectionHeader(taaLite, R.drawable.ic_gzh_display, getString(R.string.quest_taa_lite), false);
+            // GeneralsX @feature Codex 16/10/2026 Preserve stored IDs while placing the new Lite before Medium.
+            final int[] taaModes = {0, 3, 1, 2};
+            int taaMode = getQuestTaaMode(this);
+            int taaIndex = taaMode == 3 ? 1 : taaMode == 1 ? 2 : taaMode == 2 ? 3 : 0;
             UiKit.segmented(taaLite, new String[]{getString(R.string.quest_perf_off),
-                getString(R.string.quest_taa_quality_lite), getString(R.string.quest_taa_quality_full)},
-                getQuestTaaMode(this), index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit().putInt("quest_taa_mode", index).putBoolean("quest_taa_lite", index != 0).apply());
+                getString(R.string.quest_taa_quality_lite), getString(R.string.quest_taa_quality_medium),
+                getString(R.string.quest_taa_quality_full)}, taaIndex,
+                index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putInt("quest_taa_mode", taaModes[index]).putBoolean("quest_taa_lite", index != 0).apply());
             UiKit.supporting(taaLite, getString(R.string.quest_taa_lite_desc));
             LinearLayout shadowCoverage = UiKit.card(root);
             UiKit.sectionHeader(shadowCoverage, R.drawable.ic_gzh_display, getString(R.string.quest_shadow_coverage), false);

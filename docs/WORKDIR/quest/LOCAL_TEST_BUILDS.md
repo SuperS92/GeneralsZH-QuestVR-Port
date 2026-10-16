@@ -76,3 +76,12 @@ Lite uses bilinear history and relaxed color precision, with precise camera
 and depth math. Full-image coverage and the depth-copy/alpha contract remain.
 Retire ineffective transfer batching; keep HUD transfer. Android remains
 1.4.0.9 / 10409 and the updater is unchanged. Hardware gain is unmeasured.
+
+
+## Test 13
+
+Bundle centered-area temporal filtering, smaller depth transfers, grouped
+dependencies, reset/rejection shortcuts and sparse timing into the new Lite.
+Rename the previous Lite to Medium; keep Full unchanged. Stable saved IDs
+preserve existing choices. Graphics-only changes; Android remains 1.4.0.9.
+No new render pacing, simulation, numeric or network changes.

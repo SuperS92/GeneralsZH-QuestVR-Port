@@ -3,6 +3,7 @@
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
 #include "QuestTaaShaders.spv.h"
 #include <android/log.h>
+#include <algorithm>
 #include <vector>
 namespace QuestXR {
 namespace {
@@ -10,6 +11,25 @@ namespace {
 // 8/4/2 cap rejected more history at subpixel motion than the 10/5/1 reference.
 struct Push {float reproject[16]{};uint32_t info[4]{};float tune[4]{10,5,1,0};};
 static_assert(sizeof(Push)==96,"Shader push layout");
+const char *qualityName(TaaQuality quality) {
+    return quality==TaaQuality::Lite?"lite":quality==TaaQuality::Medium?"medium":"full";
+}
+// RDR reference: TaaPass.cpp, 423788baa4959d21d5057243ad31f5c8b40f9f28.
+// GeneralsX @performance Codex 16/10/2026 Group independent image dependencies without weakening their scopes.
+struct BarrierBatch {
+    std::array<VkImageMemoryBarrier,8> images{};
+    unsigned count=0;
+    void add(VkImage image,VkImageAspectFlags aspects,VkImageLayout before,VkImageLayout after,VkAccessFlags src,VkAccessFlags dst) {
+        auto &b=images[count++];b.sType=VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        b.srcAccessMask=src;b.dstAccessMask=dst;b.oldLayout=before;b.newLayout=after;b.image=image;
+        b.srcQueueFamilyIndex=b.dstQueueFamilyIndex=VK_QUEUE_FAMILY_IGNORED;b.subresourceRange={aspects,0,1,0,1};
+    }
+    void flush(VkCommandBuffer command) {
+        if(count)vkCmdPipelineBarrier(command,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            0,0,nullptr,0,nullptr,count,images.data());
+        count=0;
+    }
+};
 VkImageAspectFlags depthAspects(VkFormat format) {
     return VK_IMAGE_ASPECT_DEPTH_BIT | (format==VK_FORMAT_D32_SFLOAT?0:VK_IMAGE_ASPECT_STENCIL_BIT);
 }
@@ -97,7 +117,7 @@ bool TemporalAA::matches(const std::array<TaaImage,2> &eyes,const TaaImage &dept
 }
 bool TemporalAA::initialize(VkPhysicalDevice physical,VkDevice device,uint32_t family,
     const std::array<TaaImage,2> &eyes,const TaaImage &depth,TaaQuality quality) {
-    if(m_device || (quality!=TaaQuality::Lite && quality!=TaaQuality::Full))return false;
+    if(m_device || (quality!=TaaQuality::Lite && quality!=TaaQuality::Medium && quality!=TaaQuality::Full))return false;
     m_quality=quality;
     m_device=device;m_physical=physical;m_sources=eyes;m_depth=depth;
     const auto fail=[&]{destroy();return false;};
@@ -142,8 +162,9 @@ bool TemporalAA::initialize(VkPhysicalDevice physical,VkDevice device,uint32_t f
     if(!m_historyPass||!m_applyPass)return fail();
     // GeneralsX @performance Codex 16/10/2026 Only create the selected quality pipeline; Full shader stays unchanged.
     m_resolve=m_quality==TaaQuality::Lite
-        ?makePipeline(m_historyPass,kTaaResolveFast,sizeof(kTaaResolveFast),true)
-        :makePipeline(m_historyPass,kTaaResolve,sizeof(kTaaResolve),true);
+        ?makePipeline(m_historyPass,kTaaResolveCompact,sizeof(kTaaResolveCompact),true)
+        :m_quality==TaaQuality::Medium?makePipeline(m_historyPass,kTaaResolveFast,sizeof(kTaaResolveFast),true)
+            :makePipeline(m_historyPass,kTaaResolve,sizeof(kTaaResolve),true);
     m_apply=makePipeline(m_applyPass,kTaaApply,sizeof(kTaaApply),false);
     if(!m_resolve||!m_apply)return fail();
     VkSamplerCreateInfo sampler{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};sampler.minFilter=sampler.magFilter=VK_FILTER_LINEAR;
@@ -197,12 +218,78 @@ bool TemporalAA::initialize(VkPhysicalDevice physical,VkDevice device,uint32_t f
         VkQueryPoolCreateInfo query{VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO};query.queryType=VK_QUERY_TYPE_TIMESTAMP;query.queryCount=12;
         if(vkCreateQueryPool(device,&query,nullptr,&m_queries)!=VK_SUCCESS)m_queries=VK_NULL_HANDLE;
     }
-    __android_log_print(ANDROID_LOG_INFO,"GeneralsXR","Quest TAA Lite ready: %ux%u full image, depth_copy=%d memory_bytes=%llu; HUD/pointer excluded",
+    __android_log_print(ANDROID_LOG_INFO,"GeneralsXR","Quest TAA ready: %ux%u depth_copy=%d memory_bytes=%llu; HUD/pointer excluded",
         m_width,m_height,m_copyDepth,(unsigned long long)m_bytes);
     __android_log_print(ANDROID_LOG_INFO,"GeneralsXR",
-        "Quest TAA quality: mode=%s history_taps=%u relaxed_color=%u coordinates_highp=1 coverage=full",
-        m_quality==TaaQuality::Lite?"lite":"full",m_quality==TaaQuality::Lite?1u:5u,m_quality==TaaQuality::Lite?1u:0u);
+        "Quest TAA quality: mode=%s history_taps=%u relaxed_color=%u coordinates_highp=1 coverage=%s depth_region=%s barriers=%s timing_stride=%u",
+        qualityName(m_quality),m_quality==TaaQuality::Full?5u:1u,m_quality==TaaQuality::Full?0u:1u,
+        m_quality==TaaQuality::Lite?"center70x70":"full",m_quality==TaaQuality::Lite?"center_plus_gather_border":"full",
+        m_quality==TaaQuality::Lite?"grouped":"original",m_quality==TaaQuality::Lite?16u:1u);
     return true;
+}
+// GeneralsX @performance Codex 16/10/2026 Bundle the lower-bandwidth centered Lite path; preserve Medium/Full recording.
+void TemporalAA::recordLite(VkCommandBuffer cmd,unsigned index,unsigned output,unsigned input,const float *reproject,bool reset) {
+    auto &eye=m_eyes[index];const auto color=m_sources[index];const auto aspects=depthAspects(m_depth.info.format);
+    // 70% of width and height, as in RDR Lite. Integer margins are symmetric.
+    const uint32_t mx=m_width*15/100,my=m_height*15/100;
+    const VkRect2D area{{int32_t(mx),int32_t(my)},{m_width-2*mx,m_height-2*my}};
+    Push push{};std::copy(reproject,reproject+16,push.reproject);
+    push.info[0]=m_width;push.info[1]=m_height;push.info[2]=reset?1:0;push.info[3]=mx|(my<<16);
+    BarrierBatch batch;
+    batch.add(color.image,VK_IMAGE_ASPECT_COLOR_BIT,color.layout,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT);
+    if(!reset && m_copyDepth) {
+        batch.add(m_depth.image,aspects,m_depth.layout,VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT|VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_TRANSFER_READ_BIT);
+        batch.add(m_privateDepth.image,aspects,m_depthInitialized?VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,m_depthInitialized?VK_ACCESS_SHADER_READ_BIT:0,VK_ACCESS_TRANSFER_WRITE_BIT);
+    } else if(!m_copyDepth)batch.add(m_depth.image,aspects,m_depth.layout,VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT|VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT);
+    else if(!m_depthInitialized)batch.add(m_privateDepth.image,aspects,VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,0,VK_ACCESS_SHADER_READ_BIT);
+    if(!eye.initialized)batch.add(eye.images[input].image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,0,VK_ACCESS_SHADER_READ_BIT);
+    batch.add(eye.images[output].image,VK_IMAGE_ASPECT_COLOR_BIT,
+        eye.initialized?VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:VK_IMAGE_LAYOUT_UNDEFINED,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        eye.initialized?VK_ACCESS_SHADER_READ_BIT:0,VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+    batch.flush(cmd);
+    if(!reset && m_copyDepth) {
+        // Unlike a full-eye copy, transfer only texels the centered shader can read.
+        // textureGather at p+1 also reads the next row/column: include that border.
+        VkImageCopy copy{};copy.srcSubresource=copy.dstSubresource={VK_IMAGE_ASPECT_DEPTH_BIT,0,0,1};
+        copy.srcOffset=copy.dstOffset={int32_t(mx),int32_t(my),0};
+        copy.extent={std::min(m_width-mx,area.extent.width+1),std::min(m_height-my,area.extent.height+1),1};
+        vkCmdCopyImage(cmd,m_depth.image,VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,m_privateDepth.image,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,1,&copy);
+        batch.add(m_privateDepth.image,aspects,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT);
+        batch.flush(cmd);
+    }
+    const VkViewport viewport{0,0,float(m_width),float(m_height),0,1};
+    const auto draw=[&](VkRenderPass pass,VkFramebuffer fb,VkPipeline pipeline,VkDescriptorSet set) {
+        VkRenderPassBeginInfo r{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};r.renderPass=pass;r.framebuffer=fb;r.renderArea=area;
+        vkCmdBeginRenderPass(cmd,&r,VK_SUBPASS_CONTENTS_INLINE);vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,pipeline);
+        vkCmdSetViewport(cmd,0,1,&viewport);vkCmdSetScissor(cmd,0,1,&area);
+        vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,m_pipelineLayout,0,1,&set,0,nullptr);
+        vkCmdPushConstants(cmd,m_pipelineLayout,VK_SHADER_STAGE_FRAGMENT_BIT,0,sizeof push,&push);
+        vkCmdDraw(cmd,3,1,0,0);vkCmdEndRenderPass(cmd);
+    };
+    draw(m_historyPass,eye.resolveFb[output],m_resolve,eye.sets[input]);
+    batch.add(eye.images[output].image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT);
+    if(!reset) {
+        batch.add(color.image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_ACCESS_SHADER_READ_BIT,VK_ACCESS_COLOR_ATTACHMENT_READ_BIT|VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+        batch.flush(cmd);
+        // Retain LOAD and RGB-only writes: alpha and all peripheral pixels remain exact.
+        draw(m_applyPass,eye.applyFb,m_apply,eye.sets[output]);
+        batch.add(color.image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,color.layout,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,VK_ACCESS_COLOR_ATTACHMENT_READ_BIT|VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_TRANSFER_READ_BIT);
+    } else batch.add(color.image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,color.layout,
+        VK_ACCESS_SHADER_READ_BIT,VK_ACCESS_COLOR_ATTACHMENT_READ_BIT|VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_TRANSFER_READ_BIT);
+    if(!reset || !m_copyDepth)batch.add(m_depth.image,aspects,m_copyDepth?VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+        m_depth.layout,m_copyDepth?VK_ACCESS_TRANSFER_READ_BIT:VK_ACCESS_SHADER_READ_BIT,
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+    batch.flush(cmd);
 }
 bool TemporalAA::process(VkQueue queue,unsigned index,const TaaCamera &camera,uint64_t frame,uint64_t time,bool identity) {
     if(!ready()||!queue||index>1||camera.width!=m_width||camera.height!=m_height)return false;
@@ -229,7 +316,13 @@ bool TemporalAA::process(VkQueue queue,unsigned index,const TaaCamera &camera,ui
     VkCommandBufferBeginInfo begin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};begin.flags=VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     if(vkBeginCommandBuffer(slot.command,&begin)!=VK_SUCCESS){m_failed=true;return false;}
     auto cmd=slot.command;const auto color=m_sources[index];const auto aspects=depthAspects(m_depth.info.format);
-    if(m_queries){vkCmdResetQueryPool(cmd,m_queries,slotIndex*2,2);vkCmdWriteTimestamp(cmd,VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,m_queries,slotIndex*2);}
+    // Match RDR's sparse timing cadence in Lite; never change the Medium/Full reference path.
+    const bool timed=m_queries && (m_quality!=TaaQuality::Lite || frame%16==0);
+    if(timed){vkCmdResetQueryPool(cmd,m_queries,slotIndex*2,2);vkCmdWriteTimestamp(cmd,VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,m_queries,slotIndex*2);}
+    if(m_quality==TaaQuality::Lite) {
+        push.info[2]=(identity||reason!=TaaMath::Reset::None)?1:0;
+        recordLite(cmd,index,eye.output,1-eye.output,push.reproject,push.info[2]!=0);
+    } else {
     barrier(cmd,color.image,VK_IMAGE_ASPECT_COLOR_BIT,color.layout,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT);
     if(m_copyDepth) {
@@ -272,22 +365,25 @@ bool TemporalAA::process(VkQueue queue,unsigned index,const TaaCamera &camera,ui
         VK_ACCESS_SHADER_READ_BIT,VK_ACCESS_COLOR_ATTACHMENT_READ_BIT|VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_TRANSFER_READ_BIT);
     if(!m_copyDepth)barrier(cmd,m_depth.image,aspects,VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,m_depth.layout,
         VK_ACCESS_SHADER_READ_BIT,VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
-    if(m_queries)vkCmdWriteTimestamp(cmd,VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,m_queries,slotIndex*2+1);
+    }
+    if(timed)vkCmdWriteTimestamp(cmd,VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,m_queries,slotIndex*2+1);
     if(vkEndCommandBuffer(cmd)!=VK_SUCCESS||vkResetFences(m_device,1,&slot.fence)!=VK_SUCCESS){m_failed=true;return false;}
     VkSubmitInfo submit{VK_STRUCTURE_TYPE_SUBMIT_INFO};submit.commandBufferCount=1;submit.pCommandBuffers=&cmd;
     if(vkQueueSubmit(queue,1,&submit,slot.fence)!=VK_SUCCESS){m_failed=true;return false;}
-    ++m_nextSlot[index];eye.history=next;eye.output=input;eye.initialized=true;m_depthInitialized=true;slot.timed=m_queries!=VK_NULL_HANDLE;
+    ++m_nextSlot[index];eye.history=next;eye.output=1-eye.output;eye.initialized=true;
+    m_depthInitialized=true;
+    slot.timed=timed;
     ++m_processed;if(push.info[2])++m_resets;
     ++m_resetReasons[unsigned(reason)];
     if(m_processed%240==0)__android_log_print(ANDROID_LOG_INFO,"GeneralsXR",
-        "Quest TAA Lite: eyes=%llu resets=%llu busy=%llu gpu_left_ms=%.3f gpu_right_ms=%.3f gpu_pair_ms=%.3f depth_copy=%d memory_bytes=%llu full=1",
+        "Quest TAA Lite: eyes=%llu resets=%llu busy=%llu gpu_left_ms=%.3f gpu_right_ms=%.3f gpu_pair_ms=%.3f depth_copy=%d memory_bytes=%llu full=%u",
         (unsigned long long)m_processed,(unsigned long long)m_resets,(unsigned long long)m_busy,m_eyeGpu[0],m_eyeGpu[1],
-        m_eyeGpu[0]>=0&&m_eyeGpu[1]>=0?m_eyeGpu[0]+m_eyeGpu[1]:-1,m_copyDepth,(unsigned long long)m_bytes);
+        m_eyeGpu[0]>=0&&m_eyeGpu[1]>=0?m_eyeGpu[0]+m_eyeGpu[1]:-1,m_copyDepth,(unsigned long long)m_bytes,m_quality==TaaQuality::Lite?0u:1u);
     if(m_processed%240==0)__android_log_print(ANDROID_LOG_INFO,"GeneralsXR",
         "Quest TAA history: reused_eyes=%llu first=%llu gap=%llu camera=%llu projection=%llu invalid=%llu tune=10,5,1 mode=%s (GPU span includes dependencies)",
         (unsigned long long)m_resetReasons[0],(unsigned long long)m_resetReasons[1],(unsigned long long)m_resetReasons[2],
         (unsigned long long)m_resetReasons[3],(unsigned long long)m_resetReasons[4],(unsigned long long)m_invalid,
-        m_quality==TaaQuality::Lite?"lite":"full");
+        qualityName(m_quality));
     return true;
 }
 void TemporalAA::destroy() {

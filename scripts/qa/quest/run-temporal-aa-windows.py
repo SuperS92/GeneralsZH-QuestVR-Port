@@ -24,8 +24,8 @@ result=subprocess.run([str(exe)],capture_output=True,text=True,timeout=90)
 log=result.stdout+result.stderr;(work/'result.log').write_text(log,encoding='utf-8');print(log)
 if result.returncode:raise SystemExit(result.returncode)
 report={'status':'HOST_GPU_TAA_PASS','cases':int(re.search(r'PASS (\d+) GPU frame cases',log)[1]),
-    'qualities':['Full','Lite'],
-    'checks':['Both quality pipelines execute the full GPU fixture suite','Independent row-vector D3D projection oracle: 1000 points','RGBA/BGRA, separate eyes',
+    'qualities':['Full','Medium','Lite'],
+    'checks':['All three quality pipelines execute the GPU fixture suite','Lite peripheral pixels byte-exact; bounded centered history','Independent row-vector D3D projection oracle: 1000 points','RGBA/BGRA, separate eyes',
     'D32/D24S8 direct sampled depth and private depth copy','Every pixel alpha preserved',
     'First/reset raw bytes exact','Flat replacement rejects stale history','Temporal attenuation of alternating texture',
     'Actual GPU orthographic and perspective camera reprojection with independent expected pixels',

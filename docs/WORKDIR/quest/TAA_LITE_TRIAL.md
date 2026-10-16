@@ -102,3 +102,38 @@ Keep compact HUD transfer. Compare modes at identical resolution/settings with
 HUD transfer held On; the older HUD-Off pair is not the new baseline.
 Shader fetch/ALU savings do not establish headset gains. Both modes require
 GPU fixture, native, image and normal timing checks before any public release.
+
+
+## Test 13: bundled centered Lite, reference Medium and Full
+
+The previous full-image Lite is now Medium (stable ID 1); Full retains ID 2
+and its exact shader. New Lite is ID 3, displayed between Off and Medium.
+No saved choice silently switches to a different algorithm. New installs stay
+Off; the Android version and APK updater are unchanged.
+
+Lite uses the pinned RDR area default: the centered 70% of each eye width and
+height, approximately 49% of its pixels. Peripheral pixels remain raw. The
+resolve and apply are both scissored; previous coordinates must stay two pixels
+inside valid history. Preserve camera/depth precision, five-sample YCoCg bounds,
+bilinear history, relaxed color math and the 10/5/1 history limits. Invalid,
+reset and out-of-area histories exit before unnecessary neighborhood work.
+
+Group independent image barriers with the original access/stage scopes. A
+private depth fallback copies the centered rectangle plus one row/column for
+the 2x2 gather; reset frames do not read or copy depth. Keep descriptor image
+layouts valid even when the reset shader does not sample them. Timestamp
+queries run once every sixteen frames, with the existing dependency-inclusive
+span retained. Full-size history allocations remain; this is not a memory
+allocation reduction claim.
+
+Retain RGB-only LOAD apply, exact source alpha and the DXVK flush/queue lock.
+RDR's opaque DONT_CARE apply and direct command-buffer hook are incompatible
+with those current integration contracts. Do not force sampled-depth usage,
+patch the dependency, remove synchronization or change simulation timing.
+
+GPU fixtures cover all three modes, both eye formats and depth formats, sampled
+and copied depth, byte-exact alpha/peripheral pixels, crop-edge rejection and
+same-eye camera/depth reprojection. Host results do not certify Quest driver
+behavior or a performance gain. Measure the new Lite as one bundle against
+the retained references; do not attribute its gain to individual changes.
+Replay and a completed PC match remain required before public promotion.
