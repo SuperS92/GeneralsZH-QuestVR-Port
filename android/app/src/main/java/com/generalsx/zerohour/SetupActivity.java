@@ -190,13 +190,19 @@ public class SetupActivity extends Activity {
             .getBoolean("quest_direct_color_copy", false);
     }
     // GeneralsX @performance Codex 15/10/2026 Independent local render trials.
+    // GeneralsX @feature Codex 16/10/2026 Migrate the old On choice to Full, with Off on fresh installs.
+    static int getQuestTaaMode(android.content.Context ctx) {
+        if (!BuildConfig.QUEST_VR) return 0;
+        android.content.SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int mode = prefs.contains("quest_taa_mode") ? prefs.getInt("quest_taa_mode", 0)
+            : prefs.getBoolean("quest_taa_lite", false) ? 2 : 0;
+        return mode >= 0 && mode <= 2 ? mode : 0;
+    }
     static boolean getQuestTaaLite(android.content.Context ctx) {
-        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getBoolean("quest_taa_lite", false);
+        return getQuestTaaMode(ctx) != 0;
     }
     static boolean getQuestTransferBatch(android.content.Context ctx) {
-        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getBoolean("quest_transfer_batch", false);
+        return false; // Retired after the hardware comparison.
     }
     static boolean getQuestShadowCoverage(android.content.Context ctx) {
         return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -1830,16 +1836,11 @@ public class SetupActivity extends Activity {
             UiKit.supporting(directColor, getString(R.string.quest_direct_color_copy_desc));
             LinearLayout taaLite = UiKit.card(root);
             UiKit.sectionHeader(taaLite, R.drawable.ic_gzh_display, getString(R.string.quest_taa_lite), false);
-            UiKit.segmented(taaLite, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
-                getQuestTaaLite(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit().putBoolean("quest_taa_lite", index == 1).apply());
+            UiKit.segmented(taaLite, new String[]{getString(R.string.quest_perf_off),
+                getString(R.string.quest_taa_quality_lite), getString(R.string.quest_taa_quality_full)},
+                getQuestTaaMode(this), index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit().putInt("quest_taa_mode", index).putBoolean("quest_taa_lite", index != 0).apply());
             UiKit.supporting(taaLite, getString(R.string.quest_taa_lite_desc));
-            LinearLayout transferBatch = UiKit.card(root);
-            UiKit.sectionHeader(transferBatch, R.drawable.ic_gzh_display, getString(R.string.quest_transfer_batch), false);
-            UiKit.segmented(transferBatch, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
-                getQuestTransferBatch(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit().putBoolean("quest_transfer_batch", index == 1).apply());
-            UiKit.supporting(transferBatch, getString(R.string.quest_transfer_batch_desc));
             LinearLayout shadowCoverage = UiKit.card(root);
             UiKit.sectionHeader(shadowCoverage, R.drawable.ic_gzh_display, getString(R.string.quest_shadow_coverage), false);
             UiKit.segmented(shadowCoverage, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},

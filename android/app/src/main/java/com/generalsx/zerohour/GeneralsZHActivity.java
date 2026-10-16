@@ -456,6 +456,7 @@ public class GeneralsZHActivity extends SDLActivity {
                 android.system.Os.setenv("GX_QUEST_DIRECT_COLOR_COPY", SetupActivity.getQuestDirectColorCopy(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_TRANSFER_BATCH", SetupActivity.getQuestTransferBatch(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_TAA_LITE", SetupActivity.getQuestTaaLite(this) ? "1" : "0", true);
+                android.system.Os.setenv("GX_QUEST_TAA_MODE", Integer.toString(SetupActivity.getQuestTaaMode(this)), true);
                 android.system.Os.setenv("GX_QUEST_SHADOW_COVERAGE", SetupActivity.getQuestShadowCoverage(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_TEST_LABEL", BuildConfig.QUEST_TEST_LABEL, true);
                 android.system.Os.setenv("GX_QUEST_FIXED_SCREEN", SetupActivity.getQuestFixedScreen(this) ? "1" : "0", true);

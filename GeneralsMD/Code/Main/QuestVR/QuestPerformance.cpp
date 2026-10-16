@@ -54,7 +54,8 @@ void clearFrameCaches() {
 }
 bool PerformanceRequested(PerfOption option) {
     // GeneralsX @performance Codex 14/10/2026 Retired Test 05 cannot be restored by stale settings.
-    if (option == PerfOption::TerrainCulling) return false;
+    // GeneralsX @performance Codex 16/10/2026 Transfer grouping showed no measured benefit; stale settings cannot restore it.
+    if (option == PerfOption::TerrainCulling || option == PerfOption::TransferBatch) return false;
     const size_t i = size_t(option);
     return i < size_t(PerfOption::Count) && strictSwitch(optionNames[i]);
 }

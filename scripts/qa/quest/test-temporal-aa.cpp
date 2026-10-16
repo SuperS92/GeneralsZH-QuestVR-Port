@@ -50,6 +50,7 @@ int main() {
         vkCmdPipelineBarrier(cmd,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,0,0,nullptr,0,nullptr,1,&info);
     };
     unsigned cases=0;
+    for(auto quality:{TaaQuality::Full,TaaQuality::Lite})
     for(auto format:{VK_FORMAT_R8G8B8A8_UNORM,VK_FORMAT_B8G8R8A8_UNORM})for(auto depthFormat:{VK_FORMAT_D32_SFLOAT,VK_FORMAT_D24_UNORM_S8_UINT})for(bool copyDepth:{false,true}) {
         VkFormatProperties support{};vkGetPhysicalDeviceFormatProperties(physical,depthFormat,&support);
         if(!(support.optimalTilingFeatures&VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))continue;
@@ -67,10 +68,10 @@ int main() {
         const VkImageAspectFlags ds=VK_IMAGE_ASPECT_DEPTH_BIT|(depthFormat==VK_FORMAT_D32_SFLOAT?0:VK_IMAGE_ASPECT_STENCIL_BIT);
         begin();for(auto eye:eyes)barrier(eye.image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_UNDEFINED,eye.layout);
         barrier(depth.image,ds,VK_IMAGE_LAYOUT_UNDEFINED,depth.layout);submit();
-        TemporalAA rejected;auto bad=eyes;bad[1]=bad[0];require(!rejected.initialize(physical,device,family,bad,depth),"Aliased eyes rejected");
+        TemporalAA rejected;require(!rejected.initialize(physical,device,family,eyes,depth,static_cast<TaaQuality>(0)),"Disabled quality cannot initialize a filter");auto bad=eyes;bad[1]=bad[0];require(!rejected.initialize(physical,device,family,bad,depth),"Aliased eyes rejected");
         bad=eyes;bad[1].info.usage&=~VK_IMAGE_USAGE_SAMPLED_BIT;require(!rejected.initialize(physical,device,family,bad,depth),"Unsampleable eye rejected");
         auto badDepth=depth;badDepth.layout=VK_IMAGE_LAYOUT_UNDEFINED;require(!rejected.initialize(physical,device,family,eyes,badDepth),"Unknown depth layout rejected");
-        TemporalAA taa;require(taa.initialize(physical,device,family,eyes,depth),"Actual TAA initializes");require(taa.copiesDepth()==copyDepth,"Actual direct/copy depth selection");
+        TemporalAA taa;require(taa.initialize(physical,device,family,eyes,depth,quality),"Actual TAA initializes");require(taa.copiesDepth()==copyDepth,"Actual direct/copy depth selection");
         TaaCamera camera;camera.valid=true;camera.width=w;camera.height=h;
         for(unsigned i=0;i<4;++i)camera.view[i*5]=camera.projection[i*5]=1;
         std::vector<unsigned> center;

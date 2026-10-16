@@ -96,8 +96,9 @@ bool TemporalAA::matches(const std::array<TaaImage,2> &eyes,const TaaImage &dept
         && eyes[0].layout==m_sources[0].layout && eyes[1].layout==m_sources[1].layout && depth.layout==m_depth.layout;
 }
 bool TemporalAA::initialize(VkPhysicalDevice physical,VkDevice device,uint32_t family,
-    const std::array<TaaImage,2> &eyes,const TaaImage &depth) {
-    if(m_device)return false;
+    const std::array<TaaImage,2> &eyes,const TaaImage &depth,TaaQuality quality) {
+    if(m_device || (quality!=TaaQuality::Lite && quality!=TaaQuality::Full))return false;
+    m_quality=quality;
     m_device=device;m_physical=physical;m_sources=eyes;m_depth=depth;
     const auto fail=[&]{destroy();return false;};
     if(!physical||!device)return fail();
@@ -139,7 +140,10 @@ bool TemporalAA::initialize(VkPhysicalDevice physical,VkDevice device,uint32_t f
     if(vkCreatePipelineLayout(device,&layout,nullptr,&m_pipelineLayout)!=VK_SUCCESS)return fail();
     m_historyPass=makePass(format,false);m_applyPass=makePass(format,true);
     if(!m_historyPass||!m_applyPass)return fail();
-    m_resolve=makePipeline(m_historyPass,kTaaResolve,sizeof(kTaaResolve),true);
+    // GeneralsX @performance Codex 16/10/2026 Only create the selected quality pipeline; Full shader stays unchanged.
+    m_resolve=m_quality==TaaQuality::Lite
+        ?makePipeline(m_historyPass,kTaaResolveFast,sizeof(kTaaResolveFast),true)
+        :makePipeline(m_historyPass,kTaaResolve,sizeof(kTaaResolve),true);
     m_apply=makePipeline(m_applyPass,kTaaApply,sizeof(kTaaApply),false);
     if(!m_resolve||!m_apply)return fail();
     VkSamplerCreateInfo sampler{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};sampler.minFilter=sampler.magFilter=VK_FILTER_LINEAR;
@@ -195,6 +199,9 @@ bool TemporalAA::initialize(VkPhysicalDevice physical,VkDevice device,uint32_t f
     }
     __android_log_print(ANDROID_LOG_INFO,"GeneralsXR","Quest TAA Lite ready: %ux%u full image, depth_copy=%d memory_bytes=%llu; HUD/pointer excluded",
         m_width,m_height,m_copyDepth,(unsigned long long)m_bytes);
+    __android_log_print(ANDROID_LOG_INFO,"GeneralsXR",
+        "Quest TAA quality: mode=%s history_taps=%u relaxed_color=%u coordinates_highp=1 coverage=full",
+        m_quality==TaaQuality::Lite?"lite":"full",m_quality==TaaQuality::Lite?1u:5u,m_quality==TaaQuality::Lite?1u:0u);
     return true;
 }
 bool TemporalAA::process(VkQueue queue,unsigned index,const TaaCamera &camera,uint64_t frame,uint64_t time,bool identity) {
@@ -277,9 +284,10 @@ bool TemporalAA::process(VkQueue queue,unsigned index,const TaaCamera &camera,ui
         (unsigned long long)m_processed,(unsigned long long)m_resets,(unsigned long long)m_busy,m_eyeGpu[0],m_eyeGpu[1],
         m_eyeGpu[0]>=0&&m_eyeGpu[1]>=0?m_eyeGpu[0]+m_eyeGpu[1]:-1,m_copyDepth,(unsigned long long)m_bytes);
     if(m_processed%240==0)__android_log_print(ANDROID_LOG_INFO,"GeneralsXR",
-        "Quest TAA history: reused_eyes=%llu first=%llu gap=%llu camera=%llu projection=%llu invalid=%llu tune=10,5,1 (GPU span includes dependencies)",
+        "Quest TAA history: reused_eyes=%llu first=%llu gap=%llu camera=%llu projection=%llu invalid=%llu tune=10,5,1 mode=%s (GPU span includes dependencies)",
         (unsigned long long)m_resetReasons[0],(unsigned long long)m_resetReasons[1],(unsigned long long)m_resetReasons[2],
-        (unsigned long long)m_resetReasons[3],(unsigned long long)m_resetReasons[4],(unsigned long long)m_invalid);
+        (unsigned long long)m_resetReasons[3],(unsigned long long)m_resetReasons[4],(unsigned long long)m_invalid,
+        m_quality==TaaQuality::Lite?"lite":"full");
     return true;
 }
 void TemporalAA::destroy() {

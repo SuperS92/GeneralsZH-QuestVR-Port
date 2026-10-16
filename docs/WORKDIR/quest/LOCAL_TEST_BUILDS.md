@@ -68,3 +68,11 @@ Correct the sampled depth-copy layout, match the pinned RDR Lite history caps,
 and separate history reset reasons in diagnostics. Keep full-image coverage,
 default Off, Android 1.4.0.9 / 10409 and the existing updater. Stronger host
 usage/layout and camera/depth pixel oracles pass; headset quality is pending.
+
+## Test 12
+
+Add Off / Lite / Full temporal filtering. Preserve the Test 11 shader as Full;
+Lite uses bilinear history and relaxed color precision, with precise camera
+and depth math. Full-image coverage and the depth-copy/alpha contract remain.
+Retire ineffective transfer batching; keep HUD transfer. Android remains
+1.4.0.9 / 10409 and the updater is unchanged. Hardware gain is unmeasured.

@@ -5,6 +5,8 @@
 #include <vulkan/vulkan.h>
 #include <array>
 namespace QuestXR {
+// GeneralsX @feature Codex 16/10/2026 Preserve the Test 11 filter alongside the cheaper trial.
+enum class TaaQuality : unsigned { Lite=1, Full=2 };
 struct TaaImage {
     VkImage image=VK_NULL_HANDLE;
     VkImageLayout layout=VK_IMAGE_LAYOUT_UNDEFINED;
@@ -13,7 +15,7 @@ struct TaaImage {
 class TemporalAA final {
 public:
     bool initialize(VkPhysicalDevice physical,VkDevice device,uint32_t family,
-        const std::array<TaaImage,2> &eyes,const TaaImage &depth);
+        const std::array<TaaImage,2> &eyes,const TaaImage &depth,TaaQuality quality=TaaQuality::Full);
     // Caller flushes original DXVK producers and holds the same submission queue lock.
     bool process(VkQueue queue,unsigned eye,const TaaCamera &camera,uint64_t frame,uint64_t time,bool identity=false);
     void invalidate() { for(auto &eye:m_eyes)eye.history.valid=false; }
@@ -64,6 +66,7 @@ private:
     double m_eyeGpu[2]{-1,-1};
     uint64_t m_bytes=0,m_processed=0,m_resets=0,m_busy=0;
     uint64_t m_resetReasons[6]{},m_invalid=0;
+    TaaQuality m_quality=TaaQuality::Full;
     bool m_copyDepth=false,m_depthInitialized=false,m_failed=false;
 };
 }

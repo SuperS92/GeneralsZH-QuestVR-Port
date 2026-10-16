@@ -731,7 +731,8 @@ bool Bootstrap::applyTaa(IDirect3DDevice8 *device, unsigned eye, const TaaCamera
     DxvkQueueGuard guard(m_dxvkInterop);
     if (!m_taaAttempted) {
         m_taaAttempted = true;
-        m_taaUnavailable = !m_temporalAA.initialize(m_vkPhysicalDevice, m_vkDevice, m_vkQueueFamilyIndex, eyes, depth);
+        m_taaUnavailable = !m_temporalAA.initialize(m_vkPhysicalDevice, m_vkDevice, m_vkQueueFamilyIndex, eyes, depth,
+            static_cast<TaaQuality>(QuestXR_TaaMode()));
         __android_log_print(ANDROID_LOG_INFO, kLogTag, "Quest TAA Lite requested=1 active=%d full_image=1 jitter=0 motion_vectors=0; original path on failure", !m_taaUnavailable);
     }
     if (m_taaUnavailable) return false;
@@ -2931,9 +2932,19 @@ extern "C" bool QuestXR_GetControllerState(uint32_t hand, QuestXRControllerState
 #endif
 
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+// GeneralsX @feature Codex 16/10/2026 Explicit quality choice; legacy enabled builds select the unchanged Full filter.
+extern "C" unsigned QuestXR_TaaMode() {
+    const char *mode=std::getenv("GX_QUEST_TAA_MODE");
+    if(mode) {
+        if(std::strcmp(mode,"1")==0)return 1;
+        if(std::strcmp(mode,"2")==0)return 2;
+        return 0;
+    }
+    return QuestXR::PerformanceRequested(QuestXR::PerfOption::TaaLite)?2:0;
+}
 extern "C" bool QuestXR_TaaRequested() {
     const char *spatial = std::getenv("GX_QUEST_SPATIAL_AA");
-    const bool requested = QuestXR::PerformanceRequested(QuestXR::PerfOption::TaaLite);
+    const bool requested = QuestXR_TaaMode()!=0;
     const bool compatible = !spatial || std::strcmp(spatial, "0") == 0;
     static bool reported = false;
     if (requested && !compatible && !reported) {

@@ -444,6 +444,8 @@
     <string name="quest_transfer_batch_desc">픽셀과 해상도 변경 없이 양안 및 HUD 전송을 묶습니다. 변경 후 게임과 런처를 완전히 다시 시작하세요.</string>
     <string name="quest_shadow_coverage">그림자 가장자리 (실험적)</string>
     <string name="quest_shadow_coverage_desc">마지막 그림자 영역을 VR 눈 화면에 맞춥니다. 변경 후 게임과 런처를 완전히 다시 시작하세요.</string>
-    <string name="quest_taa_lite">TAA Lite (experimental)</string>
-    <string name="quest_taa_lite_desc">Temporal anti-aliasing for the game world. Set other anti-aliasing to Off. May leave trails on moving objects. Default off; fully restart the game and launcher.</string>
+    <string name="quest_taa_lite">TAA (experimental)</string>
+    <string name="quest_taa_lite_desc">Lite uses simpler color math and history sampling. Full keeps the previous filter. Both cover the whole image and may cost FPS or leave motion trails. Set other anti-aliasing to Off. Fully restart the game and launcher.</string>
+    <string name="quest_taa_quality_lite">Lite</string>
+    <string name="quest_taa_quality_full">Full</string>
 </resources>

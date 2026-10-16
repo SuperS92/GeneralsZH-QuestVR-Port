@@ -444,6 +444,8 @@
     <string name="quest_transfer_batch_desc">Łączy transfer obrazów oczu i HUD bez zmiany pikseli ani rozdzielczości. Uruchom ponownie grę i launcher.</string>
     <string name="quest_shadow_coverage">Krawędzie cieni (eksperymentalne)</string>
     <string name="quest_shadow_coverage_desc">Dopasowuje końcową warstwę cieni do widoku oka VR. Uruchom ponownie grę i launcher.</string>
-    <string name="quest_taa_lite">TAA Lite (experimental)</string>
-    <string name="quest_taa_lite_desc">Temporal anti-aliasing for the game world. Set other anti-aliasing to Off. May leave trails on moving objects. Default off; fully restart the game and launcher.</string>
+    <string name="quest_taa_lite">TAA (experimental)</string>
+    <string name="quest_taa_lite_desc">Lite uses simpler color math and history sampling. Full keeps the previous filter. Both cover the whole image and may cost FPS or leave motion trails. Set other anti-aliasing to Off. Fully restart the game and launcher.</string>
+    <string name="quest_taa_quality_lite">Lite</string>
+    <string name="quest_taa_quality_full">Full</string>
 </resources>

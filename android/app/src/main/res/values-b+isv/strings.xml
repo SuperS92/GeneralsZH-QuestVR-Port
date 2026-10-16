@@ -444,6 +444,8 @@
     <string name="quest_transfer_batch_desc">Sojedinjuje prenos obrazov očij i HUD bez izměny pikselov ili razrěšenja. Poslě izměn potpuno zapustite igru i launcher znova.</string>
     <string name="quest_shadow_coverage">Kraje těnjev (eksperimentalno)</string>
     <string name="quest_shadow_coverage_desc">Prilagođuje posledny sloj těnjev oblasti oka VR. Igru i launcher potpuno zapustite znova.</string>
-    <string name="quest_taa_lite">TAA Lite (experimental)</string>
-    <string name="quest_taa_lite_desc">Temporal anti-aliasing for the game world. Set other anti-aliasing to Off. May leave trails on moving objects. Default off; fully restart the game and launcher.</string>
+    <string name="quest_taa_lite">TAA (experimental)</string>
+    <string name="quest_taa_lite_desc">Lite uses simpler color math and history sampling. Full keeps the previous filter. Both cover the whole image and may cost FPS or leave motion trails. Set other anti-aliasing to Off. Fully restart the game and launcher.</string>
+    <string name="quest_taa_quality_lite">Lite</string>
+    <string name="quest_taa_quality_full">Full</string>
 </resources>

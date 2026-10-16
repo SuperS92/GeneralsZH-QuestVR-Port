@@ -78,3 +78,27 @@ Test 10 also used more restrictive history caps than the pinned RDR reference:
 the reference values, preserving full-image coverage and the same sample count.
 It logs reset reasons separately. Check for useful stabilization, blur and
 moving-object trails before requesting another performance comparison.
+
+## Test 12: Off / Lite / Full
+
+Test 11 visibly improves edges/fences, but the normal paired headset captures
+record mean 60.4 FPS / 13.06 ms app GPU Off and 41.7 FPS / 21.00 ms On at 1.5
+scale. GPU clocks match; scene and temperature remain uncontrolled factors.
+The existing high-precision cubic shader is retained byte-for-byte as Full.
+Lite uses the pinned RDR alternative: one bilinear history lookup instead of
+five cubic lookups, with relaxed-precision color moments/clipping/blending.
+Depth, reprojection, texture positions and confidence weights stay highp.
+Relaxed precision permits driver lowering; it does not guarantee FP16 execution.
+
+Both modes retain full-image coverage, the same five current-color bounds,
+10/5/1 caps, depth copy, apply pass, memory and original-alpha preservation.
+Only the selected resolve pipeline is allocated. Neither mode introduces
+jitter, motion vectors or changes to simulation. Full here means the previous
+local filter, not RDR's separate jittered Full algorithm.
+
+The old enabled preference maps to Full; new installs remain Off. Retire
+transfer batching and block stale environment/preferences from enabling it.
+Keep compact HUD transfer. Compare modes at identical resolution/settings with
+HUD transfer held On; the older HUD-Off pair is not the new baseline.
+Shader fetch/ALU savings do not establish headset gains. Both modes require
+GPU fixture, native, image and normal timing checks before any public release.
