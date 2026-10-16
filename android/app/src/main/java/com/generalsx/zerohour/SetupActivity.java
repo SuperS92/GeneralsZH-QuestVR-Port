@@ -119,6 +119,11 @@ public class SetupActivity extends Activity {
         return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getBoolean("quest_frontend_passthrough", false);
     }
+    // GeneralsX @feature Codex 17/10/2026 Independent default-off gameplay room background.
+    static boolean getQuestGameplayPassthrough(android.content.Context ctx) {
+        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean("quest_gameplay_passthrough", false);
+    }
     static boolean getQuestFlatIntro(android.content.Context ctx) {
         return getQuestFixedScreen(ctx);
     }
@@ -1813,6 +1818,12 @@ public class SetupActivity extends Activity {
             passthrough.setChecked(getQuestFrontendPassthrough(this));
             passthrough.setOnCheckedChangeListener((button, checked) -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .edit().putBoolean("quest_frontend_passthrough", checked).apply());
+            LinearLayout worldBackground = UiKit.card(root);
+            SwitchCompat worldPassthrough = UiKit.switchRow(worldBackground, getString(R.string.quest_gameplay_passthrough),
+                getString(R.string.quest_gameplay_passthrough_desc));
+            worldPassthrough.setChecked(getQuestGameplayPassthrough(this));
+            worldPassthrough.setOnCheckedChangeListener((button, checked) -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit().putBoolean("quest_gameplay_passthrough", checked).apply());
             LinearLayout taaLite = UiKit.card(root);
             UiKit.sectionHeader(taaLite, R.drawable.ic_gzh_display, getString(R.string.quest_taa_lite), false);
             // GeneralsX @feature Codex 16/10/2026 Preserve stored IDs while placing the new Lite before Medium.

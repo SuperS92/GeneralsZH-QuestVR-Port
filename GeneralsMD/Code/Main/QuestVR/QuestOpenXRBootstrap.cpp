@@ -346,7 +346,10 @@ bool Bootstrap::initialize()
 	const char *fixedScreen = std::getenv("GX_QUEST_FIXED_SCREEN");
 	m_fixedFrontend = fixedScreen && std::strcmp(fixedScreen, "1") == 0;
 	const char *passthrough = std::getenv("GX_QUEST_FRONTEND_PASSTHROUGH");
-	m_passthroughRequested = passthrough && std::strcmp(passthrough, "1") == 0;
+    m_frontendPassthroughRequested = passthrough && std::strcmp(passthrough, "1") == 0;
+    const char *worldPassthrough=std::getenv("GX_QUEST_GAMEPLAY_PASSTHROUGH");
+    m_gameplayPassthroughRequested=worldPassthrough&&std::strcmp(worldPassthrough,"1")==0;
+    m_passthroughRequested=m_frontendPassthroughRequested||m_gameplayPassthroughRequested;
 	__android_log_print(ANDROID_LOG_INFO, kLogTag, "Quest local build: %s; front-end passthrough requested=%d",
 		std::getenv("GX_QUEST_TEST_LABEL") ? std::getenv("GX_QUEST_TEST_LABEL") : "release", m_passthroughRequested);
 
@@ -2044,6 +2047,7 @@ bool Bootstrap::beginFrame()
 	}
 	m_viewsValid = false;
 	m_eyeRenderingComplete = false;
+    m_worldCoverage.resetFrame();
 	m_diagnosticCameras = {};
 	// GeneralsX @feature Codex 02/10/2026 Begin observing before either eye is drawn.
 	BeginDrawCapture(m_eyeCapture.wantsDrawObservation(
@@ -2164,7 +2168,7 @@ bool Bootstrap::updateFrontendPassthrough(bool wanted)
         return false;
     }
     m_passthroughRunning = true;
-    __android_log_print(ANDROID_LOG_INFO, kLogTag, "Front-end passthrough active; gameplay remains opaque stereo");
+    __android_log_print(ANDROID_LOG_INFO, kLogTag, "Passthrough feature active; world transparency requires paired coverage");
     return true;
 }
 
@@ -2187,13 +2191,17 @@ bool Bootstrap::endFrame()
 		{XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW},
 	}};
 	XrCompositionLayerProjection projectionLayer{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
-	const bool frontendPassthrough = updateFrontendPassthrough(m_shouldRender && m_viewsValid
-		&& m_menuRenderingComplete && m_menuPresentation == QUEST_XR_MENU_FRONTEND && !m_eyeRenderingComplete);
+    const bool wantsFrontend=m_frontendPassthroughRequested&&m_menuRenderingComplete
+        &&m_menuPresentation==QUEST_XR_MENU_FRONTEND&&!m_eyeRenderingComplete;
+    const bool wantsWorld=gameplayPassthroughEnabled()&&m_eyeRenderingComplete&&m_worldCoverage.stereoReady();
+    const bool passthroughActive=updateFrontendPassthrough(m_shouldRender&&m_viewsValid&&(wantsFrontend||wantsWorld));
+    const bool frontendPassthrough=passthroughActive&&wantsFrontend;
+    const bool worldPassthrough=passthroughActive&&wantsWorld;
 	XrCompositionLayerPassthroughFB passthroughLayer{XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB};
 	passthroughLayer.layerHandle = m_passthroughLayer;
 	passthroughLayer.flags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
 	XrCompositionLayerQuad menuLayer{XR_TYPE_COMPOSITION_LAYER_QUAD};
-	const XrCompositionLayerBaseHeader *layers[2] = {};
+	const XrCompositionLayerBaseHeader *layers[3] = {};
 	uint32_t layerCount = 0;
 	bool frameOperationOk = true;
 	if (m_shouldRender && m_viewsValid) {
@@ -2280,10 +2288,16 @@ bool Bootstrap::endFrame()
 			projectionLayer.space = m_gameSpace;
 			projectionLayer.viewCount = m_viewCount;
 			projectionLayer.views = projectionViews.data();
-			// Keep both eye buffers opaque in gameplay. Only replace the black front-end projection.
-			layers[layerCount++] = frontendPassthrough
-				? reinterpret_cast<const XrCompositionLayerBaseHeader *>(&passthroughLayer)
-				: reinterpret_cast<const XrCompositionLayerBaseHeader *>(&projectionLayer);
+            // GeneralsX @feature Codex 17/10/2026 Premultiplied game RGB over the room, then the existing opaque HUD.
+            if(frontendPassthrough||worldPassthrough)
+                layers[layerCount++]=reinterpret_cast<const XrCompositionLayerBaseHeader *>(&passthroughLayer);
+            if(!frontendPassthrough) {
+                projectionLayer.layerFlags=worldPassthrough?XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT:0;
+                layers[layerCount++]=reinterpret_cast<const XrCompositionLayerBaseHeader *>(&projectionLayer);
+            }
+            static unsigned worldReports=0;
+            if(worldPassthrough&&worldReports++%120==0)
+                __android_log_print(ANDROID_LOG_INFO,kLogTag,"Quest gameplay passthrough: active=1 paired_coverage=1 premultiplied=1");
 
 			if (menuWaited && m_menuRenderingComplete) {
                 const MenuGeometry &geometry = menuGeometry;
@@ -2542,6 +2556,7 @@ void Bootstrap::detachGraphics()
 		vkQueueWaitIdle(m_vkQueue);
 		interop->ReleaseSubmissionQueue();
 	}
+    m_worldCoverage.destroy();
 	m_eyeCapture.destroy(); // Queue completed above; drain the file writer before teardown.
     m_temporalAA.destroy();
     m_taaAttempted = m_taaUnavailable = false;
@@ -2868,6 +2883,7 @@ bool Bootstrap::selectSystemAndViews()
 		properties.systemName, properties.graphicsProperties.maxSwapchainImageWidth,
 		properties.graphicsProperties.maxSwapchainImageHeight,
 		properties.graphicsProperties.maxLayerCount);
+    m_worldLayerSupported=properties.graphicsProperties.maxLayerCount>=3;
 
 	uint32_t count = 0;
 	result = xrEnumerateViewConfigurationViews(m_instance, m_systemId,
@@ -3085,6 +3101,8 @@ extern "C" bool QuestXR_GetControllerState(uint32_t hand, QuestXRControllerState
 
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
 // GeneralsX @feature Codex 16/10/2026 Explicit quality choice; legacy enabled builds select the unchanged Full filter.
+extern "C" bool QuestXR_GameplayPassthroughEnabled() {return QuestXR::GetBootstrap().gameplayPassthroughEnabled();}
+extern "C" bool QuestXR_BeginWorldCoverage(IDirect3DDevice8 *device,unsigned eye) {return QuestXR::GetBootstrap().beginWorldCoverage(device,eye);}
 extern "C" unsigned QuestXR_TaaMode() {
     const char *mode=std::getenv("GX_QUEST_TAA_MODE");
     if(mode) {

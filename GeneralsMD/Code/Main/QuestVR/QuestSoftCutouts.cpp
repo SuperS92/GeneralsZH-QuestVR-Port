@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "VRDevice/QuestSoftCutouts.h"
+#include "VRDevice/QuestWorldCoverage.h"
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
 #include "VRDevice/QuestCutoutMips.h"
 #include "VRDevice/QuestTreeContours.h"
@@ -147,8 +148,10 @@ public:
         return SUCCEEDED(device->SetRenderState(states[static_cast<size_t>(state)], value));
     }
     bool draw() override {
-        return SUCCEEDED(device->DrawIndexedPrimitive(static_cast<D3DPRIMITIVETYPE>(primitive),
+        const bool ok=SUCCEEDED(device->DrawIndexedPrimitive(static_cast<D3DPRIMITIVETYPE>(primitive),
             minVertex, vertices, startIndex, primitives));
+        if(ok)QuestXR::CaptureWorldCoverageDraw(device,primitive,minVertex,vertices,startIndex,primitives);
+        return ok;
     }
 };
 }

@@ -457,4 +457,6 @@
     <string name="quest_visibility_mask_desc">يتخطى بعض بكسلات العالم المخفية بعدسات النظارة. يدعم AA الزمني إيقاف أو Lite. عند عدم دعم القناع يستمر العرض العادي. أعد تشغيل اللعبة والمشغل بعد التغيير.</string>
     <string name="quest_tabletop_tilt">إمالة ساحة اللعب</string>
     <string name="quest_tabletop_tilt_desc">اضغط زري الإمساك معًا وحرّك العصا اليمنى لأعلى أو لأسفل لإمالة الساحة بخطوات 15°. حرّكها لليسار لإعادة الضبط. أعد العصا للوسط بين الخطوات. تُحفظ الزاوية. في وضع الطاولة فقط.</string>
+    <string name="quest_gameplay_passthrough">العبور حول ساحة المعركة</string>
+    <string name="quest_gameplay_passthrough_desc">اعرض غرفتك حول ساحة المعركة. يتطلب معالجة رسومية إضافية. أعد تشغيل اللعبة والمشغّل بالكامل بعد التغيير.</string>
 </resources>

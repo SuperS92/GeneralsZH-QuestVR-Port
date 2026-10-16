@@ -457,4 +457,6 @@
     <string name="quest_visibility_mask_desc">Ignora alguns pixels ocultos pela óptica do headset. Compatível com AA temporal desligado ou Lite. Sem máscara adequada, mantém o render normal. Reinicie o jogo e o launcher após alterações.</string>
     <string name="quest_tabletop_tilt">Inclinação do tabuleiro</string>
     <string name="quest_tabletop_tilt_desc">Segure os dois botões de agarrar e mova o analógico direito para cima ou para baixo para inclinar o campo em passos de 15°. Para a esquerda redefine o ângulo. Centralize entre os passos. O ângulo é salvo. Apenas no modo tabuleiro.</string>
+    <string name="quest_gameplay_passthrough">Passthrough ao redor do campo de batalha</string>
+    <string name="quest_gameplay_passthrough_desc">Mostra seu ambiente ao redor do campo de batalha. Exige processamento gráfico adicional. Reinicie completamente o jogo e o launcher após alterações.</string>
 </resources>

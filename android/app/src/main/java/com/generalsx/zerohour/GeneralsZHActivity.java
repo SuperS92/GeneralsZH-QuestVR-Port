@@ -448,6 +448,7 @@ public class GeneralsZHActivity extends SDLActivity {
                 android.system.Os.setenv("GX_QUEST_TREE_WIND_PAIR", SetupActivity.getQuestTreeWindPair(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_TREE_CONTOURS", SetupActivity.getQuestTreeContours(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_FRONTEND_PASSTHROUGH", SetupActivity.getQuestFrontendPassthrough(this) ? "1" : "0", true);
+                android.system.Os.setenv("GX_QUEST_GAMEPLAY_PASSTHROUGH", SetupActivity.getQuestGameplayPassthrough(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_TRACK_STREAMING", SetupActivity.getQuestTrackStreaming(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_HUD_TRANSFER", SetupActivity.getQuestHudTransfer(this) ? "1" : "0", true);
                 android.system.Os.setenv("GX_QUEST_TERRAIN_CULLING", "0", true);

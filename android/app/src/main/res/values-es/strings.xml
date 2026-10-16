@@ -457,4 +457,6 @@
     <string name="quest_visibility_mask_desc">Omite algunos píxeles ocultos por la óptica del visor. Admite AA temporal desactivado o Lite. Si la máscara no es compatible, mantiene el renderizado normal. Reinicia el juego y el lanzador tras los cambios.</string>
     <string name="quest_tabletop_tilt">Inclinación del tablero</string>
     <string name="quest_tabletop_tilt_desc">Mantén ambos botones de agarre y mueve el stick derecho arriba o abajo para inclinar el campo en pasos de 15°. A la izquierda restablece el ángulo. Centra el stick entre pasos. El ángulo se guarda. Solo en modo tablero.</string>
+    <string name="quest_gameplay_passthrough">Passthrough detrás del campo de batalla</string>
+    <string name="quest_gameplay_passthrough_desc">Muestra tu habitación alrededor del campo de batalla. Requiere trabajo gráfico adicional. Reinicia por completo el juego y el lanzador tras los cambios.</string>
 </resources>

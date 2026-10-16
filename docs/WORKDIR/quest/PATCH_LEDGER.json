@@ -43,7 +43,7 @@
     {
       "path": "Core/GameEngineDevice/Source/W3DDevice/GameClient/W3DSnow.cpp",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Suppress snow renderer only; preserve update/RNG",
+      "purpose": "Quest-only point-sprite alpha coverage after the original snow draw; original simulation/counts retained",
       "risk": "presentation",
       "owningTest": "native syntax; snow map hardware gate",
       "removalCondition": "Upstream provides equivalent optional platform support"
@@ -139,7 +139,7 @@
     {
       "path": "GeneralsMD/Code/Main/CMakeLists.txt",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Optional Quest build wiring including spatial/SMAA and bounded raw-eye capture modules; ordinary target remains available; optional compact HUD transfer module",
+      "purpose": "Optional Quest modules, including private world coverage; retired spatial AA not linked; ordinary target remains available",
       "risk": "build/identity",
       "owningTest": "control and Quest builds; isolated host GPU AA/readback fixtures",
       "removalCondition": "Upstream provides equivalent optional platform support"
@@ -375,6 +375,22 @@
       "risk": "menu map selection; no simulation or protocol change",
       "owningTest": "portable path and filtered-index host cases; headset playlist/search confirmation pending",
       "removalCondition": "Upstream menu resolves portable cache keys and retains playlist indices"
+    },
+    {
+      "path": "Core/Libraries/Source/WWVegas/WW3D2/dx8wrapper.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only draw observation/cutout hooks, plus optional same-eye alpha-only transparent coverage and final depth union before depth discard; original traversal/statistics retained",
+      "risk": "optional presentation GPU work; no update/logic change",
+      "owningTest": "production host state/raster fixture; native builds; headset/performance gate",
+      "removalCondition": "Upstream provides equivalent optional passthrough presentation"
+    },
+    {
+      "path": "Core/GameEngineDevice/Source/W3DDevice/GameClient/Water/W3DWater.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only alpha coverage after direct native water draws; offscreen reflection targets excluded; original water RGB/material alpha retained",
+      "risk": "optional presentation GPU work; no update/logic change",
+      "owningTest": "production host state/raster fixture; native builds; headset/performance gate",
+      "removalCondition": "Upstream provides equivalent optional passthrough presentation"
     }
   ],
   "followUpUpstreamEdits": [

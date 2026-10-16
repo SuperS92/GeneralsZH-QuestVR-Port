@@ -79,6 +79,9 @@ extern "C" bool QuestXR_BeginFrame();
 extern "C" bool QuestXR_EndFrame();
 extern "C" bool QuestXR_IsFrameActive();
 extern "C" bool QuestXR_ShouldRenderFrame();
+// GeneralsX @feature Codex 17/10/2026 Optional local room background; no simulation changes.
+extern "C" bool QuestXR_GameplayPassthroughEnabled();
+extern "C" bool QuestXR_BeginWorldCoverage(IDirect3DDevice8 *,std::uint32_t eye);
 extern "C" IDirect3DSurface8 *QuestXR_GetMenuDepthSurface(IDirect3DDevice8 *device);
 extern "C" bool QuestXR_GetEyeView(std::uint32_t eye, QuestXREyeView *view);
 // Presentation-space epoch, including delayed runtime origin changes.

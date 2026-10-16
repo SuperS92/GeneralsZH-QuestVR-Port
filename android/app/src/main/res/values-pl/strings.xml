@@ -457,4 +457,6 @@
     <string name="quest_visibility_mask_desc">Pomija część pikseli świata ukrytych przez optykę gogli. Obsługuje czasowe AA wyłączone lub Lite. Bez odpowiedniej maski zachowuje zwykły obraz. Po zmianach uruchom grę i launcher ponownie.</string>
     <string name="quest_tabletop_tilt">Nachylenie planszy</string>
     <string name="quest_tabletop_tilt_desc">Przytrzymaj oba przyciski chwytu i wychyl prawy drążek w górę lub w dół, aby pochylić pole o 15°. Wychylenie w lewo resetuje kąt. Między krokami wróć drążkiem do środka. Kąt jest zapisywany. Tylko w trybie stołowym.</string>
+    <string name="quest_gameplay_passthrough">Passthrough wokół pola bitwy</string>
+    <string name="quest_gameplay_passthrough_desc">Pokazuje pokój wokół pola bitwy. Wymaga dodatkowej pracy układu graficznego. Po zmianach całkowicie uruchom ponownie grę i launcher.</string>
 </resources>

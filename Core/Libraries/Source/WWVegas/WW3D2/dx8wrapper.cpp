@@ -54,6 +54,7 @@
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
 #include "../../../../GameEngineDevice/Include/VRDevice/QuestDrawCapture.h"
 #include "../../../../GameEngineDevice/Include/VRDevice/QuestSoftCutouts.h"
+#include "../../../../GameEngineDevice/Include/VRDevice/QuestWorldCoverage.h"
 #include "../../../../GameEngineDevice/Include/VRDevice/QuestTerrainCulling.h"
 #include "../../../../GameEngineDevice/Include/VRDevice/QuestShroudPass.h"
 #include "../../../../GameEngineDevice/Include/VRDevice/QuestDepthDiscard.h"
@@ -2419,6 +2420,7 @@ void DX8Wrapper::End_Scene(bool flip_frames)
 	}
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
     // GeneralsX @performance Codex 14/10/2026 Sorting and pillarbox draws have finished.
+    QuestXR::FinishWorldCoverage(D3DDevice, flip_frames);
     QuestXR::DiscardCompletedEyeDepth(D3DDevice, flip_frames);
 #endif
 	DX8CALL(EndScene());
@@ -2764,6 +2766,9 @@ void DX8Wrapper::Draw_Sorting_IB_VB(
 		vertex_count,
 		dyn_ib_access.IndexBufferOffset,
 		polygon_count));
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+    QuestXR::CaptureWorldCoverageDraw(D3DDevice,D3DPT_TRIANGLELIST,0,vertex_count,dyn_ib_access.IndexBufferOffset,polygon_count);
+#endif
     }
 
 	DX8_RECORD_RENDER(polygon_count,vertex_count,render_state.shader);
@@ -2895,6 +2900,9 @@ void DX8Wrapper::Draw(
 					vertex_count,
 					start_index+render_state.iba_offset,
 					polygon_count));
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+                QuestXR::CaptureWorldCoverageDraw(D3DDevice,primitive_type,min_vertex_index,vertex_count,start_index+render_state.iba_offset,polygon_count);
+#endif
                 }
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
                 } else Increment_DX8_CallCount(); // Frustum-rejected original draw remains accounted for.

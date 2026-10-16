@@ -22,6 +22,9 @@
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "GameClient/View.h"
 #include "WW3D2/dx8wrapper.h"
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestWorldCoverage.h"
+#endif
 #include "WW3D2/rinfo.h"
 #include "WW3D2/camera.h"
 #include "WW3D2/assetmgr.h"
@@ -314,6 +317,9 @@ flush_particles:
 		{
 			Debug_Statistics::Record_DX8_Polys_And_Vertices(numberInBatch*2,numberInBatch*4,ShaderClass::_PresetOpaqueShader);
 			DX8Wrapper::_Get_D3D_Device8()->DrawPrimitive( D3DPT_POINTLIST, m_dwBase, numberInBatch);
+#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+            QuestXR::CaptureWorldCoveragePrimitive(DX8Wrapper::_Get_D3D_Device8(),D3DPT_POINTLIST,m_dwBase,numberInBatch);
+#endif
 			totalPart -= numberInBatch;
 			m_dwBase += numberInBatch;
 		}

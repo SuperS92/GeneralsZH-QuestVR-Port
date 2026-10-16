@@ -371,6 +371,7 @@ void W3DDisplay::drawQuestXRStereo(W3DView *view)
 	double pointerCpuMs[2] = {};
 	double eyeCpuMs[2] = {};
 	bool advancedSceneThisFrame = false;
+    const bool roomBackground=QuestXR_GameplayPassthroughEnabled(); // One decision for both eyes, including fallback frames.
 	for (uint32_t eye = 0; eye < 2; ++eye) {
 		const auto eyeStart = std::chrono::steady_clock::now();
 		bool renderedEye = false;
@@ -428,7 +429,8 @@ void W3DDisplay::drawQuestXRStereo(W3DView *view)
 			if (boundColor != nullptr) boundColor->Release();
 			if (boundDepth != nullptr) boundDepth->Release();
 		}
-		if (WW3D::Begin_Render(true, true, Vector3(0.03f, 0.06f, 0.12f)) == WW3D_ERROR_OK) {
+        if (WW3D::Begin_Render(true, true, roomBackground?Vector3(0,0,0):Vector3(0.03f,0.06f,0.12f)) == WW3D_ERROR_OK) {
+            if(roomBackground)QuestXR_BeginWorldCoverage(DX8Wrapper::_Get_D3D_Device8(),eye);
             m_questXRCamera->Apply();
             if(QuestXR_VisibilityMaskRequested()) {
                 DX8Wrapper::Apply_Render_State_Changes();

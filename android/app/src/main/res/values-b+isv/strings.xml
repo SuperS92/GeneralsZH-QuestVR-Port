@@ -457,4 +457,6 @@
     <string name="quest_visibility_mask_desc">Preskakuje něktore piksele světa skryte optikoju šlema. Podpora vremennogo AA: izključeno ili Lite. Bez prikladnoj masky ostaje obyčno izobraženje. Po izměnah ponovno zapustite igru i zapuskač.</string>
     <string name="quest_tabletop_tilt">Naklon igrovogo pola</string>
     <string name="quest_tabletop_tilt_desc">Držite oba pritiska hvata i dvigajte pravy stik gore ili dolu za naklon pola v korakah 15°. Vlevo vrati normalny pogled. Medžu korakami vratite stik do centra. Ugol se shranjaje. Samo v stolnom režimu.</string>
+    <string name="quest_gameplay_passthrough">Passthrough okolo bojnogo polja</string>
+    <string name="quest_gameplay_passthrough_desc">Pokazuje vašu sobu okolo bojnogo polja. Potrěbuje dodatkovu grafičnu rabotu. Po izměnah polno restartujte igru i spustnik.</string>
 </resources>

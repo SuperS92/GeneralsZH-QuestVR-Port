@@ -16,6 +16,7 @@
 #include "QuestTemporalAA.h"
 #include "VRDevice/QuestHudTransfer.h"
 #include "QuestEyeCapture.h"
+#include "VRDevice/QuestWorldCoverage.h"
 #include "VRDevice/QuestVisibilityMask.h"
 
 #include <cstdint>
@@ -57,6 +58,11 @@ public:
 	bool endFrame();
 	bool isFrameActive() const { return m_frameActive; }
 	bool shouldRenderFrame() const { return m_frameActive && m_shouldRender; }
+    bool gameplayPassthroughEnabled() const {return m_gameplayPassthroughRequested&&m_worldLayerSupported&&m_passthroughEnabled&&!m_passthroughFailed&&m_worldCoverage.available();}
+    bool beginWorldCoverage(::IDirect3DDevice8 *device,unsigned eye) {
+        return gameplayPassthroughEnabled()&&m_frameActive&&m_shouldRender&&eye<2
+            &&m_worldCoverage.begin(device,m_eyeSurfaces[eye],m_depthSurface,eye);
+    }
 	::IDirect3DSurface8 *getMenuDepthSurface(::IDirect3DDevice8 *device);
 	void detachGraphics();
 	void shutdown();
@@ -159,6 +165,9 @@ private:
 	// GeneralsX @feature Codex 10/10/2026 Optional room-fixed front-end screen.
 	// GeneralsX @feature Codex 12/10/2026 Optional front-end underlay, never world transparency.
 	bool m_passthroughRequested = false, m_passthroughEnabled = false;
+    bool m_frontendPassthroughRequested = false,m_gameplayPassthroughRequested = false;
+    bool m_worldLayerSupported=false;
+    WorldCoverage m_worldCoverage;
 	bool m_passthroughFailed = false, m_passthroughRunning = false;
 	XrPassthroughFB m_passthrough = XR_NULL_HANDLE;
 	XrPassthroughLayerFB m_passthroughLayer = XR_NULL_HANDLE;

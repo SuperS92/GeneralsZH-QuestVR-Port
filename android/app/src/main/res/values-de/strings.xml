@@ -457,4 +457,6 @@
     <string name="quest_visibility_mask_desc">Spart einen Teil der Welt-Pixel, die durch die Headset-Optik unsichtbar sind. Unterstützt temporale Kantenglättung Aus oder Lite. Ohne geeignete Maske bleibt die normale Darstellung aktiv. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
     <string name="quest_tabletop_tilt">Spielfeld kippen</string>
     <string name="quest_tabletop_tilt_desc">Beide Grip-Tasten halten und den rechten Stick nach oben oder unten bewegen, um das Spielfeld in 15°-Schritten zu kippen. Nach links setzt den Winkel zurück. Den Stick zwischen den Schritten zentrieren. Der Winkel wird gespeichert. Nur im Tabletop-Modus.</string>
+    <string name="quest_gameplay_passthrough">Passthrough hinter dem Spielfeld</string>
+    <string name="quest_gameplay_passthrough_desc">Zeigt dein Zimmer rund um das Spielfeld. Benötigt zusätzliche Grafikleistung. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
 </resources>

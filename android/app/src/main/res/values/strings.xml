@@ -464,4 +464,6 @@
     <string name="quest_visibility_mask_desc">Skips some world pixels hidden by the headset optics. Supports temporal AA Off or Lite. Unsupported masks retain normal rendering. Fully restart the game and launcher after changes.</string>
     <string name="quest_tabletop_tilt">Tabletop tilt</string>
     <string name="quest_tabletop_tilt_desc">Hold both grips and flick the right stick up or down to tilt the battlefield in 15° steps. Flick left to reset. Return the stick to center between steps. The angle is saved. Tabletop mode only.</string>
+    <string name="quest_gameplay_passthrough">Passthrough behind the battlefield</string>
+    <string name="quest_gameplay_passthrough_desc">Show your room around the battlefield. Adds rendering work. Fully restart the game and launcher after changes.</string>
 </resources>
