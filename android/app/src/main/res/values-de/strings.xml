@@ -448,5 +448,7 @@
     <string name="quest_taa_lite_desc">Lite glättet den mittleren Bildbereich. Medium und Full glätten das ganze Bild. Bewegungsspuren sind möglich. Andere Kantenglättung ausschalten. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
+    <string name="quest_taa_fast_transfers">Lite-Übertragung (experimentell)</string>
+    <string name="quest_taa_fast_transfers_desc">Alternative Tiefen- und Bildübertragung für TAA Lite. Kann GPU-Zeit sparen. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
     <string name="quest_taa_quality_full">Full</string>
 </resources>

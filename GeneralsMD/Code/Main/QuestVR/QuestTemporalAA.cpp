@@ -68,18 +68,19 @@ bool TemporalAA::makeImage(VkFormat format,VkImageUsageFlags usage,VkImageAspect
     if(vkBindImageMemory(m_device,image.image,image.memory,0)!=VK_SUCCESS)return false;
     image.view=makeView(image.image,format,aspect);return image.view!=VK_NULL_HANDLE;
 }
-VkRenderPass TemporalAA::makePass(VkFormat format,bool load) {
+VkRenderPass TemporalAA::makePass(VkFormat format,bool load,bool confidence) {
     VkAttachmentDescription a{};a.format=format;a.samples=VK_SAMPLE_COUNT_1_BIT;
     a.loadOp=load?VK_ATTACHMENT_LOAD_OP_LOAD:VK_ATTACHMENT_LOAD_OP_DONT_CARE;a.storeOp=VK_ATTACHMENT_STORE_OP_STORE;
     a.stencilLoadOp=VK_ATTACHMENT_LOAD_OP_DONT_CARE;a.stencilStoreOp=VK_ATTACHMENT_STORE_OP_DONT_CARE;
     a.initialLayout=a.finalLayout=VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    VkAttachmentReference ref{0,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-    VkSubpassDescription sub{};sub.pipelineBindPoint=VK_PIPELINE_BIND_POINT_GRAPHICS;sub.colorAttachmentCount=1;sub.pColorAttachments=&ref;
+    VkAttachmentDescription attachments[2]{a,a};attachments[1].format=VK_FORMAT_R8_UNORM;
+    VkAttachmentReference refs[2]{{0,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},{1,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}};
+    VkSubpassDescription sub{};sub.pipelineBindPoint=VK_PIPELINE_BIND_POINT_GRAPHICS;sub.colorAttachmentCount=confidence?2:1;sub.pColorAttachments=refs;
     VkRenderPassCreateInfo info{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    info.attachmentCount=1;info.pAttachments=&a;info.subpassCount=1;info.pSubpasses=&sub;VkRenderPass pass{};
+    info.attachmentCount=sub.colorAttachmentCount;info.pAttachments=attachments;info.subpassCount=1;info.pSubpasses=&sub;VkRenderPass pass{};
     return vkCreateRenderPass(m_device,&info,nullptr,&pass)==VK_SUCCESS?pass:VK_NULL_HANDLE;
 }
-VkPipeline TemporalAA::makePipeline(VkRenderPass pass,const uint32_t *fragment,size_t bytes,bool alpha) {
+VkPipeline TemporalAA::makePipeline(VkRenderPass pass,const uint32_t *fragment,size_t bytes,bool alpha,unsigned attachments) {
     VkShaderModule modules[2]{};
     VkShaderModuleCreateInfo shader{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
     shader.codeSize=sizeof(kTaaVertex);shader.pCode=kTaaVertex;
@@ -100,7 +101,9 @@ VkPipeline TemporalAA::makePipeline(VkRenderPass pass,const uint32_t *fragment,s
     VkPipelineDepthStencilStateCreateInfo ds{VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
     VkPipelineColorBlendAttachmentState mask{};mask.colorWriteMask=VK_COLOR_COMPONENT_R_BIT|VK_COLOR_COMPONENT_G_BIT|VK_COLOR_COMPONENT_B_BIT
         |(alpha?VK_COLOR_COMPONENT_A_BIT:0);
-    VkPipelineColorBlendStateCreateInfo blend{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};blend.attachmentCount=1;blend.pAttachments=&mask;
+    // Identical blend states avoid requiring independentBlend for the R8 attachment.
+    VkPipelineColorBlendAttachmentState masks[2]{mask,mask};
+    VkPipelineColorBlendStateCreateInfo blend{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};blend.attachmentCount=attachments;blend.pAttachments=masks;
     VkDynamicState dynamicStates[]={VK_DYNAMIC_STATE_VIEWPORT,VK_DYNAMIC_STATE_SCISSOR};
     VkPipelineDynamicStateCreateInfo dynamic{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};dynamic.dynamicStateCount=2;dynamic.pDynamicStates=dynamicStates;
     VkGraphicsPipelineCreateInfo info{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
@@ -116,7 +119,7 @@ bool TemporalAA::matches(const std::array<TaaImage,2> &eyes,const TaaImage &dept
         && eyes[0].layout==m_sources[0].layout && eyes[1].layout==m_sources[1].layout && depth.layout==m_depth.layout;
 }
 bool TemporalAA::initialize(VkPhysicalDevice physical,VkDevice device,uint32_t family,
-    const std::array<TaaImage,2> &eyes,const TaaImage &depth,TaaQuality quality) {
+    const std::array<TaaImage,2> &eyes,const TaaImage &depth,TaaQuality quality,bool fastTransfers) {
     if(m_device || (quality!=TaaQuality::Lite && quality!=TaaQuality::Medium && quality!=TaaQuality::Full))return false;
     m_quality=quality;
     m_device=device;m_physical=physical;m_sources=eyes;m_depth=depth;
@@ -151,22 +154,34 @@ bool TemporalAA::initialize(VkPhysicalDevice physical,VkDevice device,uint32_t f
     m_copyDepth=!(depth.info.usage&VK_IMAGE_USAGE_SAMPLED_BIT);
     if(m_copyDepth && !(depth.info.usage&VK_IMAGE_USAGE_TRANSFER_SRC_BIT))return fail();
     vkGetPhysicalDeviceMemoryProperties(physical,&m_memory);
-    VkDescriptorSetLayoutBinding bindings[3]{};
-    for(unsigned i=0;i<3;++i){bindings[i].binding=i;bindings[i].descriptorCount=1;bindings[i].descriptorType=VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;bindings[i].stageFlags=VK_SHADER_STAGE_FRAGMENT_BIT;}
-    VkDescriptorSetLayoutCreateInfo setInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};setInfo.bindingCount=3;setInfo.pBindings=bindings;
+    // GeneralsX @performance Codex 16/10/2026 Copy filtered RGBA after separating confidence into R8.
+    VkFormatProperties confidenceFeatures{};vkGetPhysicalDeviceFormatProperties(physical,VK_FORMAT_R8_UNORM,&confidenceFeatures);
+    VkImageFormatProperties confidenceImage{};
+    const bool confidenceSupported=vkGetPhysicalDeviceImageFormatProperties(physical,VK_FORMAT_R8_UNORM,VK_IMAGE_TYPE_2D,VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT,0,&confidenceImage)==VK_SUCCESS
+        &&(confidenceFeatures.optimalTilingFeatures&needed)==needed
+        &&(confidenceImage.sampleCounts&VK_SAMPLE_COUNT_1_BIT)&&confidenceImage.maxExtent.width>=m_width&&confidenceImage.maxExtent.height>=m_height;
+    m_fastCopy=fastTransfers&&quality==TaaQuality::Lite&&properties.limits.maxColorAttachments>=2&&confidenceSupported
+        &&(eyes[0].info.usage&VK_IMAGE_USAGE_TRANSFER_DST_BIT)&&(eyes[1].info.usage&VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    const unsigned bindingCount=m_fastCopy?4:3;
+    VkDescriptorSetLayoutBinding bindings[4]{};
+    for(unsigned i=0;i<bindingCount;++i){bindings[i].binding=i;bindings[i].descriptorCount=1;bindings[i].descriptorType=VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;bindings[i].stageFlags=VK_SHADER_STAGE_FRAGMENT_BIT;}
+    VkDescriptorSetLayoutCreateInfo setInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};setInfo.bindingCount=bindingCount;setInfo.pBindings=bindings;
     if(vkCreateDescriptorSetLayout(device,&setInfo,nullptr,&m_setLayout)!=VK_SUCCESS)return fail();
     VkPushConstantRange push{VK_SHADER_STAGE_FRAGMENT_BIT,0,sizeof(Push)};
     VkPipelineLayoutCreateInfo layout{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};layout.setLayoutCount=1;layout.pSetLayouts=&m_setLayout;layout.pushConstantRangeCount=1;layout.pPushConstantRanges=&push;
     if(vkCreatePipelineLayout(device,&layout,nullptr,&m_pipelineLayout)!=VK_SUCCESS)return fail();
-    m_historyPass=makePass(format,false);m_applyPass=makePass(format,true);
-    if(!m_historyPass||!m_applyPass)return fail();
+    m_historyPass=makePass(format,false,m_fastCopy);
+    if(!m_fastCopy)m_applyPass=makePass(format,true);
+    if(!m_historyPass||(!m_fastCopy&&!m_applyPass))return fail();
     // GeneralsX @performance Codex 16/10/2026 Only create the selected quality pipeline; Full shader stays unchanged.
     m_resolve=m_quality==TaaQuality::Lite
-        ?makePipeline(m_historyPass,kTaaResolveCompact,sizeof(kTaaResolveCompact),true)
+        ?(m_fastCopy?makePipeline(m_historyPass,kTaaResolveCompactCopy,sizeof(kTaaResolveCompactCopy),true,2)
+            :makePipeline(m_historyPass,kTaaResolveCompact,sizeof(kTaaResolveCompact),true))
         :m_quality==TaaQuality::Medium?makePipeline(m_historyPass,kTaaResolveFast,sizeof(kTaaResolveFast),true)
             :makePipeline(m_historyPass,kTaaResolve,sizeof(kTaaResolve),true);
-    m_apply=makePipeline(m_applyPass,kTaaApply,sizeof(kTaaApply),false);
-    if(!m_resolve||!m_apply)return fail();
+    if(!m_fastCopy)m_apply=makePipeline(m_applyPass,kTaaApply,sizeof(kTaaApply),false);
+    if(!m_resolve||(!m_fastCopy&&!m_apply))return fail();
     VkSamplerCreateInfo sampler{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};sampler.minFilter=sampler.magFilter=VK_FILTER_LINEAR;
     sampler.mipmapMode=VK_SAMPLER_MIPMAP_MODE_NEAREST;sampler.addressModeU=sampler.addressModeV=sampler.addressModeW=VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     if(vkCreateSampler(device,&sampler,nullptr,&m_sampler)!=VK_SUCCESS)return fail();
@@ -177,19 +192,21 @@ bool TemporalAA::initialize(VkPhysicalDevice physical,VkDevice device,uint32_t f
         m_depthView=m_privateDepth.view;
     } else m_depthView=makeView(depth.image,depth.info.format,VK_IMAGE_ASPECT_DEPTH_BIT);
     if(!m_depthView)return fail();
-    VkDescriptorPoolSize poolSize{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,12};
+    VkDescriptorPoolSize poolSize{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,4*bindingCount};
     VkDescriptorPoolCreateInfo pool{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};pool.maxSets=4;pool.poolSizeCount=1;pool.pPoolSizes=&poolSize;
     if(vkCreateDescriptorPool(device,&pool,nullptr,&m_descriptors)!=VK_SUCCESS)return fail();
-    const auto framebuffer=[&](VkRenderPass pass,VkImageView view,VkFramebuffer &out) {
-        VkFramebufferCreateInfo f{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};f.renderPass=pass;f.attachmentCount=1;f.pAttachments=&view;f.width=m_width;f.height=m_height;f.layers=1;
+    const auto framebuffer=[&](VkRenderPass pass,VkImageView view,VkFramebuffer &out,VkImageView confidence=VK_NULL_HANDLE) {
+        const VkImageView attachments[2]{view,confidence};
+        VkFramebufferCreateInfo f{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};f.renderPass=pass;f.attachmentCount=confidence?2:1;f.pAttachments=attachments;f.width=m_width;f.height=m_height;f.layers=1;
         return vkCreateFramebuffer(device,&f,nullptr,&out)==VK_SUCCESS;
     };
     for(unsigned e=0;e<2;++e) {
         auto &eye=m_eyes[e];eye.sourceView=makeView(eyes[e].image,format,VK_IMAGE_ASPECT_COLOR_BIT);
-        if(!eye.sourceView || !framebuffer(m_applyPass,eye.sourceView,eye.applyFb))return fail();
+        if(!eye.sourceView || (!m_fastCopy&&!framebuffer(m_applyPass,eye.sourceView,eye.applyFb)))return fail();
         for(unsigned h=0;h<2;++h) {
-            if(!makeImage(format,VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT,VK_IMAGE_ASPECT_COLOR_BIT,eye.images[h])
-                ||!framebuffer(m_historyPass,eye.images[h].view,eye.resolveFb[h]))return fail();
+            if(m_fastCopy&&!makeImage(VK_FORMAT_R8_UNORM,VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT,VK_IMAGE_ASPECT_COLOR_BIT,eye.confidence[h]))return fail();
+            if(!makeImage(format,VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT|(m_fastCopy?VK_IMAGE_USAGE_TRANSFER_SRC_BIT:0),VK_IMAGE_ASPECT_COLOR_BIT,eye.images[h])
+                ||!framebuffer(m_historyPass,eye.images[h].view,eye.resolveFb[h],eye.confidence[h].view))return fail();
         }
         VkDescriptorSetLayout layouts[2]{m_setLayout,m_setLayout};
         VkDescriptorSetAllocateInfo allocate{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};allocate.descriptorPool=m_descriptors;allocate.descriptorSetCount=2;allocate.pSetLayouts=layouts;
@@ -199,11 +216,12 @@ bool TemporalAA::initialize(VkPhysicalDevice physical,VkDevice device,uint32_t f
                 // The private copy is sampled, not an attachment. VUID 01210
                 // forbids DEPTH_STENCIL_READ_ONLY for that image usage.
                 {m_depthSampler,m_depthView,m_copyDepth?VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL},
-                {m_sampler,eye.images[h].view,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}};
-            VkWriteDescriptorSet writes[3]{};
-            for(unsigned b=0;b<3;++b){writes[b].sType=VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;writes[b].dstSet=eye.sets[h];writes[b].dstBinding=b;
+                {m_sampler,eye.images[h].view,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+                {m_sampler,eye.confidence[h].view,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}};
+            VkWriteDescriptorSet writes[4]{};
+            for(unsigned b=0;b<bindingCount;++b){writes[b].sType=VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;writes[b].dstSet=eye.sets[h];writes[b].dstBinding=b;
                 writes[b].descriptorType=VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;writes[b].descriptorCount=1;writes[b].pImageInfo=&images[b];}
-            vkUpdateDescriptorSets(device,3,writes,0,nullptr);
+            vkUpdateDescriptorSets(device,bindingCount,writes,0,nullptr);
         }
     }
     VkCommandPoolCreateInfo commands{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};commands.flags=VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;commands.queueFamilyIndex=family;
@@ -225,6 +243,8 @@ bool TemporalAA::initialize(VkPhysicalDevice physical,VkDevice device,uint32_t f
         qualityName(m_quality),m_quality==TaaQuality::Full?5u:1u,m_quality==TaaQuality::Full?0u:1u,
         m_quality==TaaQuality::Lite?"center70x70":"full",m_quality==TaaQuality::Lite?"center_plus_gather_border":"full",
         m_quality==TaaQuality::Lite?"grouped":"original",m_quality==TaaQuality::Lite?16u:1u);
+    __android_log_print(ANDROID_LOG_INFO,"GeneralsXR","Quest TAA transfers: requested=%d native_color_copy=%d sampled_depth=%d confidence_r8=%d (Lite only)",
+        fastTransfers,m_fastCopy,!m_copyDepth,m_fastCopy);
     return true;
 }
 // GeneralsX @performance Codex 16/10/2026 Bundle the lower-bandwidth centered Lite path; preserve Medium/Full recording.
@@ -252,6 +272,13 @@ void TemporalAA::recordLite(VkCommandBuffer cmd,unsigned index,unsigned output,u
     batch.add(eye.images[output].image,VK_IMAGE_ASPECT_COLOR_BIT,
         eye.initialized?VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:VK_IMAGE_LAYOUT_UNDEFINED,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         eye.initialized?VK_ACCESS_SHADER_READ_BIT:0,VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+    if(m_fastCopy) {
+        if(!eye.initialized)batch.add(eye.confidence[input].image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,0,VK_ACCESS_SHADER_READ_BIT);
+        batch.add(eye.confidence[output].image,VK_IMAGE_ASPECT_COLOR_BIT,
+            eye.initialized?VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:VK_IMAGE_LAYOUT_UNDEFINED,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            eye.initialized?VK_ACCESS_SHADER_READ_BIT:0,VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+    }
     batch.flush(cmd);
     if(!reset && m_copyDepth) {
         // Unlike a full-eye copy, transfer only texels the centered shader can read.
@@ -274,9 +301,23 @@ void TemporalAA::recordLite(VkCommandBuffer cmd,unsigned index,unsigned output,u
         vkCmdDraw(cmd,3,1,0,0);vkCmdEndRenderPass(cmd);
     };
     draw(m_historyPass,eye.resolveFb[output],m_resolve,eye.sets[input]);
-    batch.add(eye.images[output].image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    if(m_fastCopy)batch.add(eye.confidence[output].image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT);
-    if(!reset) {
+    batch.add(eye.images[output].image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        m_fastCopy&&!reset?VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,m_fastCopy&&!reset?VK_ACCESS_TRANSFER_READ_BIT:VK_ACCESS_SHADER_READ_BIT);
+    if(!reset&&m_fastCopy) {
+        batch.add(color.image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_ACCESS_SHADER_READ_BIT,VK_ACCESS_TRANSFER_WRITE_BIT);
+        batch.flush(cmd);
+        VkImageCopy copy{};copy.srcSubresource=copy.dstSubresource={VK_IMAGE_ASPECT_COLOR_BIT,0,0,1};
+        copy.srcOffset=copy.dstOffset={int32_t(mx),int32_t(my),0};copy.extent={area.extent.width,area.extent.height,1};
+        vkCmdCopyImage(cmd,eye.images[output].image,VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,color.image,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,1,&copy);
+        batch.add(eye.images[output].image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_ACCESS_TRANSFER_READ_BIT,VK_ACCESS_SHADER_READ_BIT);
+        batch.add(color.image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,color.layout,
+            VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_COLOR_ATTACHMENT_READ_BIT|VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_TRANSFER_READ_BIT);
+    } else if(!reset) {
         batch.add(color.image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_ACCESS_SHADER_READ_BIT,VK_ACCESS_COLOR_ATTACHMENT_READ_BIT|VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
         batch.flush(cmd);
@@ -396,7 +437,7 @@ void TemporalAA::destroy() {
         if(eye.applyFb)vkDestroyFramebuffer(m_device,eye.applyFb,nullptr);
         for(auto fb:eye.resolveFb)if(fb)vkDestroyFramebuffer(m_device,fb,nullptr);
         if(eye.sourceView)vkDestroyImageView(m_device,eye.sourceView,nullptr);
-        for(auto image:eye.images) {
+        for(const auto &images:{eye.images,eye.confidence})for(auto image:images) {
             if(image.view)vkDestroyImageView(m_device,image.view,nullptr);
             if(image.image)vkDestroyImage(m_device,image.image,nullptr);
             if(image.memory)vkFreeMemory(m_device,image.memory,nullptr);

@@ -18,10 +18,12 @@ inline std::map<VkImage,VkImageLayout> layouts;
 inline std::map<VkImage,VkExtent3D> extents;
 inline std::map<VkImageView,VkImage> views;
 inline std::map<VkPipeline,bool> resolvePipeline;
-inline std::map<VkDescriptorSet,std::array<VkDescriptorImageInfo,3>> sets;
+inline std::map<VkDescriptorSet,std::array<VkDescriptorImageInfo,4>> sets;
+inline std::map<VkPipeline,unsigned> resolveBindings;
 inline std::map<VkCommandBuffer,VkPipeline> boundPipeline;
 inline std::map<VkCommandBuffer,VkDescriptorSet> boundSet;
 inline uint64_t barrierCalls=0,copyCalls=0,copyPixels=0;
+inline uint64_t depthCopies=0,colorCopies=0,depthPixels=0;
 inline void initialize(VkDevice device) {
     createImage=reinterpret_cast<PFN_vkCreateImage>(vkGetDeviceProcAddr(device,"vkCreateImage"));
     createView=reinterpret_cast<PFN_vkCreateImageView>(vkGetDeviceProcAddr(device,"vkCreateImageView"));
@@ -77,7 +79,7 @@ extern "C" VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(VkDevice device,uin
         for(unsigned d=0;d<writes[i].descriptorCount;++d) {
             const auto &image=writes[i].pImageInfo[d];const auto view=TaaContract::views.find(image.imageView);
             require(view!=TaaContract::views.end(),"Descriptor uses a known actual view");TaaContract::checkLayout(view->second,image.imageLayout);
-            require(writes[i].dstBinding+d<3,"Fixture descriptor binding");
+            require(writes[i].dstBinding+d<4,"Fixture descriptor binding");
             TaaContract::sets[writes[i].dstSet][writes[i].dstBinding+d]=image;
         }
     TaaContract::descriptors(device,count,writes,copies,copy);
@@ -92,7 +94,10 @@ extern "C" VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(VkCommandBuffer command,VkI
         require(unsigned(r.srcOffset.x)+r.extent.width<=src.width&&unsigned(r.srcOffset.y)+r.extent.height<=src.height
             &&unsigned(r.dstOffset.x)+r.extent.width<=dst.width&&unsigned(r.dstOffset.y)+r.extent.height<=dst.height,"Depth copy inside actual image bounds");
         // A cropped copy must include the p+1 gather footprint of every resolved pixel.
-        if(unsigned(r.srcOffset.x)>0||unsigned(r.srcOffset.y)>0) {
+        const bool depth=(r.srcSubresource.aspectMask&VK_IMAGE_ASPECT_DEPTH_BIT)!=0;
+        if(depth) {++TaaContract::depthCopies;TaaContract::depthPixels+=uint64_t(r.extent.width)*r.extent.height;}
+        else ++TaaContract::colorCopies;
+        if(depth&&(unsigned(r.srcOffset.x)>0||unsigned(r.srcOffset.y)>0)) {
             const unsigned mx=src.width*15/100,my=src.height*15/100;
             require(r.srcOffset.x==int(mx)&&r.srcOffset.y==int(my)&&r.dstOffset.x==int(mx)&&r.dstOffset.y==int(my),"Cropped depth preserves original pixel coordinates");
             require(unsigned(r.srcOffset.x)+r.extent.width>=std::min(src.width,src.width-mx+1)
@@ -105,9 +110,13 @@ extern "C" VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(VkCommandBuffer command,VkI
 extern "C" VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(VkDevice device,VkPipelineCache cache,uint32_t count,
     const VkGraphicsPipelineCreateInfo *infos,const VkAllocationCallbacks *allocator,VkPipeline *pipelines) {
     const auto result=TaaContract::createPipelines(device,cache,count,infos,allocator,pipelines);
-    if(result==VK_SUCCESS)for(unsigned i=0;i<count;++i)
+    if(result==VK_SUCCESS)for(unsigned i=0;i<count;++i) {
         // Fixture resolve writes confidence alpha; apply writes only RGB.
         TaaContract::resolvePipeline[pipelines[i]]=(infos[i].pColorBlendState->pAttachments[0].colorWriteMask&VK_COLOR_COMPONENT_A_BIT)!=0;
+        TaaContract::resolveBindings[pipelines[i]]=infos[i].pColorBlendState->attachmentCount==2?4:3;
+        if(infos[i].pColorBlendState->attachmentCount==2)
+            require(!std::memcmp(&infos[i].pColorBlendState->pAttachments[0],&infos[i].pColorBlendState->pAttachments[1],sizeof(VkPipelineColorBlendAttachmentState)),"MRT blend states identical without independentBlend feature");
+    }
     return result;
 }
 extern "C" VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(VkCommandBuffer command,VkPipelineBindPoint point,VkPipeline pipeline) {
@@ -121,7 +130,8 @@ extern "C" VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuffer co
 extern "C" VKAPI_ATTR void VKAPI_CALL vkCmdDraw(VkCommandBuffer command,uint32_t vertices,uint32_t instances,uint32_t firstVertex,uint32_t firstInstance) {
     const auto &set=TaaContract::sets.at(TaaContract::boundSet.at(command));
     const bool resolve=TaaContract::resolvePipeline.at(TaaContract::boundPipeline.at(command));
-    for(unsigned binding=resolve?0:2;binding<3;++binding) {
+    const unsigned count=resolve?TaaContract::resolveBindings.at(TaaContract::boundPipeline.at(command)):3;
+    for(unsigned binding=resolve?0:2;binding<count;++binding) {
         const auto &descriptor=set[binding];const auto image=TaaContract::views.at(descriptor.imageView);
         require(TaaContract::layouts.at(image)==descriptor.imageLayout,"Every statically used descriptor has the promised layout even on reset");
     }

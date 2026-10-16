@@ -85,3 +85,12 @@ dependencies, reset/rejection shortcuts and sparse timing into the new Lite.
 Rename the previous Lite to Medium; keep Full unchanged. Stable saved IDs
 preserve existing choices. Graphics-only changes; Android remains 1.4.0.9.
 No new render pacing, simulation, numeric or network changes.
+
+
+## Test 14
+
+Add one default-off Lite transfers switch for sampled D24S8 depth and native
+RGBA copy with separate R8 confidence. Keep the Test 13 Lite when Off and retain
+Medium/Full. Automatic capability/allocation fallbacks keep the existing path.
+Android stays 1.4.0.9. Hardware performance and crossplay are not certified by
+compilation or the host output comparisons.

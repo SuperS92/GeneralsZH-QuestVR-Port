@@ -448,5 +448,7 @@
     <string name="quest_taa_lite_desc">Lite wygładza środek widoku. Medium i Full wygładzają cały obraz. Mogą pojawić się smugi w ruchu. Wyłącz pozostały antyaliasing. Po zmianach całkowicie uruchom ponownie grę i launcher.</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
+    <string name="quest_taa_fast_transfers">Transfer Lite (eksperymentalny)</string>
+    <string name="quest_taa_fast_transfers_desc">Alternatywny transfer głębi i kolorów dla TAA Lite. Może skrócić czas GPU. Po zmianach całkowicie uruchom ponownie grę i launcher.</string>
     <string name="quest_taa_quality_full">Full</string>
 </resources>

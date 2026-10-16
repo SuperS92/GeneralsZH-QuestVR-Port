@@ -69,6 +69,7 @@ public:
     bool discardCompletedEyeDepth(::IDirect3DDevice8 *device, ::IDirect3DSurface8 *depth, unsigned eye);
     bool captureTaaCamera(::IDirect3DDevice8 *device, unsigned eye, TaaCamera &camera) const;
     bool applyTaa(::IDirect3DDevice8 *device, unsigned eye, const TaaCamera &camera);
+    bool createTaaDepthSurface(::IDirect3DDevice8 *device);
 	::IDirect3DSurface8 *getDepthSurface() const { return m_depthSurface; }
 	void markEyeRenderingComplete() { m_eyeRenderingComplete = true; }
 	::IDirect3DSurface8 *getMenuSurface() const { return m_menuSurface; }
@@ -180,6 +181,7 @@ private:
 	std::array<::IDirect3DSurface8 *, 2> m_eyeSurfaces = {};
 	::IDirect3DSurface8 *m_msaaEyeSurface = nullptr;
 	::IDirect3DSurface8 *m_depthSurface = nullptr;
+    ::IDirect3DTexture8 *m_taaDepthTexture = nullptr;
 	std::vector<VkImage> m_menuSwapchainImages;
 	::IDirect3DTexture8 *m_menuTexture = nullptr;
 	::IDirect3DSurface8 *m_menuSurface = nullptr;

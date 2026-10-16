@@ -137,3 +137,36 @@ same-eye camera/depth reprojection. Host results do not certify Quest driver
 behavior or a performance gain. Measure the new Lite as one bundle against
 the retained references; do not attribute its gain to individual changes.
 Replay and a completed PC match remain required before public promotion.
+
+
+## Test 14: optional Lite transfer bundle
+
+One default-off switch, Lite transfers, applies only to mode 3. Off retains the
+Test 13 Lite; Medium/Full ignore it. Saved mode IDs and the updater stay fixed.
+
+The owned depth allocation tries a standard D24S8 depth texture instead of an
+attachment-only surface. The existing pinned D3D8-to-D3D9 path marks textures as
+sampleable. Verify actual Vulkan D24S8, samples/layers/mips/extent, tiling, usage
+and layout before accepting it. Retain both texture and surface lifetimes; the
+TAA descriptors are destroyed after draining the queue, before either owner.
+Unsupported allocation/interop uses the original surface and depth-copy path.
+No new format mapping, dependency patch, MSAA or stencil precision change.
+
+The optional Lite resolve writes original-alpha RGBA and a separate R8 UNORM
+confidence attachment. Two identical blend states require no independentBlend.
+Confidence uses the same bilinear coordinates and 8-bit quantization as the
+former history alpha. Copy the filtered central RGBA rectangle to the original
+eye image, preserving every original alpha and peripheral pixel. Retain exact
+history and eye layouts, producer flush, same-queue ownership and fences.
+The pointer still draws afterward into the original eye target.
+
+Check R8 format/image support, attachment limits and both eye transfer-destination
+usages. Unsupported color-copy resources retain the old apply pipeline; a failed
+fast initialization is destroyed and retried with the old path. Sampled depth
+and color copy can therefore fall back independently. This is a bundle, not an
+isolated copy benchmark. Extra R8 history has real memory and bandwidth cost.
+
+Host fixtures run every mode and depth/eye format with the bundle Off/On and
+compare complete rendered bytes, including temporal confidence across frames.
+Native builds and headset shadow/water/stereo/lifecycle/cost remain separate
+gates; replay and a completed PC match are required before publication.

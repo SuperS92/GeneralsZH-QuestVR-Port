@@ -448,5 +448,7 @@
     <string name="quest_taa_lite_desc">Lite 处理视野中央，Medium 和 Full 处理整个画面。可能出现运动拖影。请关闭其他抗锯齿。更改后请完全重启游戏和启动器。</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
+    <string name="quest_taa_fast_transfers">Lite 传输（实验性）</string>
+    <string name="quest_taa_fast_transfers_desc">为 TAA Lite 使用另一种深度与颜色传输方式，可能减少 GPU 时间。更改后请完全重启游戏和启动器。</string>
     <string name="quest_taa_quality_full">Full</string>
 </resources>

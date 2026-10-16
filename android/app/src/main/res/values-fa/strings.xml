@@ -448,5 +448,7 @@
     <string name="quest_taa_lite_desc">Lite مرکز تصویر را فیلتر می‌کند. Medium و Full کل تصویر را فیلتر می‌کنند. ممکن است رد حرکت دیده شود. سایر روش‌های هموارسازی لبه را خاموش کنید. پس از تغییر، بازی و راه‌انداز را کامل دوباره اجرا کنید.</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
+    <string name="quest_taa_fast_transfers">انتقال Lite (آزمایشی)</string>
+    <string name="quest_taa_fast_transfers_desc">انتقال جایگزین عمق و رنگ برای TAA Lite. ممکن است زمان GPU را کاهش دهد. پس از تغییر، بازی و راه‌انداز را کامل دوباره اجرا کنید.</string>
     <string name="quest_taa_quality_full">Full</string>
 </resources>

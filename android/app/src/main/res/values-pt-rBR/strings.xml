@@ -448,5 +448,7 @@
     <string name="quest_taa_lite_desc">Lite suaviza o centro da visão. Medium e Full suavizam toda a imagem. Pode deixar rastros de movimento. Desative o outro antisserrilhamento. Reinicie completamente o jogo e o launcher após alterações.</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
+    <string name="quest_taa_fast_transfers">Transferências Lite (experimental)</string>
+    <string name="quest_taa_fast_transfers_desc">Transferências alternativas de profundidade e cor para TAA Lite. Podem reduzir o tempo de GPU. Reinicie completamente o jogo e o launcher após alterações.</string>
     <string name="quest_taa_quality_full">Full</string>
 </resources>

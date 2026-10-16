@@ -25,7 +25,7 @@ log=result.stdout+result.stderr;(work/'result.log').write_text(log,encoding='utf
 if result.returncode:raise SystemExit(result.returncode)
 report={'status':'HOST_GPU_TAA_PASS','cases':int(re.search(r'PASS (\d+) GPU frame cases',log)[1]),
     'qualities':['Full','Medium','Lite'],
-    'checks':['All three quality pipelines execute the GPU fixture suite','Lite peripheral pixels byte-exact; bounded centered history','Independent row-vector D3D projection oracle: 1000 points','RGBA/BGRA, separate eyes',
+    'checks':['All three quality pipelines execute with transfers Off/On','Every fast-transfer GPU output pixel matches reference bytes','Unsupported source copy usage falls back to original apply','MRT blend states identical without independentBlend','Lite peripheral pixels byte-exact; bounded centered history','Independent row-vector D3D projection oracle: 1000 points','RGBA/BGRA, separate eyes',
     'D32/D24S8 direct sampled depth and private depth copy','Every pixel alpha preserved',
     'First/reset raw bytes exact','Flat replacement rejects stale history','Temporal attenuation of alternating texture',
     'Actual GPU orthographic and perspective camera reprojection with independent expected pixels',

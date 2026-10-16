@@ -10,6 +10,7 @@
 
 #include <d3d8.h>
 #include "QuestOpenXRBootstrap.h"
+#include "QuestTaaDepthFormat.h"
 #include "VRDevice/QuestHudTransfer.h"
 #include "VRDevice/QuestColorCopy.h"
 #include "VRDevice/QuestTransferBatch.h"
@@ -52,6 +53,11 @@ constexpr const char *kLogTag = "GeneralsXR";
 // path active. Quest tests of the experimental DXVK 2x resolve showed black
 // or stale/disparate eye images; retain the implementation for offline repair.
 constexpr bool kEnableExperimentalEyeMsaa = false;
+// GeneralsX @performance Codex 16/10/2026 One opt-in bundle, restricted to Lite and its existing AA compatibility gate.
+bool fastTaaTransfersRequested() {
+    const char *value=std::getenv("GX_QUEST_TAA_FAST_TRANSFERS");
+    return value&&std::strcmp(value,"1")==0&&QuestXR_TaaMode()==3&&QuestXR_TaaRequested();
+}
 constexpr float kMenuDistanceMeters = 1.5f;
 constexpr float kMenuWidthMeters = 1.6f;
 constexpr float kHudDistanceMeters = 1.25f;
@@ -612,9 +618,11 @@ bool Bootstrap::createEyeTargets(IDirect3DDevice8 *device, uint32_t menuWidth, u
 			m_msaaEyeSurface->Release();
 			m_msaaEyeSurface = nullptr;
 		}
-		hr = device->CreateDepthStencilSurface(m_recommendedEyeWidth,
-			m_recommendedEyeHeight, D3DFMT_D24S8, D3DMULTISAMPLE_NONE,
-			&m_depthSurface);
+		if (!fastTaaTransfersRequested() || !createTaaDepthSurface(device)) {
+		    hr = device->CreateDepthStencilSurface(m_recommendedEyeWidth,
+			    m_recommendedEyeHeight, D3DFMT_D24S8, D3DMULTISAMPLE_NONE,
+			    &m_depthSurface);
+		}
 		if (FAILED(hr) || m_depthSurface == nullptr) {
 			__android_log_print(ANDROID_LOG_ERROR, kLogTag,
 				"CreateDepthStencilSurface for OpenXR eyes failed: 0x%08x",
@@ -635,6 +643,32 @@ bool Bootstrap::createEyeTargets(IDirect3DDevice8 *device, uint32_t menuWidth, u
 			"OpenXR eye anti-aliasing: 2x MSAA with DXVK resolve");
 	}
 	return true;
+}
+
+bool Bootstrap::createTaaDepthSurface(IDirect3DDevice8 *device)
+{
+    // D3D8 forwards a standard D24S8 depth texture to the pinned D3D9 backend.
+    // Unlike attachment-only surfaces, its actual Vulkan image includes SAMPLED usage.
+    IDirect3DTexture8 *candidate=nullptr;IDirect3DSurface8 *surface=nullptr;
+    HRESULT result=device->CreateTexture(m_recommendedEyeWidth,m_recommendedEyeHeight,1,
+        D3DUSAGE_DEPTHSTENCIL,D3DFMT_D24S8,D3DPOOL_DEFAULT,&candidate);
+    if(SUCCEEDED(result)&&candidate)result=candidate->GetSurfaceLevel(0,&surface);
+    bool valid=false;
+    if(SUCCEEDED(result)&&surface) {
+        D3DSURFACE_DESC desc{};DxvkVulkanInteropTexture *interop=nullptr;
+        if(SUCCEEDED(surface->GetDesc(&desc))&&desc.Format==D3DFMT_D24S8
+            &&desc.Width==m_recommendedEyeWidth&&desc.Height==m_recommendedEyeHeight&&desc.MultiSampleType==D3DMULTISAMPLE_NONE
+            &&SUCCEEDED(surface->QueryInterface(kD3D9VkInteropTextureId,reinterpret_cast<void **>(&interop)))&&interop) {
+            TaaImage image;
+            valid=SUCCEEDED(interop->GetVulkanImageInfo(&image.image,&image.layout,&image.info))&&image.image
+                &&IsSampledTaaEyeDepth(image.info,image.layout,m_recommendedEyeWidth,m_recommendedEyeHeight);
+            interop->Release();
+        }
+    }
+    if(valid) {m_taaDepthTexture=candidate;m_depthSurface=surface;}
+    else {if(surface)surface->Release();if(candidate)candidate->Release();}
+    __android_log_print(ANDROID_LOG_INFO,kLogTag,"Quest TAA sampled eye depth: requested=1 active=%d d24s8=1; original surface on failure",valid);
+    return valid;
 }
 
 bool Bootstrap::discardCompletedEyeDepth(IDirect3DDevice8 *device, IDirect3DSurface8 *depth, unsigned eye)
@@ -731,9 +765,15 @@ bool Bootstrap::applyTaa(IDirect3DDevice8 *device, unsigned eye, const TaaCamera
     DxvkQueueGuard guard(m_dxvkInterop);
     if (!m_taaAttempted) {
         m_taaAttempted = true;
-        m_taaUnavailable = !m_temporalAA.initialize(m_vkPhysicalDevice, m_vkDevice, m_vkQueueFamilyIndex, eyes, depth,
-            static_cast<TaaQuality>(QuestXR_TaaMode()));
-        __android_log_print(ANDROID_LOG_INFO, kLogTag, "Quest TAA Lite requested=1 active=%d full_image=1 jitter=0 motion_vectors=0; original path on failure", !m_taaUnavailable);
+        const auto quality=static_cast<TaaQuality>(QuestXR_TaaMode());
+        const bool fast=fastTaaTransfersRequested();
+        bool initialized=m_temporalAA.initialize(m_vkPhysicalDevice,m_vkDevice,m_vkQueueFamilyIndex,eyes,depth,quality,fast);
+        if(!initialized&&fast) {
+            __android_log_print(ANDROID_LOG_WARN,kLogTag,"Quest TAA fast transfers unavailable; retrying the original Lite apply path");
+            initialized=m_temporalAA.initialize(m_vkPhysicalDevice,m_vkDevice,m_vkQueueFamilyIndex,eyes,depth,quality,false);
+        }
+        m_taaUnavailable=!initialized;
+        __android_log_print(ANDROID_LOG_INFO, kLogTag, "Quest TAA Lite requested=1 active=%d full_image=%u jitter=0 motion_vectors=0; original path on failure", !m_taaUnavailable,quality==TaaQuality::Lite?0u:1u);
     }
     if (m_taaUnavailable) return false;
     if (!m_temporalAA.matches(eyes, depth)) {
@@ -2465,6 +2505,11 @@ void Bootstrap::detachGraphics()
 	if (m_depthSurface != nullptr) {
 		m_depthSurface->Release();
 		m_depthSurface = nullptr;
+	}
+	// The TAA views/descriptors are destroyed before releasing this texture owner.
+	if (m_taaDepthTexture != nullptr) {
+	    m_taaDepthTexture->Release();
+	    m_taaDepthTexture=nullptr;
 	}
 	if (m_menuDepthSurface != nullptr) {
 		m_menuDepthSurface->Release();

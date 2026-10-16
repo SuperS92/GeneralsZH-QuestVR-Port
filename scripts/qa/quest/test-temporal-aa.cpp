@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Exercise the actual Vulkan filter, without game logic or an XR runtime.
 #include "QuestTemporalAA.h"
+#include "QuestTaaDepthFormat.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -50,6 +51,8 @@ int main() {
         vkCmdPipelineBarrier(cmd,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,0,0,nullptr,0,nullptr,1,&info);
     };
     unsigned cases=0;
+    std::map<std::array<unsigned,3>,std::vector<unsigned char>> referenceFrames;
+    for(bool fastTransfers:{false,true})
     for(auto quality:{TaaQuality::Full,TaaQuality::Medium,TaaQuality::Lite})
     for(auto format:{VK_FORMAT_R8G8B8A8_UNORM,VK_FORMAT_B8G8R8A8_UNORM})for(auto depthFormat:{VK_FORMAT_D32_SFLOAT,VK_FORMAT_D24_UNORM_S8_UINT})for(bool copyDepth:{false,true}) {
         VkFormatProperties support{};vkGetPhysicalDeviceFormatProperties(physical,depthFormat,&support);
@@ -65,13 +68,26 @@ int main() {
         const auto colorUsage=VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         std::array<TaaImage,2> eyes{make(format,colorUsage),make(format,colorUsage)};
         const auto depth=make(depthFormat,VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT|(copyDepth?0:VK_IMAGE_USAGE_SAMPLED_BIT));
+        require(IsSampledTaaEyeDepth(depth.info,depth.layout,w,h)==(!copyDepth&&depthFormat==VK_FORMAT_D24_UNORM_S8_UINT),"Owned depth gate preserves D24S8 and sampled usage");
+        auto wrongDepth=depth.info;wrongDepth.samples=VK_SAMPLE_COUNT_2_BIT;
+        require(!IsSampledTaaEyeDepth(wrongDepth,depth.layout,w,h),"Owned sampled eye depth rejects MSAA");
+        wrongDepth=depth.info;wrongDepth.arrayLayers=2;
+        require(!IsSampledTaaEyeDepth(wrongDepth,depth.layout,w,h),"Owned sampled eye depth rejects array reinterpretation");
+        require(!IsSampledTaaEyeDepth(depth.info,VK_IMAGE_LAYOUT_UNDEFINED,w,h)&&!IsSampledTaaEyeDepth(depth.info,depth.layout,w+1,h),"Owned sampled depth requires exact extent and valid layout");
         const VkImageAspectFlags ds=VK_IMAGE_ASPECT_DEPTH_BIT|(depthFormat==VK_FORMAT_D32_SFLOAT?0:VK_IMAGE_ASPECT_STENCIL_BIT);
         begin();for(auto eye:eyes)barrier(eye.image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_UNDEFINED,eye.layout);
         barrier(depth.image,ds,VK_IMAGE_LAYOUT_UNDEFINED,depth.layout);submit();
         TemporalAA rejected;require(!rejected.initialize(physical,device,family,eyes,depth,static_cast<TaaQuality>(0)),"Disabled quality cannot initialize a filter");auto bad=eyes;bad[1]=bad[0];require(!rejected.initialize(physical,device,family,bad,depth),"Aliased eyes rejected");
         bad=eyes;bad[1].info.usage&=~VK_IMAGE_USAGE_SAMPLED_BIT;require(!rejected.initialize(physical,device,family,bad,depth),"Unsampleable eye rejected");
         auto badDepth=depth;badDepth.layout=VK_IMAGE_LAYOUT_UNDEFINED;require(!rejected.initialize(physical,device,family,eyes,badDepth),"Unknown depth layout rejected");
-        TemporalAA taa;require(taa.initialize(physical,device,family,eyes,depth,quality),"Actual TAA initializes");require(taa.copiesDepth()==copyDepth,"Actual direct/copy depth selection");
+        TemporalAA taa;require(taa.initialize(physical,device,family,eyes,depth,quality,fastTransfers),"Actual TAA initializes");require(taa.copiesDepth()==copyDepth,"Actual direct/copy depth selection");
+        require(taa.fastColorCopy()==(fastTransfers&&quality==TaaQuality::Lite),"Actual color-copy path gated to requested Lite");
+        if(fastTransfers&&quality==TaaQuality::Lite) {
+            auto noCopy=eyes;noCopy[0].info.usage&=~VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+            TemporalAA fallback;require(fallback.initialize(physical,device,family,noCopy,depth,quality,true)&&!fallback.fastColorCopy(),"Missing transfer destination usage keeps original Lite apply");fallback.destroy();
+        }
+        const std::array<unsigned,3> referenceKey{unsigned(quality),unsigned(format),unsigned(depthFormat)*2+unsigned(copyDepth)};
+        auto &reference=referenceFrames[referenceKey];
         TaaCamera camera;camera.valid=true;camera.width=w;camera.height=h;
         for(unsigned i=0;i<4;++i)camera.view[i*5]=camera.projection[i*5]=1;
         std::vector<unsigned> center;
@@ -105,12 +121,13 @@ int main() {
                 const VkClearDepthStencilValue value{eye?.75f:.25f,73};const VkImageSubresourceRange range{ds,0,1,0,1};
                 vkCmdClearDepthStencilImage(cmd,depth.image,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,&value,1,&range);
                 barrier(depth.image,ds,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,depth.layout);submit();
-                const auto barriersBefore=TaaContract::barrierCalls,copiesBefore=TaaContract::copyCalls,pixelsBefore=TaaContract::copyPixels;
+                const auto barriersBefore=TaaContract::barrierCalls,depthBefore=TaaContract::depthCopies,pixelsBefore=TaaContract::depthPixels,colorBefore=TaaContract::colorCopies;
                 require(taa.process(queue,eye,camera,frame,1000000000ull+frame*16000000ull),"Actual same-eye TAA submission");
                 if(quality==TaaQuality::Lite) {
                     require(TaaContract::barrierCalls-barriersBefore<=4,"Lite groups independent dependencies into at most four barriers");
-                    if(reset||!copyDepth)require(TaaContract::copyCalls==copiesBefore,"Lite reset/sampled-depth path has no private depth copy");
-                    else require(TaaContract::copyCalls==copiesBefore+1&&TaaContract::copyPixels-pixelsBefore<w*h,"Lite copies fewer depth texels with complete gather coverage");
+                    if(reset||!copyDepth)require(TaaContract::depthCopies==depthBefore,"Lite reset/sampled-depth path has no private depth copy");
+                    else require(TaaContract::depthCopies==depthBefore+1&&TaaContract::depthPixels-pixelsBefore<w*h,"Lite copies fewer depth texels with complete gather coverage");
+                    require(TaaContract::colorCopies-colorBefore==unsigned(!reset&&taa.fastColorCopy()),"Fast Lite uses one native color copy instead of apply on valid history");
                 }
             }
             // Readback is test-only; the production filter has no host wait here.
@@ -144,6 +161,12 @@ int main() {
                     // 95 for wrong coordinates or 120 for a disabled/reset pass.
                     require(actual[channel]>=124&&actual[channel]<=127,"GPU camera/depth reprojection selects the correct same-eye earlier pixel");
                 }
+            }
+            if(!fastTransfers)reference.insert(reference.end(),pixels+2*bytes,pixels+4*bytes);
+            else {
+                const unsigned offset=(frame-1)*2*bytes;
+                require(reference.size()>=offset+2*bytes,"Reference capture exists");
+                require(!std::memcmp(reference.data()+offset,pixels+2*bytes,2*bytes),"Every fast-transfer output pixel matches original path byte-for-byte");
             }
             const unsigned channel=format==VK_FORMAT_B8G8R8A8_UNORM?2:0;
             if(frame==8||frame==9)center.push_back(pixels[2*bytes+((h/2)*w+w/2)*4+channel]);

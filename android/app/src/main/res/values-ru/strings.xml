@@ -450,5 +450,7 @@
     <string name="quest_taa_lite_desc">Lite сглаживает центр поля зрения. Medium и Full обрабатывают весь кадр. Возможны шлейфы в движении. Отключите другое сглаживание. После изменений полностью перезапустите игру и лаунчер.</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
+    <string name="quest_taa_fast_transfers">Передача Lite (экспериментально)</string>
+    <string name="quest_taa_fast_transfers_desc">Другой способ передачи глубины и цвета для TAA Lite. Может сократить время GPU. После изменений полностью перезапустите игру и лаунчер.</string>
     <string name="quest_taa_quality_full">Full</string>
 </resources>

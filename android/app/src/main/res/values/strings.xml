@@ -455,5 +455,7 @@
     <string name="quest_taa_lite_desc">Lite filters the center of the view. Medium and Full filter the whole image. May leave motion trails. Use with other anti-aliasing Off. Fully restart the game and launcher after changes.</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
+    <string name="quest_taa_fast_transfers">Lite transfers (experimental)</string>
+    <string name="quest_taa_fast_transfers_desc">Alternative depth and color transfers for TAA Lite. May reduce GPU time. Fully restart the game and launcher after changes.</string>
     <string name="quest_taa_quality_full">Full</string>
 </resources>
