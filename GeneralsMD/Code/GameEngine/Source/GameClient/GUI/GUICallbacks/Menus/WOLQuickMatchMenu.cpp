@@ -102,6 +102,12 @@ extern NGMPGame* TheNGMPGame;
 #endif // GENERALS_ONLINE_ENABLE_P2P_TRANSPORT
 #include "GameNetwork/GeneralsOnline/OnlineServices_StatsInterface.h"
 
+#if defined(SAGE_USE_OPENXR)
+#include "VRDevice/QuestQuickMatch.h"
+// GeneralsX @bugfix Codex 16/10/2026 Keep service indices when unavailable maps filter UI rows.
+static std::vector<int> questPlaylistMapIndices;
+#endif
+
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
 // window ids ------------------------------------------------------------------------------
 static NameKeyType parentWOLQuickMatchID = NAMEKEY_INVALID;
@@ -731,14 +737,27 @@ static void populateQuickMatchMapSelectListbox( QuickMatchPreferences& pref )
 
 
 	GadgetListBoxReset(listboxMapSelect);
+#if defined(SAGE_USE_OPENXR)
+	questPlaylistMapIndices.clear();
+	Int playlistMapIndex = -1;
+#endif
 	for (std::list<AsciiString>::const_iterator it = maps.begin(); it != maps.end(); ++it)
 	{
 		AsciiString theMap = *it;
 		const MapMetaData *md = TheMapCache->findMap(theMap);
+#if defined(SAGE_USE_OPENXR)
+		++playlistMapIndex;
+		// Android cache keys use '/', while the service menu constructs Windows paths.
+		if (!md) md = TheMapCache->findMap(AsciiString(QuestQuickMatch::PortablePath(theMap.str()).c_str()));
+#endif
 		if (md && md->m_numPlayers >= numPlayers)
 		{
 			UnicodeString displayName;
 			displayName = md->m_displayName;
+#if defined(SAGE_USE_OPENXR)
+			questPlaylistMapIndices.push_back(playlistMapIndex);
+			theMap = md->m_fileName; // Use the same key when loading and saving preferences.
+#endif
 			Bool isSelected = pref.isMapSelected(theMap);
 			if (li && li->randomMaps)
 				isSelected = TRUE;
@@ -1485,6 +1504,9 @@ void WOLQuickMatchMenuShutdown( WindowLayout *layout, void *userData )
 	mapListboxPreviewFunc = nullptr;
 	mapHoverPreview = nullptr;
 	listboxMapSelect = nullptr;
+#if defined(SAGE_USE_OPENXR)
+	questPlaylistMapIndices.clear();
+#endif
 
 	parentWOLQuickMatch = nullptr;
 	buttonBack = nullptr;
@@ -2274,7 +2296,13 @@ WindowMsgHandledType WOLQuickMatchMenuSystem( GameWindow *window, UnsignedInt ms
 									bool bMapSelected = GadgetListBoxGetItemData(listboxMapSelect, i, 0);
 									if (bMapSelected)
 									{
-										vecSelectedMapIndexes.push_back(i);
+#if defined(SAGE_USE_OPENXR)
+									int serviceIndex = -1;
+									if (QuestQuickMatch::PlaylistIndex(questPlaylistMapIndices, i, serviceIndex))
+										vecSelectedMapIndexes.push_back(serviceIndex);
+#else
+									vecSelectedMapIndexes.push_back(i);
+#endif
 									}
 								}
 							}

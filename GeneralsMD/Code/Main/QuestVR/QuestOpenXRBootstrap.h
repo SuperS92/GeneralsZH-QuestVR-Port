@@ -13,7 +13,6 @@
 #include <openxr/openxr.h>
 #include <vulkan/vulkan.h>
 #include "VRDevice/QuestXRInterface.h"
-#include "QuestSpatialAA.h"
 #include "QuestTemporalAA.h"
 #include "VRDevice/QuestHudTransfer.h"
 #include "QuestEyeCapture.h"
@@ -216,13 +215,11 @@ private:
 	uint32_t m_timestampValidBits = 0;
 	void *m_dxvkInterop = nullptr;
     void *m_depthDiscardInterop = nullptr;
-	SpatialAA m_spatialAA;
     TemporalAA m_temporalAA;
     bool m_taaAttempted = false, m_taaUnavailable = false;
     uint64_t m_taaFrame = 0;
 	EyeCapture m_eyeCapture;
 	std::array<QuestXRDiagnosticCamera, 2> m_diagnosticCameras{};
-	bool m_spatialAaAttempted = false;
 	uint32_t m_viewCount = 0;
 	uint32_t m_recommendedEyeWidth = 0;
 	uint32_t m_recommendedEyeHeight = 0;

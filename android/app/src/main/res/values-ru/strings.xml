@@ -447,7 +447,7 @@
     <string name="quest_shadow_coverage">Края теней (экспериментально)</string>
     <string name="quest_shadow_coverage_desc">Подгоняет заключительный слой теней под область VR-глаза. Полностью перезапустите игру и лаунчер.</string>
     <string name="quest_taa_lite">TAA (experimental)</string>
-    <string name="quest_taa_lite_desc">Lite сглаживает центр поля зрения. Medium и Full обрабатывают весь кадр. Возможны шлейфы в движении. Отключите другое сглаживание. После изменений полностью перезапустите игру и лаунчер.</string>
+    <string name="quest_taa_lite_desc">Lite сглаживает центр поля зрения. Medium и Full обрабатывают весь кадр. Возможны шлейфы в движении. После изменений полностью перезапустите игру и лаунчер.</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
     <string name="quest_taa_fast_transfers">Передача Lite (экспериментально)</string>

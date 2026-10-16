@@ -31,7 +31,7 @@ Medium and Full, visible quality choices and optional performance logging remain
 The public Android version and APK updater do not change for this local trial.
 
 Host tests cover geometry, stereo distance, renderer/ray composition, pivot
-changes, identity at zero and gesture ownership. Headset comfort, aiming,
-placement, menu scrolling and lifecycle still need testing on the new build.
-The preceding online success does not certify the later input changes. Earlier
-peripheral geometry popping remains an unresolved separate observation.
+changes, identity at zero and gesture ownership. The maintainer subsequently
+reported that the Test 17 build works perfectly on the headset. This feedback
+does not establish an additional completed online match or cover every lifecycle
+case. Earlier peripheral geometry popping remains a separate open observation.

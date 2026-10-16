@@ -445,7 +445,7 @@
     <string name="quest_shadow_coverage">Kraje těnjev (eksperimentalno)</string>
     <string name="quest_shadow_coverage_desc">Prilagođuje posledny sloj těnjev oblasti oka VR. Igru i launcher potpuno zapustite znova.</string>
     <string name="quest_taa_lite">TAA (experimental)</string>
-    <string name="quest_taa_lite_desc">Lite filtruje središny čest obraza. Medium i Full filtrujut cely obraz. Mogut ostavati slědy dviženja. Druge vygladživanje krajev izključite. Po izměnah polno restartujte igru i spustnik.</string>
+    <string name="quest_taa_lite_desc">Lite filtruje središny čest obraza. Medium i Full filtrujut cely obraz. Mogut ostavati slědy dviženja. Po izměnah polno restartujte igru i spustnik.</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
     <string name="quest_taa_fast_transfers">Lite prěnos (eksperimentalny)</string>

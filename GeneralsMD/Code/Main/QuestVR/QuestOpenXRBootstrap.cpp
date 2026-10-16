@@ -523,8 +523,7 @@ bool Bootstrap::createEyeTargets(IDirect3DDevice8 *device, uint32_t menuWidth, u
 	}
     // GeneralsX @performance Codex 14/10/2026 Probe only owned RGBA8 presentation targets.
     const bool requested = PerformanceRequested(PerfOption::DirectColorCopy);
-    const char *aa = std::getenv("GX_QUEST_SPATIAL_AA");
-    const bool aaOff = !aa || std::strcmp(aa,"0")==0;
+    const bool aaOff = true; // Retired spatial AA cannot override TAA or direct color copy.
     bool runtimeRgba = false, nativeRgba = false;
     if (requested && aaOff && !kEnableExperimentalEyeMsaa) {
         uint32_t count = 0;
@@ -1724,34 +1723,13 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 		menuImage, menuLayout)) {
 		return false;
 	}
-	// GeneralsX @feature Codex 30/09/2026 First optional AA experiment uses
-	// immutable per-eye/per-fence-slot postprocess resources. No MSAA, history,
-	// eye sharing, scene traversal or changes to the menu/HUD copy path.
-	if (copyEyeTargets && !m_spatialAaAttempted) {
-		m_spatialAaAttempted = true;
-		const char *choice = std::getenv("GX_QUEST_SPATIAL_AA");
-        // GeneralsX @feature Codex 01/10/2026 0=off, 1=gentle spatial, 2=SMAA 1x.
-        const uint32_t mode = choice == nullptr ? 0 : std::strcmp(choice, "1") == 0
-            ? 1 : std::strcmp(choice, "2") == 0 ? 2 : 0;
-        if (mode != 0 && eyeFormats[0] == eyeFormats[1]
-            && m_colorFormat == VK_FORMAT_R8G8B8A8_UNORM) {
-            DxvkQueueGuard queueGuard(m_dxvkInterop); // SMAA's one-time lookup upload.
-            m_spatialAA.initialize(m_vkPhysicalDevice, m_vkDevice, m_vkQueueFamilyIndex,
-                eyeImages, eyeFormats[0], eyeUsage, m_recommendedEyeWidth,
-                m_recommendedEyeHeight, static_cast<uint32_t>(m_commandBuffers.size()), mode, m_vkQueue);
-		}
-		__android_log_print(ANDROID_LOG_INFO, kLogTag,
-            "Quest AA mode=%u active=%d (0=off 1=gentle 2=SMAA); historical MSAA remains disabled", mode, m_spatialAA.ready());
-	}
-	const bool filteredEyes = copyEyeTargets && m_spatialAA.ready() && m_spatialAA.matches(eyeImages);
+	// GeneralsX @tweak Codex 16/10/2026 TAA is the sole Quest AA path.
 	// GeneralsX @feature Codex 01/10/2026 Manually requested bounded raw-eye capture.
 	EyeCapture::Frame captureFrame;
 	captureFrame.monotonicNs = monotonicNanoseconds();
 	captureFrame.predictedDisplayTime = m_predictedDisplayTime;
-	captureFrame.filtered = filteredEyes;
-	const char *aaChoice = std::getenv("GX_QUEST_SPATIAL_AA");
-	captureFrame.requestedAa = aaChoice && std::strcmp(aaChoice, "2") == 0 ? 2
-		: aaChoice && std::strcmp(aaChoice, "1") == 0 ? 1 : 0;
+	captureFrame.filtered = false;
+	captureFrame.requestedAa = 0;
 	captureFrame.cameras = m_diagnosticCameras;
 	captureFrame.drawStates = DrawCaptureJson();
 	captureFrame.terrainDetailTestRequested = TerrainDetailTestRequested();
@@ -1801,7 +1779,7 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
     // GeneralsX @performance Codex 15/10/2026 Keep the original filtered/capture/front-end path.
     bool batchedTransfer = false;
     if (PerformanceRequested(PerfOption::TransferBatch) && copyEyeTargets && m_viewCount==2
-        && !filteredEyes && !captureEyes) {
+        && !captureEyes) {
         ColorTransferBatch batch;
         batch.eyes=eyeImages; batch.layouts=eyeLayouts;
         batch.eyeDestination=m_swapchainImages[imageIndex];
@@ -1866,21 +1844,14 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 			sourceToTransfer.image = eyeImages[eye];
 			sourceToTransfer.subresourceRange = sourceRange;
 			VkImage transferSource = eyeImages[eye];
-			if (filteredEyes) {
-				if (captureEyes) m_eyeCapture.copy(commandBuffer, eye, false,
-					eyeImages[eye], eyeLayouts[eye], true);
-				transferSource = m_spatialAA.record(commandBuffer, imageIndex, eye,
-					eyeImages[eye], eyeLayouts[eye]);
-			} else {
-				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &sourceToTransfer);
-			}
+			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &sourceToTransfer);
 
-			if (captureEyes) m_eyeCapture.copy(commandBuffer, eye, filteredEyes,
+			if (captureEyes) m_eyeCapture.copy(commandBuffer, eye, false,
 				transferSource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, false);
 
             CopyEyeColorImage(commandBuffer,transferSource,m_swapchainImages[imageIndex],
-                m_recommendedEyeWidth,m_recommendedEyeHeight,eye,!filteredEyes && m_colorRequiresBlit);
+                m_recommendedEyeWidth,m_recommendedEyeHeight,eye,m_colorRequiresBlit);
 
 			VkImageMemoryBarrier sourceRestore = sourceToTransfer;
 			sourceRestore.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
@@ -1890,10 +1861,8 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 				| VK_ACCESS_TRANSFER_WRITE_BIT;
 			sourceRestore.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 			sourceRestore.newLayout = eyeLayouts[eye];
-			if (!filteredEyes) {
-				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &sourceRestore);
-			}
+			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &sourceRestore);
 		}
 	} else {
 		// GeneralsX @bugfix Codex 10/10/2026 A flat-screen background must match
@@ -2574,11 +2543,9 @@ void Bootstrap::detachGraphics()
 		interop->ReleaseSubmissionQueue();
 	}
 	m_eyeCapture.destroy(); // Queue completed above; drain the file writer before teardown.
-	m_spatialAA.destroy();
     m_temporalAA.destroy();
     m_taaAttempted = m_taaUnavailable = false;
     m_taaFrame = 0;
-	m_spatialAaAttempted = false;
 	for (VkFence fence : m_commandFences) {
 		if (fence != VK_NULL_HANDLE) {
 			vkDestroyFence(m_vkDevice, fence, nullptr);
@@ -3129,15 +3096,7 @@ extern "C" unsigned QuestXR_TaaMode() {
     return QuestXR::PerformanceRequested(QuestXR::PerfOption::TaaLite)?2:0;
 }
 extern "C" bool QuestXR_TaaRequested() {
-    const char *spatial = std::getenv("GX_QUEST_SPATIAL_AA");
-    const bool requested = QuestXR_TaaMode()!=0;
-    const bool compatible = !spatial || std::strcmp(spatial, "0") == 0;
-    static bool reported = false;
-    if (requested && !compatible && !reported) {
-        reported = true;
-        __android_log_print(ANDROID_LOG_WARN, "GeneralsXR", "Quest TAA Lite disabled: set other anti-aliasing to Off for this trial");
-    }
-    return requested && compatible;
+    return QuestXR_TaaMode()!=0;
 }
 extern "C" bool QuestXR_CaptureTaaCamera(IDirect3DDevice8 *device, unsigned eye, QuestXR::TaaCamera *camera) {
     return camera && QuestXR::GetBootstrap().captureTaaCamera(device, eye, *camera);

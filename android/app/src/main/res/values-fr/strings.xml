@@ -445,7 +445,7 @@
     <string name="quest_shadow_coverage">Bords des ombres (expérimental)</string>
     <string name="quest_shadow_coverage_desc">Adapte la couche finale des ombres à la vue VR. Redémarrez le jeu et le lanceur.</string>
     <string name="quest_taa_lite">TAA (experimental)</string>
-    <string name="quest_taa_lite_desc">Lite traite le centre de la vue. Medium et Full traitent toute l’image. Des traînées peuvent apparaître. Désactivez les autres anticrénelages. Redémarrez complètement le jeu et le lanceur après modification.</string>
+    <string name="quest_taa_lite_desc">Lite traite le centre de la vue. Medium et Full traitent toute l’image. Des traînées peuvent apparaître. Redémarrez complètement le jeu et le lanceur après modification.</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
     <string name="quest_taa_fast_transfers">Transferts Lite (expérimental)</string>

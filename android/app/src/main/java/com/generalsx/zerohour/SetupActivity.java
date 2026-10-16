@@ -249,10 +249,8 @@ public class SetupActivity extends Activity {
     }
 
     static int getQuestAAMode(android.content.Context ctx) {
-        if (!BuildConfig.QUEST_VR) return 0;
-        android.content.SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        int mode = prefs.getInt(PREF_QUEST_AA_MODE, prefs.getBoolean(PREF_QUEST_SPATIAL_AA, false) ? 1 : 0);
-        return mode == 1 ? 1 : 0; // Retired SMAA preference becomes Off.
+        // GeneralsX @tweak Codex 16/10/2026 Retire spatial AA, including previously saved choices.
+        return 0;
     }
 
     static int getSimHz(android.content.Context ctx) {
@@ -1778,13 +1776,6 @@ public class SetupActivity extends Activity {
     private void buildRenderBackendSection(LinearLayout root) {
         if (BuildConfig.QUEST_VR) {
             UiKit.supporting(root, "Quest VR uses the headset's Vulkan graphics driver.");
-            LinearLayout content = UiKit.card(root);
-            UiKit.sectionHeader(content, R.drawable.ic_gzh_display, getString(R.string.quest_spatial_aa), false);
-            UiKit.segmented(content, new CharSequence[] {getString(R.string.quest_aa_off),
-                getString(R.string.quest_aa_gentle)}, getQuestAAMode(this), index ->
-                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putInt(PREF_QUEST_AA_MODE, index).putBoolean(PREF_QUEST_SPATIAL_AA, index == 1).apply());
-            UiKit.supporting(content, getString(R.string.quest_spatial_aa_desc));
             LinearLayout resolution = UiKit.card(root);
             UiKit.sectionHeader(resolution, R.drawable.ic_gzh_display, getString(R.string.quest_render_scale), false);
             int scale = getQuestRenderScale(this);

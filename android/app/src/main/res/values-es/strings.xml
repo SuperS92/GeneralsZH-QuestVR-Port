@@ -445,7 +445,7 @@
     <string name="quest_shadow_coverage">Bordes de sombras (experimental)</string>
     <string name="quest_shadow_coverage_desc">Ajusta la capa final de sombras a la vista VR. Reinicia el juego y el lanzador tras los cambios.</string>
     <string name="quest_taa_lite">TAA (experimental)</string>
-    <string name="quest_taa_lite_desc">Lite suaviza el centro de la vista. Medium y Full suavizan toda la imagen. Puede dejar estelas. Desactiva el otro antialiasing. Reinicia por completo el juego y el lanzador tras los cambios.</string>
+    <string name="quest_taa_lite_desc">Lite suaviza el centro de la vista. Medium y Full suavizan toda la imagen. Puede dejar estelas. Reinicia por completo el juego y el lanzador tras los cambios.</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
     <string name="quest_taa_fast_transfers">Transferencias Lite (experimental)</string>

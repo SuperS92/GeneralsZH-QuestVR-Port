@@ -445,7 +445,7 @@
     <string name="quest_shadow_coverage">그림자 가장자리 (실험적)</string>
     <string name="quest_shadow_coverage_desc">마지막 그림자 영역을 VR 눈 화면에 맞춥니다. 변경 후 게임과 런처를 완전히 다시 시작하세요.</string>
     <string name="quest_taa_lite">TAA (experimental)</string>
-    <string name="quest_taa_lite_desc">Lite는 화면 중앙을, Medium과 Full은 전체 화면을 처리합니다. 움직임 잔상이 생길 수 있습니다. 다른 안티앨리어싱은 끄세요. 변경 후 게임과 런처를 완전히 다시 시작하세요.</string>
+    <string name="quest_taa_lite_desc">Lite는 화면 중앙을, Medium과 Full은 전체 화면을 처리합니다. 움직임 잔상이 생길 수 있습니다. 변경 후 게임과 런처를 완전히 다시 시작하세요.</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
     <string name="quest_taa_fast_transfers">Lite 전송 (실험적)</string>

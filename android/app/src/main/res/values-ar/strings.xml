@@ -445,7 +445,7 @@
     <string name="quest_shadow_coverage">حواف الظلال (تجريبي)</string>
     <string name="quest_shadow_coverage_desc">يضبط طبقة الظلال النهائية لتطابق مجال عرض العين في الواقع الافتراضي. أعد تشغيل اللعبة والمشغّل بالكامل.</string>
     <string name="quest_taa_lite">TAA (experimental)</string>
-    <string name="quest_taa_lite_desc">يعالج Lite وسط مجال الرؤية. يعالج Medium وFull الصورة كاملة. قد تظهر آثار للحركة. أوقف تنعيم الحواف الآخر، ثم أعد تشغيل اللعبة والمشغّل بالكامل بعد التغيير.</string>
+    <string name="quest_taa_lite_desc">يعالج Lite وسط مجال الرؤية. يعالج Medium وFull الصورة كاملة. قد تظهر آثار للحركة. أعد تشغيل اللعبة والمشغّل بالكامل بعد التغيير.</string>
     <string name="quest_taa_quality_lite">Lite</string>
     <string name="quest_taa_quality_medium">Medium</string>
     <string name="quest_taa_fast_transfers">نقل Lite (تجريبي)</string>

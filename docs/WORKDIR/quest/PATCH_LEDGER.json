@@ -367,6 +367,14 @@
       "risk": "presentation bounds only; may fill previously omitted edge pixels",
       "owningTest": "viewport integer oracle; both native profiles; headset shadow-edge comparison and replay/live PC gates",
       "removalCondition": "Upstream obtains the final shadow quad bounds from the active viewport"
+    },
+    {
+      "path": "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLQuickMatchMenu.cpp",
+      "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
+      "purpose": "Quest-only Quick Match cache-path fallback and original playlist-index mapping; retain minimum-map validation and transport",
+      "risk": "menu map selection; no simulation or protocol change",
+      "owningTest": "portable path and filtered-index host cases; headset playlist/search confirmation pending",
+      "removalCondition": "Upstream menu resolves portable cache keys and retains playlist indices"
     }
   ],
   "followUpUpstreamEdits": [
