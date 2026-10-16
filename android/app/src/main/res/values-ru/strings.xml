@@ -453,4 +453,6 @@
     <string name="quest_taa_fast_transfers">Передача Lite (экспериментально)</string>
     <string name="quest_taa_fast_transfers_desc">Другой способ передачи глубины и цвета для TAA Lite. Может сократить время GPU. После изменений полностью перезапустите игру и лаунчер.</string>
     <string name="quest_taa_quality_full">Full</string>
+    <string name="quest_gpu_bundle">Экономия GPU (экспериментально)</string>
+    <string name="quest_gpu_bundle_desc">Уменьшает историю Lite, уточняет зависимости GPU и сокращает очистку и копирование HUD. Компактная история требует переноса Lite. После изменений перезапустите игру и лаунчер.</string>
 </resources>

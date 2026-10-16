@@ -451,4 +451,6 @@
     <string name="quest_taa_fast_transfers">Lite 传输（实验性）</string>
     <string name="quest_taa_fast_transfers_desc">为 TAA Lite 使用另一种深度与颜色传输方式，可能减少 GPU 时间。更改后请完全重启游戏和启动器。</string>
     <string name="quest_taa_quality_full">Full</string>
+    <string name="quest_gpu_bundle">GPU 节省（实验性）</string>
+    <string name="quest_gpu_bundle_desc">减少 Lite 历史存储，调整 GPU 依赖并限制 HUD 清除和复制工作。紧凑历史还需要 Lite 传输。更改后请完全重启游戏和启动器。</string>
 </resources>

@@ -10,9 +10,15 @@ static void require(bool ok,const char *why){if(!ok){std::fprintf(stderr,"FAIL: 
 static void check(VkResult result){require(result==VK_SUCCESS,"Vulkan operation");}
 #include "test-taa-math.h"
 #include "taa-vulkan-contract.h"
+#include "QuestGpuStages.h"
 struct Allocation {VkImage image{};VkDeviceMemory memory{};};
 int main() {
     using namespace QuestXR;testMath();
+    require(StagesForAccess(VK_ACCESS_SHADER_READ_BIT,true)==VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,"Native history sampling stage");
+    require(StagesForAccess(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,true)==VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,"Native attachment producer stage");
+    require(StagesForAccess(VK_ACCESS_TRANSFER_READ_BIT|VK_ACCESS_TRANSFER_WRITE_BIT,false)==VK_PIPELINE_STAGE_TRANSFER_BIT,"Native transfer stage");
+    require(StagesForAccess(VK_ACCESS_MEMORY_WRITE_BIT,true)==VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,"Unknown producer remains conservative");
+    require(StagesForAccess(0,true)==VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT&&StagesForAccess(0,false)==VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,"Empty access execution stages");
     VkInstance instance{};VkInstanceCreateInfo instanceInfo{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     check(vkCreateInstance(&instanceInfo,nullptr,&instance));uint32_t count=0;
     check(vkEnumeratePhysicalDevices(instance,&count,nullptr));require(count>0,"GPU present");
@@ -33,7 +39,11 @@ int main() {
         require(type<memories.memoryTypeCount,"Memory type");VkMemoryAllocateInfo a{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};a.memoryTypeIndex=type;a.allocationSize=r.size;
         VkDeviceMemory m{};check(vkAllocateMemory(device,&a,nullptr,&m));return m;
     };
-    constexpr unsigned w=17,h=13,bytes=w*h*4;
+#ifndef QUEST_TAA_TEST_WIDTH
+#define QUEST_TAA_TEST_WIDTH 17
+#define QUEST_TAA_TEST_HEIGHT 13
+#endif
+    constexpr unsigned w=QUEST_TAA_TEST_WIDTH,h=QUEST_TAA_TEST_HEIGHT,bytes=w*h*4;
     VkBuffer buffer{};VkBufferCreateInfo b{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};b.size=bytes*4;b.usage=VK_BUFFER_USAGE_TRANSFER_SRC_BIT|VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     check(vkCreateBuffer(device,&b,nullptr,&buffer));VkMemoryRequirements requirements{};vkGetBufferMemoryRequirements(device,buffer,&requirements);
     auto memory=allocate(requirements,VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);check(vkBindBufferMemory(device,buffer,memory,0));
@@ -52,6 +62,7 @@ int main() {
     };
     unsigned cases=0;
     std::map<std::array<unsigned,3>,std::vector<unsigned char>> referenceFrames;
+    for(bool gpuBundle:{false,true})
     for(bool fastTransfers:{false,true})
     for(auto quality:{TaaQuality::Full,TaaQuality::Medium,TaaQuality::Lite})
     for(auto format:{VK_FORMAT_R8G8B8A8_UNORM,VK_FORMAT_B8G8R8A8_UNORM})for(auto depthFormat:{VK_FORMAT_D32_SFLOAT,VK_FORMAT_D24_UNORM_S8_UINT})for(bool copyDepth:{false,true}) {
@@ -74,23 +85,29 @@ int main() {
         wrongDepth=depth.info;wrongDepth.arrayLayers=2;
         require(!IsSampledTaaEyeDepth(wrongDepth,depth.layout,w,h),"Owned sampled eye depth rejects array reinterpretation");
         require(!IsSampledTaaEyeDepth(depth.info,VK_IMAGE_LAYOUT_UNDEFINED,w,h)&&!IsSampledTaaEyeDepth(depth.info,depth.layout,w+1,h),"Owned sampled depth requires exact extent and valid layout");
+        TaaContract::externalImages.clear();
+        for(auto eye:eyes)TaaContract::externalImages[eye.image]=true;
+        TaaContract::externalImages[depth.image]=true;
         const VkImageAspectFlags ds=VK_IMAGE_ASPECT_DEPTH_BIT|(depthFormat==VK_FORMAT_D32_SFLOAT?0:VK_IMAGE_ASPECT_STENCIL_BIT);
         begin();for(auto eye:eyes)barrier(eye.image,VK_IMAGE_ASPECT_COLOR_BIT,VK_IMAGE_LAYOUT_UNDEFINED,eye.layout);
         barrier(depth.image,ds,VK_IMAGE_LAYOUT_UNDEFINED,depth.layout);submit();
         TemporalAA rejected;require(!rejected.initialize(physical,device,family,eyes,depth,static_cast<TaaQuality>(0)),"Disabled quality cannot initialize a filter");auto bad=eyes;bad[1]=bad[0];require(!rejected.initialize(physical,device,family,bad,depth),"Aliased eyes rejected");
         bad=eyes;bad[1].info.usage&=~VK_IMAGE_USAGE_SAMPLED_BIT;require(!rejected.initialize(physical,device,family,bad,depth),"Unsampleable eye rejected");
         auto badDepth=depth;badDepth.layout=VK_IMAGE_LAYOUT_UNDEFINED;require(!rejected.initialize(physical,device,family,eyes,badDepth),"Unknown depth layout rejected");
-        TemporalAA taa;require(taa.initialize(physical,device,family,eyes,depth,quality,fastTransfers),"Actual TAA initializes");require(taa.copiesDepth()==copyDepth,"Actual direct/copy depth selection");
+        TemporalAA taa;require(taa.initialize(physical,device,family,eyes,depth,quality,fastTransfers,gpuBundle),"Actual TAA initializes");require(taa.copiesDepth()==copyDepth,"Actual direct/copy depth selection");
         require(taa.fastColorCopy()==(fastTransfers&&quality==TaaQuality::Lite),"Actual color-copy path gated to requested Lite");
+        require(taa.compactHistory()==(gpuBundle&&fastTransfers&&quality==TaaQuality::Lite),"Compact history only for requested native-copy Lite");
         if(fastTransfers&&quality==TaaQuality::Lite) {
             auto noCopy=eyes;noCopy[0].info.usage&=~VK_IMAGE_USAGE_TRANSFER_DST_BIT;
             TemporalAA fallback;require(fallback.initialize(physical,device,family,noCopy,depth,quality,true)&&!fallback.fastColorCopy(),"Missing transfer destination usage keeps original Lite apply");fallback.destroy();
         }
         const std::array<unsigned,3> referenceKey{unsigned(quality),unsigned(format),unsigned(depthFormat)*2+unsigned(copyDepth)};
         auto &reference=referenceFrames[referenceKey];
+        const bool storeReference=!gpuBundle&&!fastTransfers;
         TaaCamera camera;camera.valid=true;camera.width=w;camera.height=h;
         for(unsigned i=0;i<4;++i)camera.view[i*5]=camera.projection[i*5]=1;
         std::vector<unsigned> center;
+        const unsigned preciseBefore=TaaContract::preciseBarriers;
         for(unsigned frame=1;frame<=16;++frame) {
             const bool reset=frame==1||frame==10||frame==13||frame==15; if(frame==10||frame==13||frame==15)taa.invalidate();
             if(frame==14)camera.view[12]=2.0f/w; // one pixel right in the current image
@@ -162,17 +179,22 @@ int main() {
                     require(actual[channel]>=124&&actual[channel]<=127,"GPU camera/depth reprojection selects the correct same-eye earlier pixel");
                 }
             }
-            if(!fastTransfers)reference.insert(reference.end(),pixels+2*bytes,pixels+4*bytes);
+            if(storeReference)reference.insert(reference.end(),pixels+2*bytes,pixels+4*bytes);
             else {
                 const unsigned offset=(frame-1)*2*bytes;
                 require(reference.size()>=offset+2*bytes,"Reference capture exists");
-                require(!std::memcmp(reference.data()+offset,pixels+2*bytes,2*bytes),"Every fast-transfer output pixel matches original path byte-for-byte");
+                for(unsigned n=0;n<2*bytes;++n) {
+                    // Local UV remapping can change bilinear rounding by one UNORM8 step; alpha stays exact.
+                    const int tolerance=taa.compactHistory()&&n%4!=3?1:0;
+                    require(std::abs(int(reference[offset+n])-int(pixels[2*bytes+n]))<=tolerance,"Bundle output matches reference within one RGB quantization step; alpha exact");
+                }
             }
             const unsigned channel=format==VK_FORMAT_B8G8R8A8_UNORM?2:0;
             if(frame==8||frame==9)center.push_back(pixels[2*bytes+((h/2)*w+w/2)*4+channel]);
             ++cases;
         }
         require(center.size()==2&&std::abs(int(center[0])-int(center[1]))<35,"Temporal accumulation reduces alternating texture variation");
+        require((TaaContract::preciseBarriers>preciseBefore)==(gpuBundle&&quality==TaaQuality::Lite),"Only bundled Lite records precise internal dependencies");
         check(vkQueueWaitIdle(queue));taa.destroy();
         for(auto a:images){vkDestroyImage(device,a.image,nullptr);vkFreeMemory(device,a.memory,nullptr);}
     }

@@ -451,4 +451,6 @@
     <string name="quest_taa_fast_transfers">انتقال Lite (آزمایشی)</string>
     <string name="quest_taa_fast_transfers_desc">انتقال جایگزین عمق و رنگ برای TAA Lite. ممکن است زمان GPU را کاهش دهد. پس از تغییر، بازی و راه‌انداز را کامل دوباره اجرا کنید.</string>
     <string name="quest_taa_quality_full">Full</string>
+    <string name="quest_gpu_bundle">کاهش مصرف GPU (آزمایشی)</string>
+    <string name="quest_gpu_bundle_desc">حافظه تاریخچه Lite و پاک‌سازی و کپی HUD را کاهش می‌دهد و وابستگی‌های GPU را تنظیم می‌کند. تاریخچه فشرده به انتقال Lite نیاز دارد. پس از تغییر، بازی و لانچر را دوباره اجرا کنید.</string>
 </resources>

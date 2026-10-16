@@ -4,6 +4,8 @@
 #pragma once
 #include <map>
 namespace TaaContract {
+inline std::map<VkImage,bool> externalImages;
+inline unsigned preciseBarriers=0;
 inline PFN_vkCreateImage createImage=nullptr;
 inline PFN_vkCreateImageView createView=nullptr;
 inline PFN_vkCmdPipelineBarrier barrier=nullptr;
@@ -67,8 +69,27 @@ extern "C" VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device,cons
 extern "C" VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(VkCommandBuffer command,VkPipelineStageFlags source,VkPipelineStageFlags destination,VkDependencyFlags flags,
     uint32_t memoryCount,const VkMemoryBarrier *memory,uint32_t bufferCount,const VkBufferMemoryBarrier *buffers,uint32_t imageCount,const VkImageMemoryBarrier *images) {
     ++TaaContract::barrierCalls;
+    if(imageCount&&!(source&VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)&&!(destination&VK_PIPELINE_STAGE_ALL_COMMANDS_BIT))++TaaContract::preciseBarriers;
+    const auto supports=[](VkPipelineStageFlags stage,VkAccessFlags access) {
+        if(stage&VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)return true;
+        if((access&(VK_ACCESS_TRANSFER_READ_BIT|VK_ACCESS_TRANSFER_WRITE_BIT))&&!(stage&VK_PIPELINE_STAGE_TRANSFER_BIT))return false;
+        if((access&VK_ACCESS_SHADER_READ_BIT)&&!(stage&(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT|VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT)))return false;
+        if((access&(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT|VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT))&&!(stage&VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT))return false;
+        if((access&(VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT))
+            &&!(stage&(VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT|VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT)))return false;
+        return !(access&(VK_ACCESS_MEMORY_READ_BIT|VK_ACCESS_MEMORY_WRITE_BIT));
+    };
     for(unsigned i=0;i<imageCount;++i){
-        const auto &b=images[i];TaaContract::checkLayout(b.image,b.oldLayout);TaaContract::checkLayout(b.image,b.newLayout);
+        const auto &b=images[i];
+        const bool externalEdge=(b.srcAccessMask&(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT))
+            ||(b.dstAccessMask&(VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT))
+            ||((b.dstAccessMask&VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)&&(b.dstAccessMask&VK_ACCESS_TRANSFER_READ_BIT));
+        if(TaaContract::externalImages.count(b.image)&&externalEdge) {
+            if(!(source&VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)||!(destination&VK_PIPELINE_STAGE_ALL_COMMANDS_BIT))
+                std::fprintf(stderr,"Boundary stages %x -> %x access %x -> %x layout %u -> %u\n",source,destination,b.srcAccessMask,b.dstAccessMask,b.oldLayout,b.newLayout);
+            require((source&VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)&&(destination&VK_PIPELINE_STAGE_ALL_COMMANDS_BIT),"DXVK producer/consumer boundaries remain conservative");
+        }
+        require(supports(source,b.srcAccessMask)&&supports(destination,b.dstAccessMask),"Barrier access masks supported by execution stages");TaaContract::checkLayout(b.image,b.oldLayout);TaaContract::checkLayout(b.image,b.newLayout);
         require(b.oldLayout==VK_IMAGE_LAYOUT_UNDEFINED||TaaContract::layouts.at(b.image)==b.oldLayout,"Barrier old layout matches recorded state");
         TaaContract::layouts[b.image]=b.newLayout;
     }

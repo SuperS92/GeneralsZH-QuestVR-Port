@@ -17,15 +17,22 @@ definition=work/'vulkan.def';definition.write_text('LIBRARY vulkan-1.dll\nEXPORT
 compiler=pathlib.Path(tools['hostCxxRuntime'])
 subprocess.run([str(compiler/'llvm-dlltool.exe'),'-m','i386:x86-64','-d',str(definition),'-l',str(work/'libvulkan.a')],check=True)
 exe=work/'taa-smoke.exe'
-subprocess.run([str(compiler/'clang++.exe'),'-std=c++17','-static','-D__ANDROID__','-DSAGE_USE_OPENXR',
+compileCommand=[str(compiler/'clang++.exe'),'-std=c++17','-static','-D__ANDROID__','-DSAGE_USE_OPENXR',
     '-I'+str(work/'include'),'-I'+str(root/'scripts/qa/quest/host-shims'),'-I'+str(source.parent),
-    '-I'+str(root/'Core/GameEngineDevice/Include'),str(source),str(test),str(work/'libvulkan.a'),'-o',str(exe)],check=True)
-result=subprocess.run([str(exe)],capture_output=True,text=True,timeout=90)
-log=result.stdout+result.stderr;(work/'result.log').write_text(log,encoding='utf-8');print(log)
-if result.returncode:raise SystemExit(result.returncode)
-report={'status':'HOST_GPU_TAA_PASS','cases':int(re.search(r'PASS (\d+) GPU frame cases',log)[1]),
+    '-I'+str(root/'Core/GameEngineDevice/Include'),str(source),str(test),str(work/'libvulkan.a'),'-o',str(exe)]
+logs=[]
+for width,height in ((17,13),(31,23)):
+    subprocess.run(compileCommand+['-DQUEST_TAA_TEST_WIDTH='+str(width),'-DQUEST_TAA_TEST_HEIGHT='+str(height)],check=True)
+    result=subprocess.run([str(exe)],capture_output=True,text=True,timeout=90)
+    log=f'Dimensions {width}x{height}\n'+result.stdout+result.stderr
+    logs.append(log);(work/'result.log').write_text('\n'.join(logs),encoding='utf-8')
+    print(result.stdout)
+    if result.returncode:
+        print(result.stderr);raise SystemExit(result.returncode)
+log='\n'.join(logs)
+report={'status':'HOST_GPU_TAA_PASS','cases':sum(map(int,re.findall(r'PASS (\d+) GPU frame cases',log))),
     'qualities':['Full','Medium','Lite'],
-    'checks':['All three quality pipelines execute with transfers Off/On','Every fast-transfer GPU output pixel matches reference bytes','Unsupported source copy usage falls back to original apply','MRT blend states identical without independentBlend','Lite peripheral pixels byte-exact; bounded centered history','Independent row-vector D3D projection oracle: 1000 points','RGBA/BGRA, separate eyes',
+    'checks':['All quality pipelines execute with transfers and GPU bundle Off/On','Compact history RGB within one UNORM8 step; alpha/periphery/reset exact','Known native stage/access scopes and conservative DXVK boundaries','Unchanged-layout modes preserve every GPU output byte','Unsupported source copy usage falls back to original apply','MRT blend states identical without independentBlend','Lite peripheral pixels byte-exact; bounded centered history','Independent row-vector D3D projection oracle: 1000 points','RGBA/BGRA, separate eyes',
     'D32/D24S8 direct sampled depth and private depth copy','Every pixel alpha preserved',
     'First/reset raw bytes exact','Flat replacement rejects stale history','Temporal attenuation of alternating texture',
     'Actual GPU orthographic and perspective camera reprojection with independent expected pixels',

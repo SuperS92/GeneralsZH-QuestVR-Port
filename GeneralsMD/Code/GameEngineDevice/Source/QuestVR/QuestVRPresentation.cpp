@@ -138,8 +138,21 @@ void W3DDisplay::drawQuestXRMenu()
     if (flatWorld && !flatDepth) return;
     if (flatWorld) DX8Wrapper::Set_Render_Target(menuSurface, flatDepth);
     else DX8Wrapper::Set_Render_Target(menuSurface, true);
-	bool rendered = false;
-	if (WW3D::Begin_Render(true, flatWorld, Vector3(0.0f, 0.0f, 0.0f)) == WW3D_ERROR_OK) {
+    // GeneralsX @performance Codex 16/10/2026 Preserve UI drawing and coordinates; only discard work above the copied HUD guard.
+    const uint32_t clearTop=!flatWorld?QuestXR_GetHudClearTop(presentation==QUEST_XR_MENU_HUD,getWidth(),getHeight()):0;
+    bool rendered = false;
+    if (WW3D::Begin_Render(clearTop==0, flatWorld, Vector3(0.0f, 0.0f, 0.0f)) == WW3D_ERROR_OK) {
+        if(clearTop) {
+            const D3DRECT rect{0,LONG(clearTop),LONG(getWidth()),LONG(getHeight())};
+            auto *device=DX8Wrapper::_Get_D3D_Device8();
+            if(FAILED(device->Clear(1,&rect,D3DCLEAR_TARGET,0xff000000,1.0f,0))) {
+                if(FAILED(device->Clear(0,nullptr,D3DCLEAR_TARGET,0xff000000,1.0f,0))) {
+                    WW3D::End_Render(false);
+                    DX8Wrapper::Set_Render_Target(static_cast<IDirect3DSurface8 *>(nullptr));
+                    return;
+                }
+            }
+        }
         // Original composed camera, perspective and view filters; no tracked eye substitution.
         if (flatWorld) drawViews();
 		TheInGameUI->DRAW();

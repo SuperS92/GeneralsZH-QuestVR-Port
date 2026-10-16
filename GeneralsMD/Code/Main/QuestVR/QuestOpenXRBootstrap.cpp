@@ -767,10 +767,10 @@ bool Bootstrap::applyTaa(IDirect3DDevice8 *device, unsigned eye, const TaaCamera
         m_taaAttempted = true;
         const auto quality=static_cast<TaaQuality>(QuestXR_TaaMode());
         const bool fast=fastTaaTransfersRequested();
-        bool initialized=m_temporalAA.initialize(m_vkPhysicalDevice,m_vkDevice,m_vkQueueFamilyIndex,eyes,depth,quality,fast);
+        bool initialized=m_temporalAA.initialize(m_vkPhysicalDevice,m_vkDevice,m_vkQueueFamilyIndex,eyes,depth,quality,fast,GpuBundleRequested());
         if(!initialized&&fast) {
             __android_log_print(ANDROID_LOG_WARN,kLogTag,"Quest TAA fast transfers unavailable; retrying the original Lite apply path");
-            initialized=m_temporalAA.initialize(m_vkPhysicalDevice,m_vkDevice,m_vkQueueFamilyIndex,eyes,depth,quality,false);
+            initialized=m_temporalAA.initialize(m_vkPhysicalDevice,m_vkDevice,m_vkQueueFamilyIndex,eyes,depth,quality,false,GpuBundleRequested());
         }
         m_taaUnavailable=!initialized;
         __android_log_print(ANDROID_LOG_INFO, kLogTag, "Quest TAA Lite requested=1 active=%d full_image=%u jitter=0 motion_vectors=0; original path on failure", !m_taaUnavailable,quality==TaaQuality::Lite?0u:1u);
@@ -1592,6 +1592,14 @@ bool Bootstrap::recenterGameSpace()
 	return true;
 }
 
+// GeneralsX @performance Codex 16/10/2026 Clear the copied HUD guard and all visible pixels, with full-frame fallback for expanded UI.
+uint32_t Bootstrap::getHudClearTop(bool hud,uint32_t width,uint32_t height) const {
+    if(!GpuBundleRequested()||!hud||width!=m_menuWidth||height!=m_menuHeight)return 0;
+    const auto geometry=getMenuGeometry(QUEST_XR_MENU_HUD,m_menuCropTop,m_menuWidth,m_menuHeight,m_controllers);
+    const int32_t crop=int32_t(std::lround(float(height)*geometry.cropTop));
+    const auto plan=PlanHudTransfer(height,crop,true,m_compactMenuSwapchain!=XR_NULL_HANDLE&&!m_compactMenuImages.empty());
+    return PlanHudCopy(plan,true).sourceTop;
+}
 bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 	uint32_t menuImageIndex, bool copyMenu, const HudTransferPlan &hudPlan)
 {
@@ -1854,8 +1862,15 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 			VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &menuSource);
 
         CopyHudColorImage(commandBuffer, menuImage, menuImages[menuImageIndex],
-            m_menuWidth, hudPlan, m_colorRequiresBlit);
-        RecordHudTransfer(m_menuWidth, m_menuHeight, hudPlan.destinationHeight, hudPlan.compact);
+            m_menuWidth, hudPlan, m_colorRequiresBlit,GpuBundleRequested());
+        const auto hudRegion=PlanHudCopy(hudPlan,GpuBundleRequested());
+        RecordHudTransfer(m_menuWidth, m_menuHeight, hudRegion.height, hudPlan.compact);
+        if(GpuBundleRequested()&&PerformanceMetricsRequested()) {
+            static unsigned samples=0;
+            if(++samples%120==0)__android_log_print(ANDROID_LOG_INFO,kLogTag,
+                "Quest GPU HUD: compact=%d source_top=%u destination_top=%u rows=%u original_rows=%u",
+                hudPlan.compact,hudRegion.sourceTop,hudRegion.destinationTop,hudRegion.height,m_menuHeight);
+        }
 
 		VkImageMemoryBarrier menuSourceRestore = menuSource;
 		menuSourceRestore.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
@@ -2954,6 +2969,9 @@ extern "C" IDirect3DSurface8 *QuestXR_GetMenuSurface()
 	return QuestXR::GetBootstrap().getMenuSurface();
 }
 
+extern "C" std::uint32_t QuestXR_GetHudClearTop(bool hud,std::uint32_t width,std::uint32_t height) {
+    return QuestXR::GetBootstrap().getHudClearTop(hud,width,height);
+}
 extern "C" void QuestXR_SetMenuPresentation(uint32_t presentation)
 {
 	QuestXR::GetBootstrap().setMenuPresentation(presentation);

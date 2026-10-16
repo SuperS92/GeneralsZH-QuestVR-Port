@@ -59,6 +59,10 @@ bool PerformanceRequested(PerfOption option) {
     const size_t i = size_t(option);
     return i < size_t(PerfOption::Count) && strictSwitch(optionNames[i]);
 }
+bool GpuBundleRequested() {
+    const char *value=std::getenv("GX_QUEST_GPU_BUNDLE");
+    return value&&std::strcmp(value,"1")==0;
+}
 bool PerformanceMetricsRequested() { return strictSwitch("GX_QUEST_PERF_METRICS"); }
 int PerformanceEye() { return inWorld() ? worldEye : -1; }
 PerformanceFrameScope::PerformanceFrameScope() : previous(frameActive) {

@@ -73,6 +73,7 @@ public:
 	::IDirect3DSurface8 *getDepthSurface() const { return m_depthSurface; }
 	void markEyeRenderingComplete() { m_eyeRenderingComplete = true; }
 	::IDirect3DSurface8 *getMenuSurface() const { return m_menuSurface; }
+	uint32_t getHudClearTop(bool hud,uint32_t width,uint32_t height) const;
 	void setMenuPresentation(uint32_t presentation);
 	void setMenuCropTop(float cropTop);
 	void markMenuRenderingComplete(uint32_t presentation);

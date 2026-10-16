@@ -28,9 +28,15 @@ inline HudTransferPlan PlanHudTransfer(uint32_t height, int32_t cropTop,
     }
     return result;
 }
+// GeneralsX @performance Codex 16/10/2026 Preserve the subimage coordinates; update only displayed rows plus a source guard.
+struct HudCopyRegion { uint32_t sourceTop=0,destinationTop=0,height=0; };
+inline HudCopyRegion PlanHudCopy(const HudTransferPlan &plan,bool tight) {
+    const uint32_t skip=tight&&plan.compact&&plan.subImageTop>64?plan.subImageTop-64:0;
+    return {plan.sourceTop+skip,skip,plan.destinationHeight-skip};
+}
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
 // Caller owns source/destination layout transitions, acquisition and fences.
 void CopyHudColorImage(VkCommandBuffer command, VkImage source, VkImage destination,
-    uint32_t width, const HudTransferPlan &plan, bool convertFormat);
+    uint32_t width, const HudTransferPlan &plan, bool convertFormat,bool tight=false);
 #endif
 }

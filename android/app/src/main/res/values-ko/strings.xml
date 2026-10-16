@@ -451,4 +451,6 @@
     <string name="quest_taa_fast_transfers">Lite 전송 (실험적)</string>
     <string name="quest_taa_fast_transfers_desc">TAA Lite의 대체 깊이 및 색상 전송 방식입니다. GPU 시간을 줄일 수 있습니다. 변경 후 게임과 런처를 완전히 다시 시작하세요.</string>
     <string name="quest_taa_quality_full">Full</string>
+    <string name="quest_gpu_bundle">GPU 절약 (실험적)</string>
+    <string name="quest_gpu_bundle_desc">Lite 기록 저장 공간과 HUD 지우기/복사를 줄이고 GPU 의존성을 조정합니다. 작은 기록은 Lite 전송도 필요합니다. 변경 후 게임과 런처를 완전히 다시 시작하세요.</string>
 </resources>

@@ -451,4 +451,6 @@
     <string name="quest_taa_fast_transfers">Transferencias Lite (experimental)</string>
     <string name="quest_taa_fast_transfers_desc">Transferencias alternativas de profundidad y color para TAA Lite. Pueden reducir el tiempo de GPU. Reinicia por completo el juego y el lanzador tras los cambios.</string>
     <string name="quest_taa_quality_full">Full</string>
+    <string name="quest_gpu_bundle">Ahorro de GPU (experimental)</string>
+    <string name="quest_gpu_bundle_desc">Reduce el historial Lite, ajusta dependencias de GPU y limita el borrado y la copia del HUD. El historial compacto requiere transferencias Lite. Reinicia el juego y el lanzador tras los cambios.</string>
 </resources>

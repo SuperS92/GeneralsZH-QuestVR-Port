@@ -451,4 +451,6 @@
     <string name="quest_taa_fast_transfers">Lite-Übertragung (experimentell)</string>
     <string name="quest_taa_fast_transfers_desc">Alternative Tiefen- und Bildübertragung für TAA Lite. Kann GPU-Zeit sparen. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
     <string name="quest_taa_quality_full">Full</string>
+    <string name="quest_gpu_bundle">GPU-Sparpaket (experimentell)</string>
+    <string name="quest_gpu_bundle_desc">Verkleinert Lite-Historienbilder, optimiert GPU-Abhängigkeiten und begrenzt die HUD-Lösch- und Kopierarbeit. Kompakte Historien benötigen zusätzlich Lite-Übertragung. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
 </resources>

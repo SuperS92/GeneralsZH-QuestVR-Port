@@ -451,4 +451,6 @@
     <string name="quest_taa_fast_transfers">Lite prěnos (eksperimentalny)</string>
     <string name="quest_taa_fast_transfers_desc">Alternativny prěnos glubiny i barv za TAA Lite. Može umenšiti vrěme GPU. Po izměnah polno restartujte igru i spustnik.</string>
     <string name="quest_taa_quality_full">Full</string>
+    <string name="quest_gpu_bundle">GPU ekonomija (eksperimentalno)</string>
+    <string name="quest_gpu_bundle_desc">Umenša historiju Lite, upravja GPU zavisimosti i ograničaje čiščenje i kopiranje HUD. Mala historija potrěbuje prenos Lite. Po izměnah ponovno zapustite igru i zapuskač.</string>
 </resources>

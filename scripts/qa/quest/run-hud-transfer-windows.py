@@ -29,6 +29,6 @@ log = result.stdout + result.stderr
 print(log)
 if result.returncode: raise SystemExit(result.returncode)
 (root / 'work/evidence/hud-transfer-host.json').write_text(json.dumps({
-    'status':'HOST_GPU_PIXEL_PASS', 'gpuCases':32, 'slotsInFlight':2,
+    'status':'HOST_GPU_PIXEL_PASS', 'gpuCases':64, 'slotsInFlight':2,
     'checks':'Exhaustive rectangle oracle; exact full-canvas GPU/CPU pixels; BGRA/RGBA blit and same-format copy; alpha, orientation, guard; changing crop/content and two in-flight slots; expanded UI, front-end and missing-resource fallback',
     'questPerformanceAndCrossplay':'NOT_VERIFIED'}, indent=2) + '\n', encoding='utf-8')

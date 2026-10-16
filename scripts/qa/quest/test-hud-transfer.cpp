@@ -23,6 +23,15 @@ int main() {
             require(plan.sourceTop+plan.destinationHeight==height,"Entire output defined, source bottom aligned");
             require(plan.subImageTop+plan.visibleHeight==plan.destinationHeight,"Visible bottom remains fixed");
             if(expected) require(plan.subImageTop>=64,"Compositor guard retained");
+            for(bool tight:{false,true}) {
+                const auto copy=PlanHudCopy(plan,tight);
+                require(copy.sourceTop+copy.height==height,"Copy and clear cover the source bottom");
+                require(copy.destinationTop+copy.height==plan.destinationHeight,"Destination bottom remains fixed");
+                require(copy.sourceTop-copy.destinationTop==plan.sourceTop,"Coordinate mapping unchanged");
+                require(copy.destinationTop<=plan.subImageTop,"All visible rows copied");
+                if(plan.compact)require(plan.subImageTop-copy.destinationTop>=64,"64 row filtering guard fully defined");
+                if(!tight||!plan.compact)require(!copy.destinationTop&&copy.sourceTop==plan.sourceTop,"Reference or full fallback unchanged");
+            }
         }
     require(!PlanHudTransfer(UINT32_MAX,0,true,true).destinationHeight,"Oversized source rejected");
     VkInstance instance{}; VkInstanceCreateInfo create{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
@@ -79,7 +88,7 @@ int main() {
         vkCmdPipelineBarrier(command,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,0,0,nullptr,0,nullptr,1,&b);
     };
     const int crops[]={333,320,319,0,512,333,333,257};
-    for(bool convert:{false,true}) {
+    for(bool tight:{false,true}) for(bool convert:{false,true}) {
         VkImage source=image(width,height,convert?VK_FORMAT_B8G8R8A8_UNORM:VK_FORMAT_R8G8B8A8_UNORM);
         VkImage full[2]{},compact[2]{},reference[2]{};
         for(unsigned slot=0;slot<2;++slot) {
@@ -89,6 +98,7 @@ int main() {
         }
         for(unsigned batch=0;batch<8;++batch) {
             const auto plan=PlanHudTransfer(height,crops[batch],batch!=5,batch!=6);
+            const auto copy=PlanHudCopy(plan,tight);
             for(unsigned slot=0;slot<2;++slot) {
                 for(unsigned y=0;y<height;++y) for(unsigned x=0;x<width;++x) {
                     const unsigned p=slot*bytes+(y*width+x)*4;
@@ -106,7 +116,7 @@ int main() {
                 barrier(commands[slot],source,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_TRANSFER_READ_BIT);
                 VkImage target=plan.compact?compact[slot]:full[slot];
                 barrier(commands[slot],target,VK_IMAGE_LAYOUT_UNDEFINED,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,0,VK_ACCESS_TRANSFER_WRITE_BIT);
-                CopyHudColorImage(commands[slot],source,target,width,plan,convert);
+                CopyHudColorImage(commands[slot],source,target,width,plan,convert,tight);
                 barrier(commands[slot],target,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_TRANSFER_READ_BIT);
                 region.bufferOffset=2*bytes+slot*bytes; region.imageExtent.height=plan.destinationHeight;
                 vkCmdCopyImageToBuffer(commands[slot],target,VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,buffer,1,&region);
@@ -127,8 +137,8 @@ int main() {
             for(unsigned slot=0;slot<2;++slot) {
                 auto *actual=data+2*bytes+slot*bytes;
                 auto *expected=data+4*bytes+slot*bytes+plan.sourceTop*rowBytes;
-                require(std::memcmp(actual,expected,plan.destinationHeight*rowBytes)==0,"All compact pixels, including guard, equal full-canvas output");
-                for(unsigned p=0;p<plan.destinationHeight*rowBytes;p+=4) {
+                require(std::memcmp(actual+copy.destinationTop*rowBytes,expected+copy.destinationTop*rowBytes,copy.height*rowBytes)==0,"All updated compact pixels, including guard, equal full-canvas output");
+                for(unsigned p=copy.destinationTop*rowBytes;p<plan.destinationHeight*rowBytes;p+=4) {
                     auto *input=data+slot*bytes+plan.sourceTop*rowBytes+p;
                     require(actual[p]==input[convert?2:0] && actual[p+1]==input[1] && actual[p+2]==input[convert?0:2] && actual[p+3]==input[3],"Exact pixels and alpha with unchanged scale/orientation");
                 }
@@ -141,5 +151,5 @@ int main() {
     vkUnmapMemory(device,bufferMemory); vkDestroyBuffer(device,buffer,nullptr); vkFreeMemory(device,bufferMemory,nullptr);
     for(auto value:images) { vkDestroyImage(device,value.image,nullptr); vkFreeMemory(device,value.memory,nullptr); }
     vkDestroyDevice(device,nullptr); vkDestroyInstance(instance,nullptr);
-    std::puts("PASS rectangle oracle and 32 GPU cases: blit/copy, compact/full, guard, odd dimensions, expanded/front-end/unavailable fallback, two in-flight slots and changed content");
+    std::puts("PASS rectangle oracle and 64 GPU cases: blit/copy, compact/full, guard, odd dimensions, expanded/front-end/unavailable fallback, two in-flight slots and changed content");
 }

@@ -11,6 +11,8 @@ enum class PerfOption { AudioGrowth, TrackUpload, TerrainLighting, TreeRange, Sh
 enum class PerfStage { Audio, Tracks, TerrainBlend, Trees, Shadows, TerrainSubmit, TrackPack, TrackLock, TrackCopy, TrackUnlock, TrackSubmit, Count };
 bool PerformanceRequested(PerfOption option);
 bool PerformanceMetricsRequested();
+// Independent opt-in render-only bundle; does not alter simulation or network state.
+bool GpuBundleRequested();
 int PerformanceEye();
 class PerformanceFrameScope {
     bool previous;

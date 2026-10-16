@@ -16,7 +16,7 @@ struct TaaImage {
 class TemporalAA final {
 public:
     bool initialize(VkPhysicalDevice physical,VkDevice device,uint32_t family,
-        const std::array<TaaImage,2> &eyes,const TaaImage &depth,TaaQuality quality=TaaQuality::Full,bool fastTransfers=false);
+        const std::array<TaaImage,2> &eyes,const TaaImage &depth,TaaQuality quality=TaaQuality::Full,bool fastTransfers=false,bool gpuBundle=false);
     // Caller flushes original DXVK producers and holds the same submission queue lock.
     bool process(VkQueue queue,unsigned eye,const TaaCamera &camera,uint64_t frame,uint64_t time,bool identity=false);
     void invalidate() { for(auto &eye:m_eyes)eye.history.valid=false; }
@@ -27,6 +27,7 @@ public:
     uint64_t bytes() const {return m_bytes;}
     bool copiesDepth() const {return m_copyDepth;}
     bool fastColorCopy() const {return m_fastCopy;}
+    bool compactHistory() const {return m_compactHistory;}
 private:
     struct Image {VkImage image{};VkDeviceMemory memory{};VkImageView view{};};
     struct Eye {
@@ -41,7 +42,7 @@ private:
         bool initialized=false;
     };
     struct Slot {VkCommandBuffer command{};VkFence fence{};bool timed=false;};
-    bool makeImage(VkFormat format,VkImageUsageFlags usage,VkImageAspectFlags aspect,Image &image);
+    bool makeImage(VkFormat format,VkImageUsageFlags usage,VkImageAspectFlags aspect,Image &image,bool compact=false);
     VkImageView makeView(VkImage image,VkFormat format,VkImageAspectFlags aspect);
     VkRenderPass makePass(VkFormat format,bool load,bool confidence=false);
     VkPipeline makePipeline(VkRenderPass pass,const uint32_t *fragment,size_t bytes,bool alpha,unsigned attachments=1);
@@ -73,6 +74,7 @@ private:
     uint64_t m_resetReasons[6]{},m_invalid=0;
     TaaQuality m_quality=TaaQuality::Full;
     bool m_fastCopy=false,m_copyDepth=false,m_depthInitialized=false,m_failed=false;
+    bool m_preciseBarriers=false,m_compactHistory=false;
 };
 }
 #endif

@@ -451,4 +451,6 @@
     <string name="quest_taa_fast_transfers">نقل Lite (تجريبي)</string>
     <string name="quest_taa_fast_transfers_desc">مسار بديل لنقل العمق والألوان مع TAA Lite. قد يقلل وقت GPU. أعد تشغيل اللعبة والمشغّل بالكامل بعد التغيير.</string>
     <string name="quest_taa_quality_full">Full</string>
+    <string name="quest_gpu_bundle">توفير GPU (تجريبي)</string>
+    <string name="quest_gpu_bundle_desc">يقلل ذاكرة سجل Lite وعمل مسح ونسخ HUD ويضبط اعتماديات GPU. يتطلب السجل المصغر نقل Lite. أعد تشغيل اللعبة والمشغل بعد التغيير.</string>
 </resources>

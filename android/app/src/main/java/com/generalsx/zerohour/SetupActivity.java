@@ -202,6 +202,9 @@ public class SetupActivity extends Activity {
         return getQuestTaaMode(ctx) != 0;
     }
     // GeneralsX @performance Codex 16/10/2026 One default-off Lite transfer bundle with the original path retained.
+    static boolean getQuestGpuBundle(android.content.Context ctx) {
+        return ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("quest_gpu_bundle", false);
+    }
     static boolean getQuestTaaFastTransfers(android.content.Context ctx) {
         return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getBoolean("quest_taa_fast_transfers", false);
@@ -1857,6 +1860,12 @@ public class SetupActivity extends Activity {
                 getQuestTaaFastTransfers(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .edit().putBoolean("quest_taa_fast_transfers", index == 1).apply());
             UiKit.supporting(taaTransfers, getString(R.string.quest_taa_fast_transfers_desc));
+            LinearLayout gpuBundle = UiKit.card(root);
+            UiKit.sectionHeader(gpuBundle, R.drawable.ic_gzh_display, getString(R.string.quest_gpu_bundle), false);
+            UiKit.segmented(gpuBundle, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
+                getQuestGpuBundle(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit().putBoolean("quest_gpu_bundle", index == 1).apply());
+            UiKit.supporting(gpuBundle, getString(R.string.quest_gpu_bundle_desc));
             LinearLayout shadowCoverage = UiKit.card(root);
             UiKit.sectionHeader(shadowCoverage, R.drawable.ic_gzh_display, getString(R.string.quest_shadow_coverage), false);
             UiKit.segmented(shadowCoverage, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
