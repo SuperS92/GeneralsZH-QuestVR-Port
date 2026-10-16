@@ -417,7 +417,11 @@ void W3DDisplay::drawQuestXRStereo(W3DView *view)
 			if (boundDepth != nullptr) boundDepth->Release();
 		}
 		if (WW3D::Begin_Render(true, true, Vector3(0.03f, 0.06f, 0.12f)) == WW3D_ERROR_OK) {
-			m_questXRCamera->Apply();
+            m_questXRCamera->Apply();
+            if(QuestXR_VisibilityMaskRequested()) {
+                DX8Wrapper::Apply_Render_State_Changes();
+                QuestXR_ApplyVisibilityMask(DX8Wrapper::_Get_D3D_Device8(),eye);
+            }
             QuestXR::TaaCamera taaCamera;
             if (QuestXR_TaaRequested()) {
                 DX8Wrapper::Apply_Render_State_Changes();

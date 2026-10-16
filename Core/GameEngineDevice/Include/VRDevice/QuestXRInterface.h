@@ -82,6 +82,8 @@ extern "C" bool QuestXR_ShouldRenderFrame();
 extern "C" IDirect3DSurface8 *QuestXR_GetMenuDepthSurface(IDirect3DDevice8 *device);
 extern "C" bool QuestXR_GetEyeView(std::uint32_t eye, QuestXREyeView *view);
 extern "C" IDirect3DSurface8 *QuestXR_GetEyeSurface(std::uint32_t eye);
+extern "C" bool QuestXR_ApplyVisibilityMask(IDirect3DDevice8 *device,std::uint32_t eye);
+extern "C" bool QuestXR_VisibilityMaskRequested();
 extern "C" bool QuestXR_ResolveEyeSurface(IDirect3DDevice8 *device, std::uint32_t eye);
 extern "C" IDirect3DSurface8 *QuestXR_GetDepthSurface();
 extern "C" void QuestXR_MarkEyeRenderingComplete();

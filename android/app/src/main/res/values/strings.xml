@@ -460,4 +460,6 @@
     <string name="quest_taa_quality_full">Full</string>
     <string name="quest_gpu_bundle">GPU savings (experimental)</string>
     <string name="quest_gpu_bundle_desc">Reduces Lite history storage, adjusts GPU dependencies and limits HUD clear/copy work. Compact history also requires Lite transfers. Fully restart the game and launcher after changes.</string>
+    <string name="quest_visibility_mask">Hidden-area mask (experimental)</string>
+    <string name="quest_visibility_mask_desc">Skips some world pixels hidden by the headset optics. Supports temporal AA Off or Lite. Unsupported masks retain normal rendering. Fully restart the game and launcher after changes.</string>
 </resources>

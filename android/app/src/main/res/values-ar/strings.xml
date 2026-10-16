@@ -453,4 +453,6 @@
     <string name="quest_taa_quality_full">Full</string>
     <string name="quest_gpu_bundle">توفير GPU (تجريبي)</string>
     <string name="quest_gpu_bundle_desc">يقلل ذاكرة سجل Lite وعمل مسح ونسخ HUD ويضبط اعتماديات GPU. يتطلب السجل المصغر نقل Lite. أعد تشغيل اللعبة والمشغل بعد التغيير.</string>
+    <string name="quest_visibility_mask">قناع المنطقة المخفية (تجريبي)</string>
+    <string name="quest_visibility_mask_desc">يتخطى بعض بكسلات العالم المخفية بعدسات النظارة. يدعم AA الزمني إيقاف أو Lite. عند عدم دعم القناع يستمر العرض العادي. أعد تشغيل اللعبة والمشغل بعد التغيير.</string>
 </resources>

@@ -453,4 +453,6 @@
     <string name="quest_taa_quality_full">Full</string>
     <string name="quest_gpu_bundle">Економія GPU (експериментально)</string>
     <string name="quest_gpu_bundle_desc">Зменшує історію Lite, уточнює залежності GPU та скорочує очищення і копіювання HUD. Компактна історія потребує перенесення Lite. Після змін перезапустіть гру й лаунчер.</string>
+    <string name="quest_visibility_mask">Маска прихованої області (експериментально)</string>
+    <string name="quest_visibility_mask_desc">Пропускає частину пікселів світу, прихованих оптикою шолома. Підтримує часове AA Вимк. або Lite. Без придатної маски залишається звичайне відображення. Після змін перезапустіть гру й лаунчер.</string>
 </resources>

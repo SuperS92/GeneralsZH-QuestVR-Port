@@ -453,4 +453,6 @@
     <string name="quest_taa_quality_full">Full</string>
     <string name="quest_gpu_bundle">GPU ekonomija (eksperimentalno)</string>
     <string name="quest_gpu_bundle_desc">Umenša historiju Lite, upravja GPU zavisimosti i ograničaje čiščenje i kopiranje HUD. Mala historija potrěbuje prenos Lite. Po izměnah ponovno zapustite igru i zapuskač.</string>
+    <string name="quest_visibility_mask">Maska skrytoj oblasti (eksperimentalno)</string>
+    <string name="quest_visibility_mask_desc">Preskakuje něktore piksele světa skryte optikoju šlema. Podpora vremennogo AA: izključeno ili Lite. Bez prikladnoj masky ostaje obyčno izobraženje. Po izměnah ponovno zapustite igru i zapuskač.</string>
 </resources>

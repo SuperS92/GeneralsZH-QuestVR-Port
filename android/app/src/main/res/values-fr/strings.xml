@@ -453,4 +453,6 @@
     <string name="quest_taa_quality_full">Full</string>
     <string name="quest_gpu_bundle">Économie GPU (expérimental)</string>
     <string name="quest_gpu_bundle_desc">Réduit l’historique Lite, ajuste les dépendances GPU et limite l’effacement et la copie du HUD. L’historique compact nécessite les transferts Lite. Redémarrez le jeu et le lanceur après modification.</string>
+    <string name="quest_visibility_mask">Masque de zone cachée (expérimental)</string>
+    <string name="quest_visibility_mask_desc">Évite certains pixels masqués par les lentilles. Compatible avec l’AA temporel désactivé ou Lite. Sans masque adapté, conserve le rendu normal. Redémarrez le jeu et le lanceur après modification.</string>
 </resources>

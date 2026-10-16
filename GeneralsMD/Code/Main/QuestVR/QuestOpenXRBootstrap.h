@@ -17,6 +17,7 @@
 #include "QuestTemporalAA.h"
 #include "VRDevice/QuestHudTransfer.h"
 #include "QuestEyeCapture.h"
+#include "VRDevice/QuestVisibilityMask.h"
 
 #include <cstdint>
 #include <array>
@@ -70,6 +71,8 @@ public:
     bool captureTaaCamera(::IDirect3DDevice8 *device, unsigned eye, TaaCamera &camera) const;
     bool applyTaa(::IDirect3DDevice8 *device, unsigned eye, const TaaCamera &camera);
     bool createTaaDepthSurface(::IDirect3DDevice8 *device);
+    bool applyVisibilityMask(::IDirect3DDevice8 *device,unsigned eye);
+    bool wantsVisibilityMask() const { return m_visibilityEnabled&&!m_visibilityFailed; }
 	::IDirect3DSurface8 *getDepthSurface() const { return m_depthSurface; }
 	void markEyeRenderingComplete() { m_eyeRenderingComplete = true; }
 	::IDirect3DSurface8 *getMenuSurface() const { return m_menuSurface; }
@@ -164,7 +167,12 @@ private:
 	PFN_xrDestroyPassthroughLayerFB m_destroyPassthroughLayer = nullptr;
 	PFN_xrPassthroughLayerResumeFB m_resumePassthroughLayer = nullptr;
 	PFN_xrPassthroughLayerPauseFB m_pausePassthroughLayer = nullptr;
-	bool m_fixedFrontend = false;
+    bool m_visibilityEnabled=false,m_visibilityFailed=false;
+    PFN_xrGetVisibilityMaskKHR m_getVisibilityMask=nullptr;
+    uint64_t m_visibilityGeneration=1;
+    std::array<MaskCache,2> m_visibilityMasks{};
+    std::array<uint64_t,2> m_visibilityApplied{};
+    bool m_fixedFrontend = false;
 	bool m_frontendAnchorValid = false;
 	XrPosef m_frontendAnchor{};
 	int64_t m_menuButtonDownNs = 0;

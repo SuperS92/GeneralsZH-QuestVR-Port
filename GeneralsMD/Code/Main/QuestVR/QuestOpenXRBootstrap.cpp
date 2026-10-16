@@ -58,6 +58,10 @@ bool fastTaaTransfersRequested() {
     const char *value=std::getenv("GX_QUEST_TAA_FAST_TRANSFERS");
     return value&&std::strcmp(value,"1")==0&&QuestXR_TaaMode()==3&&QuestXR_TaaRequested();
 }
+bool visibilityMaskRequested() {
+    const char *value=std::getenv("GX_QUEST_VISIBILITY_MASK");
+    return value&&std::strcmp(value,"1")==0;
+}
 constexpr float kMenuDistanceMeters = 1.5f;
 constexpr float kMenuWidthMeters = 1.6f;
 constexpr float kHudDistanceMeters = 1.25f;
@@ -699,6 +703,75 @@ bool Bootstrap::discardCompletedEyeDepth(IDirect3DDevice8 *device, IDirect3DSurf
 
 // GeneralsX @feature Codex 16/10/2026 The filter consumes the original same-eye
 // world color/depth before the pointer, without another scene or EndScene call.
+// GeneralsX @performance Codex 16/10/2026 Consume only the runtime's hidden mesh.
+// A depth-only clear leaves all state, color, stencil and CPU visibility/update decisions intact.
+bool Bootstrap::applyVisibilityMask(IDirect3DDevice8 *device,unsigned eye) {
+    if(!visibilityMaskRequested()||!m_visibilityEnabled||m_visibilityFailed||!m_getVisibilityMask||!device
+        ||!m_frameActive||!m_shouldRender||!m_viewsValid||eye>=2||eye>=m_viewCount||m_msaaEyeSurface)return false;
+    if(QuestXR_TaaRequested()&&QuestXR_TaaMode()!=3) {
+        static bool logged=false;
+        if(!logged){logged=true;__android_log_print(ANDROID_LOG_INFO,kLogTag,"Quest visibility mask: active=0 reason=full_image_temporal_history; retaining original world");}
+        return false; // Full-image history is deliberately unchanged.
+    }
+    IDirect3DSurface8 *color=nullptr,*depth=nullptr;
+    const auto colorHr=device->GetRenderTarget(&color),depthHr=device->GetDepthStencilSurface(&depth);
+    D3DSURFACE_DESC desc{};D3DVIEWPORT8 viewport{};D3DMATRIX projection{};
+    const bool bound=SUCCEEDED(colorHr)&&SUCCEEDED(depthHr)&&color&&depth&&color==m_eyeSurfaces[eye]&&depth==m_depthSurface
+        &&SUCCEEDED(depth->GetDesc(&desc))&&desc.Format==D3DFMT_D24S8&&desc.MultiSampleType==D3DMULTISAMPLE_NONE
+        &&desc.Width==m_recommendedEyeWidth&&desc.Height==m_recommendedEyeHeight
+        &&SUCCEEDED(device->GetViewport(&viewport))&&viewport.X==0&&viewport.Y==0&&viewport.Width==desc.Width
+        &&viewport.Height==desc.Height&&viewport.MinZ==0&&viewport.MaxZ==1&&SUCCEEDED(device->GetTransform(D3DTS_PROJECTION,&projection));
+    if(color)color->Release();if(depth)depth->Release();
+    if(!bound) {
+        static bool logged[2]{};
+        if(!logged[eye]){logged[eye]=true;__android_log_print(ANDROID_LOG_WARN,kLogTag,"Quest visibility mask: active=0 eye=%u reason=eye_target_or_viewport",eye);}
+        return false;
+    }
+    const auto &view=m_views[eye];const MaskFov fov{view.fov.angleLeft,view.fov.angleRight,view.fov.angleUp,view.fov.angleDown};
+    float matrix[16]{};static_assert(sizeof matrix==sizeof projection,"D3D projection storage");std::memcpy(matrix,&projection,sizeof matrix);
+    if(!MaskProjectionMatches(matrix,fov)) {
+        static bool logged[2]{};
+        if(!logged[eye]){logged[eye]=true;__android_log_print(ANDROID_LOG_WARN,kLogTag,"Quest visibility mask: active=0 eye=%u reason=projection",eye);}
+        return false;
+    }
+    auto &cache=m_visibilityMasks[eye];
+    if(cache.generation!=m_visibilityGeneration||cache.fov.left!=fov.left||cache.fov.right!=fov.right||cache.fov.up!=fov.up||cache.fov.down!=fov.down) {
+        cache={};cache.generation=m_visibilityGeneration;cache.fov=fov;
+        XrVisibilityMaskKHR mask{XR_TYPE_VISIBILITY_MASK_KHR};
+        auto result=m_getVisibilityMask(m_session,XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,eye,XR_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH_KHR,&mask);
+        if(XR_SUCCEEDED(result)&&mask.vertexCountOutput>=3&&mask.vertexCountOutput<=8192&&mask.indexCountOutput
+            &&mask.indexCountOutput<=24576&&mask.indexCountOutput%3==0) {
+            std::vector<XrVector2f> vertices(mask.vertexCountOutput);std::vector<uint32_t> indices(mask.indexCountOutput);
+            mask.vertexCapacityInput=uint32_t(vertices.size());mask.vertices=vertices.data();
+            mask.indexCapacityInput=uint32_t(indices.size());mask.indices=indices.data();
+            result=m_getVisibilityMask(m_session,XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,eye,XR_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH_KHR,&mask);
+            if(XR_SUCCEEDED(result)&&mask.vertexCountOutput<=vertices.size()&&mask.indexCountOutput<=indices.size()) {
+                std::vector<MaskPoint> points;points.reserve(mask.vertexCountOutput);
+                for(unsigned i=0;i<mask.vertexCountOutput;++i)points.push_back({vertices[i].x,vertices[i].y});
+                indices.resize(mask.indexCountOutput);
+                cache.plan=PlanVisibilityMask(points,indices,fov,desc.Width,desc.Height);
+            }
+        }
+        __android_log_print(ANDROID_LOG_INFO,kLogTag,
+            "Quest visibility plan: eye=%u result=%d vertices=%u indices=%u valid=%d rects=%zu hidden_pixels=%llu guard=%u protected_center=70x70",
+            eye,int(result),mask.vertexCountOutput,mask.indexCountOutput,cache.plan.valid,cache.plan.rectangles.size(),(unsigned long long)cache.plan.pixels,kMaskGuard);
+    }
+    if(!cache.plan.valid||cache.plan.rectangles.empty())return false;
+    std::array<D3DRECT,kMaskMaxRects> rectangles{};
+    for(size_t i=0;i<cache.plan.rectangles.size();++i) {
+        const auto &r=cache.plan.rectangles[i];rectangles[i]={r.left,r.top,r.right,r.bottom};
+    }
+    const auto clear=device->Clear(DWORD(cache.plan.rectangles.size()),rectangles.data(),D3DCLEAR_ZBUFFER,0,0.0f,0);
+    if(FAILED(clear)) {
+        m_visibilityFailed=true;
+        __android_log_print(ANDROID_LOG_WARN,kLogTag,"Quest visibility mask unavailable: depth clear failed; retaining original world");
+        return false;
+    }
+    if(++m_visibilityApplied[eye]%120==1&&PerformanceMetricsRequested())
+        __android_log_print(ANDROID_LOG_INFO,kLogTag,"Quest visibility mask: active=1 eye=%u applied=%llu rects=%zu hidden_pixels=%llu (depth only; GPU benefit unmeasured)",
+            eye,(unsigned long long)m_visibilityApplied[eye],cache.plan.rectangles.size(),(unsigned long long)cache.plan.pixels);
+    return true;
+}
 bool Bootstrap::captureTaaCamera(IDirect3DDevice8 *device, unsigned eye, TaaCamera &camera) const
 {
     camera = {};
@@ -1302,7 +1375,14 @@ bool Bootstrap::pollEvents()
 				static_cast<int>(change->referenceSpaceType),
 				static_cast<long long>(change->changeTime));
 		}
-		if (event.type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED) {
+        if(event.type==XR_TYPE_EVENT_DATA_VISIBILITY_MASK_CHANGED_KHR&&m_visibilityEnabled) {
+            const auto *change=reinterpret_cast<const XrEventDataVisibilityMaskChangedKHR *>(&event);
+            if(change->session==m_session&&change->viewConfigurationType==XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO) {
+                ++m_visibilityGeneration;
+                if(QuestXR_TaaMode()==3)m_temporalAA.invalidate();
+            }
+        }
+        if (event.type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED) {
 			const auto *state = reinterpret_cast<const XrEventDataSessionStateChanged *>(&event);
 			if (state->session == m_session) {
 				m_sessionState = state->state;
@@ -2573,8 +2653,10 @@ void Bootstrap::detachGraphics()
 	m_localSpace = XR_NULL_HANDLE;
 	m_gameSpace = XR_NULL_HANDLE;
 	m_viewSpace = XR_NULL_HANDLE;
-	m_session = XR_NULL_HANDLE;
-	m_colorSwapchain = XR_NULL_HANDLE;
+    m_visibilityMasks={};m_visibilityApplied={};++m_visibilityGeneration;
+    m_visibilityFailed=false;m_visibilityEnabled=false;m_getVisibilityMask=nullptr;
+    m_session = XR_NULL_HANDLE;
+    m_colorSwapchain = XR_NULL_HANDLE;
 	m_menuSwapchain = XR_NULL_HANDLE;
 	m_actionSet = XR_NULL_HANDLE;
 	m_aimPoseAction = XR_NULL_HANDLE;
@@ -2718,7 +2800,10 @@ bool Bootstrap::createInstance()
 		enabledExtensions.push_back(XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME);
 	}
 
-	m_passthroughEnabled = m_passthroughRequested && HasExtension(extensions, XR_FB_PASSTHROUGH_EXTENSION_NAME);
+    m_visibilityEnabled=visibilityMaskRequested()&&HasExtension(extensions,XR_KHR_VISIBILITY_MASK_EXTENSION_NAME);
+    if(m_visibilityEnabled)enabledExtensions.push_back(XR_KHR_VISIBILITY_MASK_EXTENSION_NAME);
+    __android_log_print(ANDROID_LOG_INFO,kLogTag,"Quest visibility mask: requested=%d extension=%d; original world on unsupported mask",visibilityMaskRequested(),m_visibilityEnabled);
+    m_passthroughEnabled = m_passthroughRequested && HasExtension(extensions, XR_FB_PASSTHROUGH_EXTENSION_NAME);
 	if (m_passthroughEnabled) enabledExtensions.push_back(XR_FB_PASSTHROUGH_EXTENSION_NAME);
 	if (m_passthroughRequested && !m_passthroughEnabled)
 		__android_log_print(ANDROID_LOG_WARN, kLogTag, "Passthrough extension unavailable; retain black background");
@@ -2754,12 +2839,27 @@ bool Bootstrap::createInstance()
 		m_instance = XR_NULL_HANDLE;
 		result = xrCreateInstance(&createInfo, &m_instance);
 	}
-	if (XR_FAILED(result)) {
-		logResult("xrCreateInstance", result);
+    if(XR_FAILED(result)&&m_visibilityEnabled) {
+        logResult("optional visibility mask instance; retry original extensions",result);
+        enabledExtensions.erase(std::remove_if(enabledExtensions.begin(),enabledExtensions.end(),
+            [](const char *name){return std::strcmp(name,XR_KHR_VISIBILITY_MASK_EXTENSION_NAME)==0;}),enabledExtensions.end());
+        createInfo.enabledExtensionCount=uint32_t(enabledExtensions.size());
+        m_visibilityEnabled=false;m_instance=XR_NULL_HANDLE;
+        result=xrCreateInstance(&createInfo,&m_instance);
+    }
+    if (XR_FAILED(result)) {
+        logResult("xrCreateInstance", result);
 		return false;
 	}
 
-	XrInstanceProperties properties{XR_TYPE_INSTANCE_PROPERTIES};
+    if(m_visibilityEnabled) {
+        const auto maskResult=xrGetInstanceProcAddr(m_instance,"xrGetVisibilityMaskKHR",reinterpret_cast<PFN_xrVoidFunction *>(&m_getVisibilityMask));
+        if(XR_FAILED(maskResult)||!m_getVisibilityMask) {
+            m_visibilityEnabled=false;m_getVisibilityMask=nullptr;
+            __android_log_print(ANDROID_LOG_WARN,kLogTag,"Quest visibility mask unavailable: function; retaining original world");
+        }
+    }
+    XrInstanceProperties properties{XR_TYPE_INSTANCE_PROPERTIES};
 	result = xrGetInstanceProperties(m_instance, &properties);
 	if (XR_SUCCEEDED(result)) {
 		__android_log_print(ANDROID_LOG_INFO, kLogTag, "Runtime: %s %u.%u.%u; vulkan_enable2=%s",
@@ -2949,6 +3049,12 @@ extern "C" IDirect3DSurface8 *QuestXR_GetEyeSurface(uint32_t eye)
 	return QuestXR::GetBootstrap().getEyeSurface(eye);
 }
 
+extern "C" bool QuestXR_ApplyVisibilityMask(IDirect3DDevice8 *device,uint32_t eye) {
+    return QuestXR::GetBootstrap().applyVisibilityMask(device,eye);
+}
+extern "C" bool QuestXR_VisibilityMaskRequested() {
+    return QuestXR::GetBootstrap().wantsVisibilityMask();
+}
 extern "C" bool QuestXR_ResolveEyeSurface(IDirect3DDevice8 *device, uint32_t eye)
 {
 	return QuestXR::GetBootstrap().resolveEyeSurface(device, eye);

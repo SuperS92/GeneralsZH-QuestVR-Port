@@ -453,4 +453,6 @@
     <string name="quest_taa_quality_full">Full</string>
     <string name="quest_gpu_bundle">Oszczędzanie GPU (eksperymentalne)</string>
     <string name="quest_gpu_bundle_desc">Zmniejsza historię Lite, dostosowuje zależności GPU i ogranicza czyszczenie oraz kopiowanie HUD. Mała historia wymaga transferów Lite. Po zmianie uruchom grę i launcher ponownie.</string>
+    <string name="quest_visibility_mask">Maska ukrytego obszaru (eksperymentalne)</string>
+    <string name="quest_visibility_mask_desc">Pomija część pikseli świata ukrytych przez optykę gogli. Obsługuje czasowe AA wyłączone lub Lite. Bez odpowiedniej maski zachowuje zwykły obraz. Po zmianach uruchom grę i launcher ponownie.</string>
 </resources>
