@@ -43,9 +43,6 @@
 #include "camera.h"
 #include "scene.h"
 #include "dx8wrapper.h"
-#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
-#include "VRDevice/QuestWorldCoverage.h"
-#endif
 #include "light.h"
 #include "d3dx8math.h"
 // GeneralsX @bugfix BenderAI 13/02/2026 Include d3dx8core.h for LPD3DXBUFFER
@@ -1948,9 +1945,6 @@ Matrix4x4 matProj, matView, matWW3D;
 			m_pDev->SetVertexShaderConstant(CV_WORLDVIEWPROJ_0, &matWorldViewProj, 4);	//pass transform matrix into shader
 
 			m_pDev->DrawIndexedPrimitive(D3DPT_TRIANGLESTRIP,0,m_numVertices,0,m_numIndices);
-#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
-        QuestXR::CaptureWorldCoverageDraw(m_pDev,D3DPT_TRIANGLESTRIP,0,m_numVertices,0,m_numIndices);
-#endif
 		}
 	}
 //	m_pDev->SetRenderState(D3DRS_FILLMODE,D3DFILL_SOLID);
@@ -2007,9 +2001,6 @@ Matrix4x4 matProj, matView, matWW3D;
 				DX8Wrapper::_Set_DX8_Transform(D3DTS_WORLD, matTemp);
 
 				m_pDev->DrawIndexedPrimitive(D3DPT_TRIANGLESTRIP,0,m_numVertices,0,m_numIndices);
-#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
-        QuestXR::CaptureWorldCoverageDraw(m_pDev,D3DPT_TRIANGLESTRIP,0,m_numVertices,0,m_numIndices);
-#endif
 			}
 		}
 		W3DShaderManager::resetShader(W3DShaderManager::ST_SHROUD_TEXTURE);
@@ -2454,19 +2445,11 @@ void WaterRenderObjClass::renderWaterMesh()
 		//write to the zbuffer.  Change to LESSEQUAL.
 		DX8Wrapper::_Get_D3D_Device8()->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
 		m_pDev->DrawIndexedPrimitive(D3DPT_TRIANGLESTRIP,0,mx*my,0,m_numIndices-2);
-#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
-        QuestXR::CaptureWorldCoverageDraw(m_pDev,D3DPT_TRIANGLESTRIP,0,mx*my,0,m_numIndices-2);
-#endif
 		DX8Wrapper::_Get_D3D_Device8()->SetRenderState(D3DRS_ZFUNC, D3DCMP_EQUAL);
 		W3DShaderManager::resetShader(W3DShaderManager::ST_SHROUD_TEXTURE);
 	}
 	else
-	{
 		m_pDev->DrawIndexedPrimitive(D3DPT_TRIANGLESTRIP,0,mx*my,0,m_numIndices-2);
-#if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
-        QuestXR::CaptureWorldCoverageDraw(m_pDev,D3DPT_TRIANGLESTRIP,0,mx*my,0,m_numIndices-2);
-#endif
-	}
 
 	Debug_Statistics::Record_DX8_Polys_And_Vertices(m_numIndices-2,mx*my,ShaderClass::_PresetOpaqueShader);
 

@@ -45,6 +45,7 @@ def main():
              'Patches/quest-dxvk-d3d8-bridge-exposure.patch',
              'Patches/quest-dxvk-completed-eye-depth.patch',
              'Patches/quest-dxvk-rgba-eye-targets.patch',
+             'Patches/quest-dxvk-world-coverage.patch',
              'android/app/src/quest/AndroidManifest.xml',
              'android/app/src/quest/res/values/strings.xml',
              'android/app/src/quest/res/values-de/strings.xml',

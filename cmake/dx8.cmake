@@ -646,7 +646,16 @@ elseif(ANDROID)
 
   # Quest graphics patches are layered after all current MYSOREZ patches.
   if(SAGE_USE_OPENXR)
-    foreach(QUEST_DXVK_PATCH quest-v044-dxvk-interop.patch quest-dxvk-d3d8-bridge-exposure.patch quest-dxvk-completed-eye-depth.patch quest-dxvk-rgba-eye-targets.patch)
+    # GeneralsX @build Codex 17/10/2026 The coverage extension deliberately extends
+    # the depth interop ABI. Verify the complete top layer before skipping its
+    # superseded predecessor's reverse check on a second profile/configure.
+    execute_process(COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply --reverse --check
+      "${CMAKE_SOURCE_DIR}/Patches/quest-dxvk-world-coverage.patch"
+      RESULT_VARIABLE QUEST_COVERAGE_LAYER_PRESENT ERROR_QUIET)
+    foreach(QUEST_DXVK_PATCH quest-v044-dxvk-interop.patch quest-dxvk-d3d8-bridge-exposure.patch quest-dxvk-completed-eye-depth.patch quest-dxvk-rgba-eye-targets.patch quest-dxvk-world-coverage.patch)
+      if(QUEST_DXVK_PATCH STREQUAL "quest-dxvk-completed-eye-depth.patch" AND QUEST_COVERAGE_LAYER_PRESENT EQUAL 0)
+        continue()
+      endif()
       set(QUEST_PATCH_WHITESPACE_ARGS)
       if(QUEST_DXVK_PATCH STREQUAL "quest-dxvk-completed-eye-depth.patch" OR QUEST_DXVK_PATCH STREQUAL "quest-dxvk-rgba-eye-targets.patch")
         set(QUEST_PATCH_WHITESPACE_ARGS --ignore-space-change)

@@ -20,6 +20,7 @@ inline CoverageDraw ClassifyCoverage(uint32_t blend,uint32_t src,uint32_t dst,ui
 }
 
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
+struct IUnknown;
 struct IDirect3DDevice8;
 struct IDirect3DTexture8;
 struct IDirect3DSurface8;
@@ -30,22 +31,20 @@ public:
     WorldCoverage(const WorldCoverage &)=delete;
     WorldCoverage &operator=(const WorldCoverage &)=delete;
     bool begin(IDirect3DDevice8 *,IDirect3DSurface8 *,IDirect3DSurface8 *,unsigned eye);
-    void capture(IDirect3DDevice8 *,uint32_t primitive,uint32_t first,uint32_t vertices,uint32_t start,uint32_t count,bool indexed=true);
     void finish(IDirect3DDevice8 *,bool presenting);
     void resetFrame();
     void destroy();
     bool stereoReady() const {return m_ready[0]&&m_ready[1];}
     bool available() const {return !m_failed;}
 private:
+    IUnknown *m_interop=nullptr;
     IDirect3DDevice8 *m_device=nullptr;
     IDirect3DTexture8 *m_texture=nullptr;
     IDirect3DSurface8 *m_mask=nullptr,*m_eye=nullptr,*m_depth=nullptr;
-    uint32_t m_width=0,m_height=0,m_eyeIndex=2,m_frames=0,m_replays=0;
+    uint32_t m_width=0,m_height=0,m_eyeIndex=2,m_frames=0;
     bool m_ready[2]{},m_valid=false,m_failed=false;
 };
-// Called only after a real native GPU draw, never by world/update traversal.
-void CaptureWorldCoverageDraw(IDirect3DDevice8 *,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t);
-void CaptureWorldCoveragePrimitive(IDirect3DDevice8 *,uint32_t,uint32_t,uint32_t);
+// Completed-eye finalization only; original draws write coverage in DXVK.
 void FinishWorldCoverage(IDirect3DDevice8 *,bool presenting);
 }
 #endif

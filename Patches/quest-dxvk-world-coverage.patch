@@ -1,0 +1,290 @@
+--- a/src/d3d8/d3d8_device.cpp
++++ b/src/d3d8/d3d8_device.cpp
+@@ -1229,7 +1229,7 @@
+       m_token++;
+       auto stateBlockIterPair = m_stateBlocks.emplace(std::piecewise_construct,
+                                                       std::forward_as_tuple(m_token),
+-                                                      std::forward_as_tuple(this, Type, pStateBlock9.ref()));
++                                                      std::forward_as_tuple(this, Type, std::move(pStateBlock9)));
+       *pToken = m_token;
+
+       // D3D8 state blocks automatically capture state on creation.
+--- a/src/d3d9/d3d9_spec_constants.h
++++ b/src/d3d9/d3d9_spec_constants.h
+@@ -32,6 +32,9 @@
+
+     SpecClipPlaneCount,     // 3 bits for 6 clip planes       | Bits : 3
+
++#ifdef SAGE_USE_OPENXR
++    SpecQuestCoverage,      // 0 disabled, 1 solid, 2 material alpha
++#endif
+     SpecConstantCount,
+   };
+
+@@ -48,7 +51,11 @@
+   struct D3D9SpecializationInfo {
+     static constexpr uint32_t MaxSpecDwords = 6;
+
++#ifdef SAGE_USE_OPENXR
++    static constexpr uint32_t MaxUBODwords  = 6;
++#else
+     static constexpr uint32_t MaxUBODwords  = 5;
++#endif
+     static constexpr size_t UBOSize = MaxUBODwords * sizeof(uint32_t);
+
+     static constexpr std::array<BitfieldPosition, SpecConstantCount> Layout{{
+@@ -72,6 +79,9 @@
+       { 4, 16, 16 }, // Fetch4
+
+       { 5, 0, 3 },   // ClipPlaneCount
++#ifdef SAGE_USE_OPENXR
++      { 5, 3, 2 },   // Quest independent coverage output
++#endif
+     }};
+
+     template <D3D9SpecConstantId Id, typename T>
+@@ -159,4 +169,16 @@
+     std::array<uint32_t, MaxNumSpecConstants + 1> m_specConstantIds = {};
+   };
+
+-}
+\ No newline at end of file
++#ifdef SAGE_USE_OPENXR
++  // GeneralsX @feature Codex 17/10/2026 Coverage accompanies the original fragment after alpha test.
++  inline void EmitQuestCoverage(SpirvModule& module, D3D9ShaderSpecConstantManager& spec,
++      uint32_t ubo, uint32_t color, uint32_t output) {
++    const uint32_t f=module.defFloatType(32), v=module.defVectorType(f,4), component=3;
++    const uint32_t mode=spec.get(module,ubo,SpecQuestCoverage);
++    const uint32_t solid=module.opIEqual(module.defBoolType(),mode,module.constu32(1));
++    const uint32_t alpha=module.opSelect(f,solid,module.constf32(1.0f),module.opCompositeExtract(f,color,1,&component));
++    const uint32_t values[4]={alpha,alpha,alpha,alpha};
++    module.opStore(output,module.opCompositeConstruct(v,4,values));
++  }
++#endif
++}
+--- a/src/d3d9/d3d9_fixed_function.cpp
++++ b/src/d3d9/d3d9_fixed_function.cpp
+@@ -2226,6 +2226,13 @@
+     m_module.opStore(m_ps.out.COLOR, current);
+
+     alphaTestPS();
++#ifdef SAGE_USE_OPENXR
++    // Location three is unused by the D3D8 fixed-function world renderer.
++    const uint32_t coverage=m_module.newVar(m_module.defPointerType(m_vec4Type,spv::StorageClassOutput),spv::StorageClassOutput);
++    m_module.decorateLocation(coverage,3);m_outputMask|=8;
++
++    EmitQuestCoverage(m_module,m_spec,m_specUbo,current,coverage);
++#endif
+   }
+
+   void D3D9FFShaderCompiler::setupPS() {
+--- a/src/dxso/dxso_compiler.cpp
++++ b/src/dxso/dxso_compiler.cpp
+@@ -3768,6 +3768,13 @@
+     // everything has already gone to the right place!
+
+     this->emitPsProcessing();
++#ifdef SAGE_USE_OPENXR
++    // D3D8 supports PS1.x; reject reserved MRT collisions in the device contract.
++    DxsoRegister coverageReg;coverageReg.id={DxsoRegisterType::ColorOut,3};
++    auto coverage=this->emitGetOperandPtr(coverageReg);
++    const auto color=this->emitValueLoad(m_ps.oColor[0]);
++    EmitQuestCoverage(m_module,m_spec,m_specUbo,color.id,coverage.id);
++#endif
+     this->emitOutputDepthClamp();
+     this->emitFunctionEnd();
+   }
+--- a/src/d3d9/d3d9_interfaces.h
++++ b/src/d3d9/d3d9_interfaces.h
+@@ -255,6 +255,11 @@
+   virtual HRESULT STDMETHODCALLTYPE DiscardCompletedEyeDepth(
+           ID3D9VkInteropTexture* pTexture) = 0;
+ };
++MIDL_INTERFACE("33b37f02-b8dc-4966-b80e-6a49e22fb628")
++ID3D9VkInteropDeviceQuestCoverage : public ID3D9VkInteropDeviceQuest {
++  virtual HRESULT STDMETHODCALLTYPE BeginWorldCoverage(ID3D9VkInteropTexture* eye, ID3D9VkInteropTexture* mask) = 0;
++  virtual HRESULT STDMETHODCALLTYPE EndWorldCoverage() = 0;
++};
+ #endif
+
+ /**
+@@ -292,6 +297,7 @@
+
+ #ifndef _MSC_VER
+ #ifdef SAGE_USE_OPENXR
++__CRT_UUID_DECL(ID3D9VkInteropDeviceQuestCoverage, 0x33b37f02,0xb8dc,0x4966,0xb8,0x0e,0x6a,0x49,0xe2,0x2f,0xb6,0x28);
+ __CRT_UUID_DECL(ID3D9VkInteropDeviceQuest, 0x7a643eb1,0x922e,0x4876,0x9a,0x90,0x69,0xa3,0xc8,0x84,0x29,0x76);
+ #endif
+ __CRT_UUID_DECL(ID3D9VkInteropInterface,   0x3461a81b,0xce41,0x485b,0xb6,0xb5,0xfc,0xf0,0x8b,0xa6,0xa6,0xbd);
+--- a/src/d3d9/d3d9_interop.h
++++ b/src/d3d9/d3d9_interop.h
+@@ -77,7 +77,7 @@
+   };
+
+ #ifdef SAGE_USE_OPENXR
+-  class D3D9VkInteropDevice final : public ID3D9VkInteropDeviceQuest {
++  class D3D9VkInteropDevice final : public ID3D9VkInteropDeviceQuestCoverage {
+ #else
+   class D3D9VkInteropDevice final : public ID3D9VkInteropDevice {
+ #endif
+@@ -129,6 +129,8 @@
+
+ #ifdef SAGE_USE_OPENXR
+     HRESULT STDMETHODCALLTYPE DiscardCompletedEyeDepth(ID3D9VkInteropTexture* pTexture);
++    HRESULT STDMETHODCALLTYPE BeginWorldCoverage(ID3D9VkInteropTexture* eye, ID3D9VkInteropTexture* mask);
++    HRESULT STDMETHODCALLTYPE EndWorldCoverage();
+ #endif
+
+     HRESULT STDMETHODCALLTYPE CreateImage(
+--- a/src/d3d9/d3d9_device.cpp
++++ b/src/d3d9/d3d9_device.cpp
+@@ -1,4 +1,7 @@
+ #include "d3d9_device.h"
++#ifdef SAGE_USE_OPENXR
++#include "d3d9_quest_coverage.h"
++#endif
+
+ #include "d3d9_annotation.h"
+ #include "d3d9_common_texture.h"
+@@ -239,6 +242,9 @@
+     }
+
+ #ifdef SAGE_USE_OPENXR
++    if (riid == __uuidof(ID3D9VkInteropDeviceQuestCoverage)) {
++      *ppvObject = ref(&m_d3d9Interop);return S_OK;
++    }
+     if (riid == __uuidof(ID3D9VkInteropDeviceQuest)) {
+       *ppvObject = ref(&m_d3d9Interop);
+       return S_OK;
+@@ -6730,6 +6736,11 @@
+         m_state.renderTargets[i]->GetRenderTargetLayout(m_hazardLayout) };
+     }
+
++#ifdef SAGE_USE_OPENXR
++    if (m_questCoverageView && m_state.renderTargets[0] != nullptr
++        && m_state.renderTargets[0]->GetCommonTexture()->GetImage()==m_questCoverageEye)
++      attachments.color[3]={m_questCoverageView,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
++#endif
+     if (dsvBound) {
+       const bool depthWrite = m_state.renderStates[D3DRS_ZWRITEENABLE];
+
+@@ -6886,6 +6897,10 @@
+       cMode       = mode,
+       cWriteMasks = extraWriteMasks,
+       cAlphaMasks = m_alphaSwizzleRTs
++#ifdef SAGE_USE_OPENXR
++      ,cQuestMode = m_questCoverageMode
++      ,cQuestActive = bool(m_questCoverageView)
++#endif
+     ](DxvkContext* ctx) {
+       for (uint32_t i = 0; i < 4; i++) {
+         DxvkBlendMode mode = cMode;
+@@ -6913,6 +6928,15 @@
+         mode.alphaSrcFactor = NormalizeFactor(mode.alphaSrcFactor);
+         mode.alphaDstFactor = NormalizeFactor(mode.alphaDstFactor);
+
++#ifdef SAGE_USE_OPENXR
++        if(i==3 && cQuestActive && cQuestMode) {
++          mode.enableBlending=true;
++          mode.colorSrcFactor=mode.alphaSrcFactor=VK_BLEND_FACTOR_ONE;
++          mode.colorDstFactor=mode.alphaDstFactor=VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
++          mode.colorBlendOp=mode.alphaBlendOp=VK_BLEND_OP_ADD;
++          mode.writeMask=VK_COLOR_COMPONENT_R_BIT|VK_COLOR_COMPONENT_G_BIT|VK_COLOR_COMPONENT_B_BIT|VK_COLOR_COMPONENT_A_BIT;
++        } else if(i==3 && cQuestActive) mode.writeMask=0;
++#endif
+         ctx->setBlendMode(i, mode);
+       }
+     });
+@@ -7286,7 +7310,22 @@
+       FlushBuffer(ibo);
+
+     UpdateFog();
+-
++#ifdef SAGE_USE_OPENXR
++    uint32_t coverageMode=0;
++    if(m_questCoverageView && m_state.renderTargets[0]!=nullptr
++        && m_state.renderTargets[0]->GetCommonTexture()->GetImage()==m_questCoverageEye) {
++      const auto& rs=m_state.renderStates;
++      const auto policy=QuestCoveragePolicy(rs[D3DRS_ALPHABLENDENABLE],rs[D3DRS_SRCBLEND],
++          rs[D3DRS_DESTBLEND],rs[D3DRS_BLENDOP],rs[D3DRS_COLORWRITEENABLE]);
++      if(policy==3) m_questCoverageFailed=true;
++      else if(!m_questCoverageFailed) coverageMode=policy;
++    }
++    if(coverageMode!=m_questCoverageMode) {
++      m_questCoverageMode=coverageMode;m_flags.set(D3D9DeviceFlag::DirtyBlendState);
++    }
++    if(m_specInfo.set<SpecQuestCoverage>(coverageMode))
++      m_flags.set(D3D9DeviceFlag::DirtySpecializationEntries);
++#endif
+     if (unlikely(m_flags.test(D3D9DeviceFlag::DirtyFramebuffer)))
+       BindFramebuffer();
+
+--- a/src/d3d9/d3d9_device.h
++++ b/src/d3d9/d3d9_device.h
+@@ -1611,6 +1611,12 @@
+     lru_list<D3D9CommonTexture*>    m_mappedTextures;
+ #endif
+
++#ifdef SAGE_USE_OPENXR
++    Rc<DxvkImage> m_questCoverageEye;
++    Rc<DxvkImageView> m_questCoverageView;
++    uint32_t m_questCoverageMode=0;
++    bool m_questCoverageFailed=false;
++#endif
+     // m_state should be declared last (i.e. freed first), because it
+     // references objects that can call back into the device when freed.
+     Direct3DState9                  m_state;
+--- /dev/null
++++ b/src/d3d9/d3d9_quest_coverage.h
+@@ -0,0 +1,16 @@
++#pragma once
++#include <cstdint>
++namespace dxvk {
++// GeneralsX @feature Codex 17/10/2026 0 skip, 1 solid, 2 alpha-over, 3 unsupported.
++inline uint32_t QuestCoveragePolicy(uint32_t blend,uint32_t src,uint32_t dst,uint32_t op,uint32_t mask) {
++  if(!(mask&7))return 0;
++  if((mask&7)!=7)return 3;
++  if(!blend)return 1;
++  if(op!=1)return 3;
++  if((src==2||src==5)&&dst==1)return 1;
++  if((src==2||src==5)&&dst==6)return 2;
++  if((src==1&&dst==2)||((src==2||src==5)&&dst==2)||(src==1&&dst==3)||(src==9&&dst==1))return 0;
++  if(src==7&&(dst==8||dst==2))return 1;
++  return 3;
++}
++}
+--- a/src/d3d9/d3d9_interop.cpp
++++ b/src/d3d9/d3d9_interop.cpp
+@@ -249,6 +249,32 @@
+   }
+ #endif
+
++#ifdef SAGE_USE_OPENXR
++  HRESULT STDMETHODCALLTYPE D3D9VkInteropDevice::BeginWorldCoverage(ID3D9VkInteropTexture* eye, ID3D9VkInteropTexture* mask) {
++    D3D9DeviceLock lock=m_device->LockDevice();
++    if(!eye||!mask||m_device->m_questCoverageView||!m_device->m_flags.test(D3D9DeviceFlag::InScene)
++        ||m_device->m_state.renderTargets[0]==nullptr||m_device->m_state.renderTargets[3]!=nullptr)return D3DERR_INVALIDCALL;
++    auto e=static_cast<D3D9VkInteropTexture*>(eye)->GetCommonTexture();
++    auto m=static_cast<D3D9VkInteropTexture*>(mask)->GetCommonTexture();
++    if(e!=m_device->m_state.renderTargets[0]->GetCommonTexture()||e==m
++        ||m->Desc()->Format!=D3D9Format::A8R8G8B8||m->Desc()->Width!=e->Desc()->Width||m->Desc()->Height!=e->Desc()->Height
++        ||m->Desc()->MultiSample!=D3DMULTISAMPLE_NONE||e->Desc()->MultiSample!=D3DMULTISAMPLE_NONE
++        ||m->Desc()->MipLevels!=1||m->Desc()->ArraySize!=1||!(m->Desc()->Usage&D3DUSAGE_RENDERTARGET))return D3DERR_INVALIDCALL;
++    m_device->m_questCoverageEye=e->GetImage();
++    m_device->m_questCoverageView=m->CreateView(0,0,VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,false);
++    m_device->m_questCoverageFailed=false;
++    m_device->m_flags.set(D3D9DeviceFlag::DirtyFramebuffer,D3D9DeviceFlag::DirtyBlendState);
++    return m_device->m_questCoverageView?D3D_OK:D3DERR_INVALIDCALL;
++  }
++  HRESULT STDMETHODCALLTYPE D3D9VkInteropDevice::EndWorldCoverage() {
++    D3D9DeviceLock lock=m_device->LockDevice();
++    const bool ok=m_device->m_questCoverageView&&!m_device->m_questCoverageFailed;
++    m_device->m_questCoverageView=nullptr;m_device->m_questCoverageEye=nullptr;m_device->m_questCoverageMode=0;
++    m_device->m_flags.set(D3D9DeviceFlag::DirtyFramebuffer,D3D9DeviceFlag::DirtyBlendState);
++    if(m_device->m_specInfo.set<SpecQuestCoverage>(0))m_device->m_flags.set(D3D9DeviceFlag::DirtySpecializationEntries);
++    return ok?D3D_OK:D3DERR_INVALIDCALL;
++  }
++#endif
+   void STDMETHODCALLTYPE D3D9VkInteropDevice::FlushRenderingCommands() {
+     m_device->Flush();
+     m_device->SynchronizeCsThread(DxvkCsThread::SynchronizeAll);

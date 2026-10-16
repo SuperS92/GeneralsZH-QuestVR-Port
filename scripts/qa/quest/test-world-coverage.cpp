@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "coverage-stubs.h"
 #include "VRDevice/QuestWorldCoverage.h"
+#include "VRDevice/QuestWorldCoverageInterop.h"
+#include "d3d9_quest_coverage.h"
 #include <array>
 #include <cassert>
 #include <cmath>
@@ -18,6 +20,7 @@ struct Surface:StubDirect3DSurface8 {
     Surface(){desc.Width=width;desc.Height=height;desc.Format=D3DFMT_A8R8G8B8;desc.MultiSampleType=D3DMULTISAMPLE_NONE;}
     ULONG STDMETHODCALLTYPE AddRef()override{return ++refs;}
     ULONG STDMETHODCALLTYPE Release()override{assert(refs);return --refs;}
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID,void **p)override{AddRef();*p=static_cast<IDirect3DSurface8*>(this);return S_OK;}
     HRESULT STDMETHODCALLTYPE GetDesc(D3DSURFACE_DESC *p)override{*p=desc;return S_OK;}
 };
 struct Texture:StubDirect3DTexture8 {
@@ -36,7 +39,35 @@ struct State {
         &&stream==o.stream&&viewport.X==o.viewport.X&&viewport.Y==o.viewport.Y&&viewport.Width==o.viewport.Width
         &&viewport.Height==o.viewport.Height&&viewport.MinZ==o.viewport.MinZ&&viewport.MaxZ==o.viewport.MaxZ;}
 };
+struct Interop:QuestXR::WorldCoverageInterop {
+ Surface *eye=nullptr,*mask=nullptr;unsigned refs=1,begins=0,ends=0;bool failed=false,reject=false;
+ ULONG STDMETHODCALLTYPE AddRef()override{return ++refs;}
+ ULONG STDMETHODCALLTYPE Release()override{assert(refs);return --refs;}
+ HRESULT STDMETHODCALLTYPE QueryInterface(REFIID,void**p)override{AddRef();*p=static_cast<QuestXR::WorldCoverageInterop*>(this);return S_OK;}
+ void STDMETHODCALLTYPE GetVulkanHandles(void*,void*,void*)override{}
+ void STDMETHODCALLTYPE GetSubmissionQueue(void*,void*,void*)override{}
+ void STDMETHODCALLTYPE TransitionTextureLayout(void*,const void*,int,int)override{}
+ void STDMETHODCALLTYPE FlushRenderingCommands()override{}
+ void STDMETHODCALLTYPE LockSubmissionQueue()override{}
+ void STDMETHODCALLTYPE ReleaseSubmissionQueue()override{}
+ void STDMETHODCALLTYPE LockDevice()override{}
+ void STDMETHODCALLTYPE UnlockDevice()override{}
+ bool STDMETHODCALLTYPE WaitForResource(void*,DWORD)override{return true;}
+ HRESULT STDMETHODCALLTYPE CreateImage(const void*,void**)override{return E_NOTIMPL;}
+ HRESULT STDMETHODCALLTYPE DiscardCompletedEyeDepth(void*)override{return E_NOTIMPL;}
+ HRESULT STDMETHODCALLTYPE BeginWorldCoverage(void*e,void*m)override{
+  if(reject||eye||!e||!m)return E_FAIL;++begins;eye=static_cast<Surface*>(static_cast<IDirect3DSurface8*>(e));
+  mask=static_cast<Surface*>(static_cast<IDirect3DSurface8*>(m));failed=false;return S_OK;
+ }
+ HRESULT STDMETHODCALLTYPE EndWorldCoverage()override{++ends;bool ok=eye&&!failed;eye=mask=nullptr;return ok?S_OK:E_FAIL;}
+ void fragment(unsigned pixel,unsigned policy,float alpha){
+  if(policy==3){failed=true;return;}if(!policy||failed)return;
+  const float a=policy==1?1:alpha;mask->rgba[pixel][3]=q(a+mask->rgba[pixel][3]*(1-a));
+ }
+};
 struct Device:StubDirect3DDevice8 {
+    Interop interop;
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID,void**p)override{interop.AddRef();*p=static_cast<QuestXR::WorldCoverageInterop*>(&interop);return S_OK;}
     State state;Surface eyes[2],depth,other;Surface *target=&eyes[0],*z=&depth;
     std::array<float,pixels> depths{},fragment{};std::array<unsigned,pixels> stencil{};
     std::vector<std::unique_ptr<Texture>> textures;std::map<DWORD,State> blocks;
@@ -99,69 +130,63 @@ struct Device:StubDirect3DDevice8 {
 };
 void rgbSame(const std::array<Pixel,pixels> &a,const std::array<Pixel,pixels> &b){for(unsigned i=0;i<pixels;++i)for(unsigned c=0;c<3;++c)assert(a[i][c]==b[i][c]);}
 }
+
 int main(){
-    unsigned cases=0;
-    for(unsigned trial=0;trial<64;++trial){
-        Device d;QuestXR::WorldCoverage coverage;
-        for(unsigned eye=0;eye<2;++eye){
-            d.target=&d.eyes[eye];const auto original=d.target->rgba;const auto depth=d.depths;const auto stencil=d.stencil;
-            const State state=d.state;assert(coverage.begin(&d,d.target,&d.depth,eye));assert(d.state==state);++cases;
-            std::array<float,pixels> expected{};
-            for(unsigned layer=0;layer<3;++layer){
-                for(unsigned i=0;i<pixels;++i){d.fragment[i]=q(float((trial*17+i*29+eye*31+layer*47)%256)/255);
-                    if(depth[i]>=.5f)expected[i]=q(d.fragment[i]+expected[i]*(1-d.fragment[i]));}
-                QuestXR::CaptureWorldCoverageDraw(&d,D3DPT_TRIANGLELIST,0,4,0,2);
-                assert(d.state==state&&d.target==&d.eyes[eye]&&d.z==&d.depth&&d.depths==depth&&d.stencil==stencil);
-                assert(d.target->rgba==original);++cases;
-            }
-            // An offscreen water reflection must not contaminate or invalidate eye coverage.
-            d.target=&d.other;d.state.rs[D3DRS_SRCBLEND]=14;
-            QuestXR::CaptureWorldCoverageDraw(&d,D3DPT_TRIANGLESTRIP,0,4,0,2);d.target=&d.eyes[eye];d.state=state;
-            QuestXR::FinishWorldCoverage(&d,false);assert(d.state==state);rgbSame(d.target->rgba,original);
-            for(unsigned i=0;i<pixels;++i)assert(std::fabs(d.target->rgba[i][3]-(depth[i]<1?1:expected[i]))<1e-6);
-            assert(d.depths==depth&&d.stencil==stencil);assert(coverage.stereoReady()==(eye==1));++cases;
-        }coverage.destroy();assert(d.blocks.empty());++cases;
+ unsigned cases=0;
+ // Exercise production begin/finish repeatedly: a single reusable mask, no per-object replay.
+ for(unsigned trial=0;trial<128;++trial){
+  Device d;QuestXR::WorldCoverage coverage;
+  for(unsigned frame=0;frame<8;++frame){
+   coverage.resetFrame();
+   for(unsigned eye=0;eye<2;++eye){
+    d.target=&d.eyes[eye];const auto original=d.target->rgba;const auto depth=d.depths;const auto stencil=d.stencil;
+    const State state=d.state;assert(coverage.begin(&d,d.target,&d.depth,eye));assert(d.state==state&&d.blocks.empty());
+    std::array<float,pixels> expected{};
+    for(unsigned layer=0;layer<4;++layer)for(unsigned i=0;i<pixels;++i){
+     const float alpha=q(float((trial*17+i*29+eye*31+layer*47)%256)/255);
+     const unsigned mode=(i+layer)%3;
+     if(depth[i]>=.5f){d.interop.fragment(i,mode,alpha);if(mode)expected[i]=q((mode==1?1:alpha)+expected[i]*(1-(mode==1?1:alpha)));}
     }
-    for(unsigned kind=0;kind<8;++kind){
-        Device d;QuestXR::WorldCoverage c;const auto original=d.target->rgba;assert(c.begin(&d,d.target,&d.depth,0));
-        if(kind==0){d.state.rs[D3DRS_SRCBLEND]=D3DBLEND_ONE;d.state.rs[D3DRS_DESTBLEND]=D3DBLEND_ONE;}
-        if(kind==1){d.state.rs[D3DRS_SRCBLEND]=D3DBLEND_DESTALPHA;d.state.rs[D3DRS_DESTBLEND]=D3DBLEND_INVDESTALPHA;}
-        if(kind==2){d.state.rs[D3DRS_ZWRITEENABLE]=1;d.state.rs[D3DRS_ALPHABLENDENABLE]=0;}
-        if(kind==3){d.state.rs[D3DRS_SRCBLEND]=14;}
-        if(kind==4){d.state.rs[D3DRS_STENCILENABLE]=1;d.state.rs[D3DRS_STENCILPASS]=D3DSTENCILOP_INCR;}
-        if(kind==5){d.state.rs[D3DRS_COLORWRITEENABLE]=0;}
-        if(kind==7){d.state.rs[D3DRS_SRCBLEND]=D3DBLEND_ONE;d.state.rs[D3DRS_DESTBLEND]=D3DBLEND_ZERO;}
-        const State state=d.state;
-        if(kind==6)QuestXR::CaptureWorldCoveragePrimitive(&d,D3DPT_POINTLIST,0,4);
-        else QuestXR::CaptureWorldCoverageDraw(&d,D3DPT_TRIANGLELIST,0,4,0,2);
-        assert(d.state==state&&d.target->rgba==original);QuestXR::FinishWorldCoverage(&d,false);assert(d.state==state);rgbSame(d.target->rgba,original);
-        if(kind==3||kind==4)assert(d.target->rgba==original);
-        else for(unsigned i=0;i<pixels;++i){
-            const float expected=d.depths[i]<1?1:(kind==1||kind==7)?1:kind==6?q(d.fragment[i]):0;
-            assert(std::fabs(d.target->rgba[i][3]-expected)<1e-6);
-        }c.destroy();++cases;
-    }
-    for(unsigned fault=0;fault<3;++fault){
-        Device d;QuestXR::WorldCoverage c;d.failTexture=fault==0;d.failBlock=fault==1;
-        if(fault==2)d.depth.desc.MultiSampleType=D3DMULTISAMPLE_2_SAMPLES;
-        const State state=d.state;const auto original=d.target->rgba;
-        assert(!c.begin(&d,d.target,&d.depth,0));assert(d.state==state&&d.target->rgba==original&&!c.stereoReady());c.destroy();++cases;
-    }
-    for(unsigned fault=0;fault<5;++fault){
-        Device d,other;QuestXR::WorldCoverage c;const auto original=d.target->rgba;const State state=d.state;
-        assert(c.begin(&d,d.target,&d.depth,0));d.failGet=fault==0;d.failNative=fault==1;d.failQuad=fault==2;
-        QuestXR::CaptureWorldCoverageDraw(&d,4,0,4,0,2);
-        QuestXR::FinishWorldCoverage(fault==4?&other:&d,fault==3);
-        assert(!c.stereoReady()&&!c.available()&&d.state==state);rgbSame(d.target->rgba,original);
-        c.resetFrame();d.failGet=d.failNative=d.failQuad=false;
-        const auto before=d.getters;assert(!c.begin(&d,d.target,&d.depth,0)&&before==d.getters);
-        c.destroy();assert(c.available()&&d.blocks.empty());++cases;
-    }
-    {Device d;const auto getters=d.getters;QuestXR::CaptureWorldCoverageDraw(&d,4,0,4,0,2);QuestXR::FinishWorldCoverage(&d,false);
-        assert(d.getters==getters&&!d.indexed&&!d.quads);++cases;}
-    for(unsigned src=1;src<18;++src)for(unsigned dst=1;dst<18;++dst){
-        assert(QuestXR::ClassifyCoverage(0,src,dst,1,7)==QuestXR::CoverageDraw::Skip);
-        assert(QuestXR::ClassifyCoverage(1,src,dst,1,0)==QuestXR::CoverageDraw::Skip);cases+=2;
-    }
-    std::printf("PASS %u coverage cases: production D3D8 calls, raster model, alpha/depth/stencil isolation, state restoration and fallbacks\n",cases);
+    QuestXR::FinishWorldCoverage(&d,false);assert(d.state==state&&d.target==&d.eyes[eye]);
+    rgbSame(d.target->rgba,original);for(unsigned i=0;i<pixels;++i)assert(std::fabs(d.target->rgba[i][3]-expected[i])<1e-6);
+    assert(d.depths==depth&&d.stencil==stencil&&d.blocks.empty()&&d.indexed==0);
+    assert(coverage.stereoReady()==(eye==1));++cases;
+   }
+   assert(d.textures.size()==1&&d.interop.begins==d.interop.ends);++cases;
+  }
+  coverage.destroy();assert(d.interop.refs==1&&d.textures[0]->refs==0&&d.eyes[0].refs==1&&d.depth.refs==1);++cases;
+ }
+ for(unsigned failure=0;failure<7;++failure){
+  Device d,other;QuestXR::WorldCoverage c;
+  if(failure==0)d.failTexture=true;
+  if(failure==1)d.interop.reject=true;
+  const auto original=d.target->rgba;const State state=d.state;
+  const bool began=c.begin(&d,d.target,&d.depth,0);
+  if(failure<2)assert(!began);else{
+   assert(began);
+   if(failure==2)d.interop.failed=true;
+   if(failure==3)d.failBlock=true;
+   if(failure==4)d.failQuad=true;
+   QuestXR::FinishWorldCoverage(failure==6?&other:&d,failure==5);
+  }
+  assert(!c.available()&&!c.stereoReady()&&d.state==state);rgbSame(d.target->rgba,original);
+  c.resetFrame();assert(!c.begin(&d,d.target,&d.depth,0));c.destroy();assert(c.available()&&d.interop.refs==1);++cases;
+ }
+ {Device d;QuestXR::WorldCoverage c;const State state=d.state;assert(c.begin(&d,d.target,&d.depth,0));c.resetFrame();
+  assert(d.interop.eye==nullptr&&d.state==state);c.destroy();++cases;}
+ {Device d;const auto getters=d.getters;QuestXR::FinishWorldCoverage(&d,false);assert(d.getters==getters&&!d.quads);++cases;}
+ // Execute the policy header extracted from the actual versioned backend patch.
+ for(unsigned src=1;src<18;++src)for(unsigned dst=1;dst<18;++dst)for(unsigned op=1;op<=5;++op)for(unsigned mask=0;mask<16;++mask){
+  const auto actual=dxvk::QuestCoveragePolicy(1,src,dst,op,mask);
+  unsigned expected=3;
+  if(!(mask&7))expected=0;
+  else if((mask&7)!=7)expected=3;
+  else if(op!=1)expected=3;
+  else if((src==2||src==5)&&dst==1)expected=1;
+  else if((src==2||src==5)&&dst==6)expected=2;
+  else if((src==1&&dst==2)||((src==2||src==5)&&dst==2)||(src==1&&dst==3)||(src==9&&dst==1))expected=0;
+  else if(src==7&&(dst==8||dst==2))expected=1;
+  assert(actual==expected);++cases;
+ }
+ std::printf("PASS %u coverage cases: production begin/finalize, independent blend policy, bounded mask reuse, exact state/RGB/depth/stencil and failure cleanup; software model, not GPU evidence\n",cases);
 }

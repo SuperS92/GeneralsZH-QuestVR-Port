@@ -1,44 +1,51 @@
 # Gameplay passthrough
 
-The optional graphics switch shows the physical room around the battlefield.
-It defaults to Off and is independent of passthrough behind flat screens. Restart
-the game and launcher after changing it. The Android version and APK updater stay
-unchanged for this local trial.
+The independent graphics switch defaults to Off. Restart game and launcher after
+changing it. Passthrough behind flat screens remains a separate setting. Keep the
+Android version and existing APK updater unchanged during local trials.
 
-Reuse the existing OpenXR passthrough feature. Composition order is room underlay,
-premultiplied stereo projection, then the existing opaque HUD/menu quad. Retain
-the runtime's OPAQUE environment blend mode. Flat campaign sequences continue
-through the existing screen path. Eye/controller transforms and simulation do not
-change.
+## Renderer path
 
-Do not use blue color keying or reinterpret the legacy destination alpha used by
-water. A private, shared-eye-size RGBA texture accumulates alpha coverage from
-extra GPU submissions of eligible transparent draws. Geometry/update traversal is
-not repeated. Reuse the same vertices, textures, alpha test and depth test;
-disable depth/stencil writes and write only mask alpha. Opaque geometry needs no
-replay: at completed-eye time, union the mask with pixels whose depth is below
-the original clear value. Only then replace the eye's final alpha, after legacy
-water/material consumers and sorted draws, before completed-eye depth discard.
+The OpenXR room underlay sits below a premultiplied stereo projection and the
+original opaque HUD quad. Retain OPAQUE environment blend mode. Menus, campaigns,
+controller transforms, simulation and network transport are unchanged.
 
-Standard transparency covers black smoke as well as colored particles. Additive
-RGB remains additive over the room without an opaque particle rectangle. Treat
-destination-alpha water surfaces as solid coverage while keeping their original
-RGB draw intact. Include filtered tree fringes and direct water/snow submissions;
-ignore offscreen reflection targets. Explicitly save/restore the pinned D3D8
-adapter's forwarded D3D9 separate-alpha states in addition to its ALL state block.
-The fullscreen alpha union follows D3D8 pixel-center conventions.
+The former transparent-draw replay path caused severe overhead and exercised an
+ownership defect in DXVK D3D8 CreateStateBlock. Passing ref() into a temporary Com
+added two references while only one new owner was needed. Move the existing
+owner instead. The versioned Quest dependency patch includes the lifetime fix;
+do not edit generated dependency sources by hand.
 
-Both eye masks must finish before the projection is blended over the room. A
-missing capability or unsupported draw contract retains opaque presentation;
-coverage failure stays latched until graphics reattachment to prevent repeated
-room/background flicker. Capture the background decision once for the stereo
-pair. Off leaves original draw traversal, eye color and composition unchanged.
+The replacement writes independent coverage to color attachment three during the
+original fragment invocation. Both fixed-function and PS1.x shader generation
+emit coverage after the original alpha test. The existing material output zero,
+including destination alpha used by water, remains intact. Coverage has independent
+ONE / ONE_MINUS_SRC_ALPHA blending. Opaque geometry and destination-alpha water
+write solid coverage; ordinary transparency writes material alpha. Colorless
+shadow volumes, multiplicative shadow fills and additive-only light do not add
+opaque coverage. Original stencil/depth tests still govern fragment survival.
 
-Host tests execute the production D3D8 code against a stateful COM/raster fixture:
-coverage accumulation, alpha-only writes, RGB/depth/stencil preservation, state
-blocks and explicit separate-alpha restoration, eye isolation, water, additive
-light, offscreen targets and failure fallback. This is not GPU/headset evidence.
-Headset image quality, TAA silhouettes, distortion effects, water, performance and
-lifecycle remain test gates. The extra mask allocation and transparent draws have
-a cost; no FPS improvement is claimed. Multiplayer transport and logic source are
-unchanged; a later completed PC match remains a runtime gate.
+Use one persistent, eye-sized RGBA8 target shared sequentially between eyes.
+Clear it once per eye, append it only while the owned eye target is bound, detach
+before the final alpha-only copy, and retain original RGB/depth/stencil and D3D
+state. No geometry traversal, draw replay, render-target switching per transparent
+object, or per-object ALL-state capture occurs. Off does not query this bridge or
+allocate a mask. Unsupported blend contracts latch opaque fallback until graphics
+reattachment. Paired-eye completion is required before showing the room.
+
+## Validation limits
+
+Host fixtures exercise production begin/finalize, state and resource cleanup,
+mask reuse, the backend blend policy and COM ownership. They are software models;
+a separate host GPU test executes the production SPIR-V emitter and independent
+attachment blending with both specialization paths. It does not certify the full
+D3D8 game path or the Quest driver. Compile
+both native profiles from one source and bind the exact dependency patch hashes.
+Then measure real game memory over minutes and GPU/frame cost, including water,
+particles, cutout trees, TAA edges, HUD/pointer, both eyes, tilt and transitions.
+Passthrough has additional compositor/bandwidth cost; no FPS gain is promised.
+A later completed PC match remains a runtime gate before public promotion.
+
+Reference: the reviewed GLES XR implementation generates eye coverage in its
+fragment shaders rather than replaying transparent draws. This Vulkan adaptation
+preserves the current renderer and legacy material alpha.

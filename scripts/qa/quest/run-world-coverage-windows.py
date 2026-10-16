@@ -6,6 +6,11 @@ root=pathlib.Path(__file__).resolve().parents[3]
 p=argparse.ArgumentParser(description=__doc__);p.add_argument('--tools',required=True,type=pathlib.Path)
 tools=json.loads(p.parse_args().tools.read_text());compiler=pathlib.Path(tools['hostCxxRuntime'])
 work=root/'work/world-coverage-smoke';work.mkdir(exist_ok=True)
+# Extract the added pure policy header from the reviewed dependency patch.
+patch=(root/'Patches/quest-dxvk-world-coverage.patch').read_text()
+section=patch.split('+++ b/src/d3d9/d3d9_quest_coverage.h\n',1)[1].split('--- a/',1)[0]
+policy='\n'.join(line[1:] for line in section.splitlines() if line.startswith('+') and not line.startswith('+++'))+'\n'
+(work/'d3d9_quest_coverage.h').write_text(policy)
 header=(compiler.parent/'include/d3d8.h').read_text()
 generated=['// Generated test-only defaults from the installed SDK. Never linked into the app.','#pragma once','#include <d3d8.h>']
 for interface in ['IDirect3DDevice8','IDirect3DSurface8','IDirect3DTexture8']:
@@ -31,4 +36,14 @@ assert r.returncode==0
 report=dict(status='PRODUCTION_WORLD_COVERAGE_HOST_PASS',cases=int(re.search(r'PASS (\d+) coverage cases',r.stdout)[1]),
     scope='Production D3D8 code; stateful software raster/COM fixture, not Quest GPU evidence',
     headset='NOT_TESTED',gpuCost='NOT_MEASURED')
+(root/'work/evidence/world-coverage-host.json').write_text(json.dumps(report,indent=2)+'\n')
+
+# The COM holder is the real backend implementation, not the raster fixture's mock.
+probe=work/'ownership-smoke.exe'
+assert 'std::move(pStateBlock9)' in patch and 'pStateBlock9.ref()' in patch
+subprocess.run([str(compiler/'clang++.exe'),'-std=c++17','-O1','-static',
+ '-I'+str(root/'references/fbraz3-dxvk/src/util/com'),str(root/'scripts/qa/quest/test-stateblock-ownership.cpp'),'-o',str(probe)],check=True,env=env)
+subprocess.run([str(probe)],check=True)
+report['actualComOwnershipCases']=8192
+report['scope']='Production D3D8 lifecycle, backend policy and actual COM ownership; software raster model, not Quest GPU evidence'
 (root/'work/evidence/world-coverage-host.json').write_text(json.dumps(report,indent=2)+'\n')
