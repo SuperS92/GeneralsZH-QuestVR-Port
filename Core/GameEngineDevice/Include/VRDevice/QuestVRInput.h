@@ -26,6 +26,8 @@ struct QuestVRWorldTransform
 	float worldUnitsPerMeter;
 	float yawRadians;
 	float offset[3];
+	float comfortPitchRadians;
+	float comfortPivotMeters[3];
 };
 
 // Shared by the eye renderer and ray adapter so grabbed tabletop transforms

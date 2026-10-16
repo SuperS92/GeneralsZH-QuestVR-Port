@@ -455,4 +455,6 @@
     <string name="quest_gpu_bundle_desc">يقلل ذاكرة سجل Lite وعمل مسح ونسخ HUD ويضبط اعتماديات GPU. يتطلب السجل المصغر نقل Lite. أعد تشغيل اللعبة والمشغل بعد التغيير.</string>
     <string name="quest_visibility_mask">قناع المنطقة المخفية (تجريبي)</string>
     <string name="quest_visibility_mask_desc">يتخطى بعض بكسلات العالم المخفية بعدسات النظارة. يدعم AA الزمني إيقاف أو Lite. عند عدم دعم القناع يستمر العرض العادي. أعد تشغيل اللعبة والمشغل بعد التغيير.</string>
+    <string name="quest_tabletop_tilt">إمالة ساحة اللعب</string>
+    <string name="quest_tabletop_tilt_desc">اضغط زري الإمساك معًا وحرّك العصا اليمنى لأعلى أو لأسفل لإمالة الساحة بخطوات 15°. حرّكها لليسار لإعادة الضبط. أعد العصا للوسط بين الخطوات. تُحفظ الزاوية. في وضع الطاولة فقط.</string>
 </resources>

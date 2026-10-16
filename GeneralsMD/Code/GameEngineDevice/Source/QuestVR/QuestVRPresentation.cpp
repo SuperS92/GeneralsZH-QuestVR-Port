@@ -33,6 +33,7 @@
 #include "VRDevice/QuestDepthDiscard.h"
 #include "VRDevice/QuestTreeWind.h"
 #include "VRDevice/QuestVRInput.h"
+#include "VRDevice/QuestComfort.h"
 #include "VRDevice/QuestVRKeyboard.h"
 #include "VRDevice/QuestCampaign.h"
 #include <android/log.h>
@@ -341,10 +342,21 @@ void W3DDisplay::drawQuestXRStereo(W3DView *view)
 	const Real worldUnitsPerMeter = worldTransform.worldUnitsPerMeter;
 	Quaternion tabletopOrientation(0.0f, std::sin(worldTransform.yawRadians * 0.5f),
 		0.0f, std::cos(worldTransform.yawRadians * 0.5f));
+	// GeneralsX @feature Codex 16/10/2026 Rotate about one captured head center, never independently per eye.
+	if (worldTransform.comfortPitchRadians != 0.0f) {
+		const auto q = QuestComfort::Orientation(worldTransform.yawRadians, worldTransform.comfortPitchRadians);
+		tabletopOrientation = Quaternion(q.x, q.y, q.z, q.w);
+	}
 	Matrix3D tabletopTransform;
 	Build_Matrix3D(tabletopOrientation, tabletopTransform);
 	tabletopTransform.Set_Translation(Vector3(worldTransform.offset[0],
 		worldTransform.offset[1], worldTransform.offset[2]));
+	if (worldTransform.comfortPitchRadians != 0.0f) {
+		const auto translation = QuestComfort::Point({0,0,0}, worldUnitsPerMeter,
+			worldTransform.yawRadians, worldTransform.comfortPitchRadians,
+			worldTransform.comfortPivotMeters, worldTransform.offset);
+		tabletopTransform.Set_Translation(Vector3(translation.x, translation.y, translation.z));
+	}
     // GeneralsX @performance Codex 05/10/2026 A cache lives only across this explicit stereo pair.
     QuestXR::PerformanceFrameScope performanceFrame;
     QuestXR::TreeWindFrameScope windFrame;

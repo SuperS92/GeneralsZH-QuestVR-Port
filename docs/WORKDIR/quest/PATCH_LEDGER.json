@@ -107,7 +107,7 @@
     {
       "path": "GeneralsMD/Code/GameEngineDevice/Source/SDL3GameEngine.cpp",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Once per engine update XR frame boundary; UI pointer adapter",
+      "purpose": "Once per engine update XR frame boundary; UI pointer adapter; guarded flat-menu right-stick wheel repeats, no world mouse commands",
       "risk": "input/lifecycle",
       "owningTest": "native syntax; input math; sleep/wake hardware gate",
       "removalCondition": "Upstream provides equivalent optional platform support"
@@ -179,7 +179,7 @@
     {
       "path": "android/app/src/main/java/com/generalsx/zerohour/SetupActivity.java",
       "upstreamCommit": "576e2265bf271176028d1cef4f2b3fe8caa20b34",
-      "purpose": "Quest guards for private import/storage, driver choice and engine updates; show Quest PC-profile migration data action even without a newer package version; clear only ReplayCheck diagnostic markers on normal private Quest launches; default-off Off/Gentle/SMAA choice and old opt-in migration; merged default-on flat-screen preference and direct six-item Quest navigation; default-off front-end passthrough switch and separate local build label; default-off vehicle-track streaming and shared Online navigation; default-off Quest compact HUD transfer control; stable Off/Lite/Medium/Full temporal-filter choices with generic descriptions; default-off Lite transfer bundle preference/environment, ignored by other modes; optional GPU transfer/history/dependency trial preference and localized description; independent default-off runtime hidden-area mask trial preference/environment",
+      "purpose": "Quest guards for private import/storage, driver choice and engine updates; show Quest PC-profile migration data action even without a newer package version; clear only ReplayCheck diagnostic markers on normal private Quest launches; default-off Off/Gentle/SMAA choice and old opt-in migration; merged default-on flat-screen preference and direct six-item Quest navigation; default-off front-end passthrough switch and separate local build label; default-off vehicle-track streaming and shared Online navigation; default-off Quest compact HUD transfer control; stable Off/Lite/Medium/Full temporal-filter choices with generic descriptions; default-off Lite transfer bundle preference/environment, ignored by other modes; optional GPU transfer/history/dependency trial preference and localized description; independent default-off runtime hidden-area mask trial preference/environment; accepted Quest render defaults without trial switches and localized comfort gesture help",
       "risk": "Android app isolation",
       "owningTest": "Java compile and merged manifest; import/relaunch hardware gate; normal-play versus replay detailed trace lifecycle hardware gate; preference-ID preservation and all locale resource parity",
       "removalCondition": "Upstream provides equivalent optional platform support"

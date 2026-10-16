@@ -1370,6 +1370,9 @@ bool Bootstrap::pollEvents()
 		}
 		if (event.type == XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING) {
 			const auto *change = reinterpret_cast<const XrEventDataReferenceSpaceChangePending *>(&event);
+			if (change->session == m_session && change->referenceSpaceType == XR_REFERENCE_SPACE_TYPE_LOCAL) {
+				m_comfortSpaceChanges.push_back(change->changeTime);
+			}
 			__android_log_print(ANDROID_LOG_INFO, kLogTag,
 				"OpenXR reference-space change pending: type %d at %lld",
 				static_cast<int>(change->referenceSpaceType),
@@ -1666,6 +1669,7 @@ bool Bootstrap::recenterGameSpace()
 		xrDestroySpace(m_gameSpace);
 	}
 	m_gameSpace = replacement;
+	++m_comfortSpaceGeneration;
 	m_frontendAnchorValid = false;
 	__android_log_print(ANDROID_LOG_INFO, kLogTag, "OpenXR game space recentered");
     m_temporalAA.invalidate();
@@ -2064,6 +2068,11 @@ bool Bootstrap::beginFrame()
 	}
 	m_previousPredictedDisplayTime = frameState.predictedDisplayTime;
 	m_predictedDisplayTime = frameState.predictedDisplayTime;
+	// Keep the captured comfort pivot fixed until the new reference space takes effect.
+	for (auto it = m_comfortSpaceChanges.begin(); it != m_comfortSpaceChanges.end();) {
+		if (*it <= m_predictedDisplayTime) { ++m_comfortSpaceGeneration; it = m_comfortSpaceChanges.erase(it); }
+		else ++it;
+	}
 	m_viewsValid = false;
 	m_eyeRenderingComplete = false;
 	m_diagnosticCameras = {};
@@ -2684,6 +2693,8 @@ void Bootstrap::detachGraphics()
 	m_menuButtonDownNs = 0;
 	m_menuButtonLongFired = false;
 	m_predictedDisplayTime = 0;
+	++m_comfortSpaceGeneration;
+	m_comfortSpaceChanges.clear();
 	m_colorFormat = 0;
     m_eyeColorFormat = kLegacyEyeColorFormat;
 	m_sourceColorFormat = VK_FORMAT_UNDEFINED;
@@ -3032,6 +3043,11 @@ extern "C" IDirect3DSurface8 *QuestXR_GetMenuDepthSurface(IDirect3DDevice8 *devi
 extern "C" bool QuestXR_EndFrame()
 {
 	return QuestXR::GetBootstrap().endFrame();
+}
+
+extern "C" uint64_t QuestXR_GetComfortSpaceGeneration()
+{
+	return QuestXR::GetBootstrap().comfortSpaceGeneration();
 }
 
 extern "C" bool QuestXR_GetEyeView(uint32_t eye, QuestXREyeView *view)

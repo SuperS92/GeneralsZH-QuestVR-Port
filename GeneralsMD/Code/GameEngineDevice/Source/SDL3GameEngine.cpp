@@ -67,6 +67,7 @@
 #if defined(__ANDROID__) && defined(SAGE_USE_OPENXR)
 #include "VRDevice/QuestXRInterface.h"
 #include "VRDevice/QuestVRInput.h"
+#include "VRDevice/QuestComfort.h"
 #include "VRDevice/QuestVRKeyboard.h"
 #include "VRDevice/QuestCampaign.h"
 #endif
@@ -2346,6 +2347,7 @@ bool updateQuestUIPointer(SDL3Mouse *mouse, SDL_Window *window)
 	static bool leftHeld = false;
 	static bool rightHeld = false;
 	static bool wasPointing = false;
+	static QuestComfort::MenuScroll menuScroll;
 	static float lastX = 0.0f;
 	static float lastY = 0.0f;
 	QuestXRControllerState controller{};
@@ -2409,6 +2411,14 @@ bool updateQuestUIPointer(SDL3Mouse *mouse, SDL_Window *window)
 		lastY = static_cast<float>(height) * 0.5f;
 		sendSyntheticMouse(mouse, window, SDL_EVENT_MOUSE_MOTION, lastX, lastY);
 	}
+	// GeneralsX @bugfix Codex 16/10/2026 Restore right-stick wheel navigation on flat menus only.
+	// World commands still use native terrain picking; keyboard/radial ownership resets repeats.
+	const bool flatMenu = TheGameLogic == nullptr || !TheGameLogic->isInGame()
+		|| (TheShell != nullptr && TheShell->isShellActive())
+		|| (TheInGameUI != nullptr && TheInGameUI->isQuitMenuVisible());
+	const int wheel = menuScroll.Step(controller.stick[1], injectIntoLegacyUi && flatMenu
+		&& !leftHeld && !rightHeld, SDL_GetTicksNS());
+	if (wheel) sendSyntheticMouse(mouse, window, SDL_EVENT_MOUSE_WHEEL, lastX, lastY, 0, static_cast<float>(wheel));
 	wasPointing = injectIntoLegacyUi;
 	return textEntryClicked;
 }

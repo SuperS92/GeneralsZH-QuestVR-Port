@@ -14,6 +14,8 @@
 
 #include "VRDevice/QuestXRInterface.h"
 #include "VRDevice/QuestVRMath.h"
+#include "VRDevice/QuestComfort.h"
+#include <cstdlib>
 
 #include "Common/Debug.h"
 #include "Common/FramePacer.h"
@@ -154,6 +156,11 @@ QuestVRWorldTransform g_worldTransform = {
 QuestVRWorldTransform g_tabletopTransform = g_worldTransform;
 QuestVRViewMode g_viewMode = QUEST_VR_VIEW_TABLETOP;
 Bool g_viewPreferencesLoaded = FALSE;
+Real g_comfortDegrees = 0.0f;
+Bool g_comfortPivotValid = FALSE;
+std::uint64_t g_comfortSpaceGeneration = 0;
+float g_comfortPivot[3] = {};
+QuestComfort::TiltGesture g_comfortTiltGesture;
 Bool g_tabletopTransformDirty = FALSE;
 Bool g_wasInGame = FALSE;
 Bool g_followActive = FALSE;
@@ -188,6 +195,7 @@ void saveViewPreferences()
 	}
 	UserPreferences preferences;
 	preferences.load("QuestVR.ini");
+	preferences.setReal("TabletopTiltDegrees", QuestComfort::ClampDegrees(g_comfortDegrees));
 	preferences.setReal("TabletopScale",
 		QuestXRClampWorldScale(g_tabletopTransform.worldUnitsPerMeter));
 	if (!preferences.write()) {
@@ -211,6 +219,7 @@ void loadViewPreferences()
 	g_viewPreferencesLoaded = TRUE;
 	UserPreferences preferences;
 	preferences.load("QuestVR.ini");
+	g_comfortDegrees = QuestComfort::ClampDegrees(preferences.getReal("TabletopTiltDegrees", 0.0f));
 	g_tabletopTransform.worldUnitsPerMeter = QuestXRClampWorldScale(
 		preferences.getReal("TabletopScale", QUEST_XR_WORLD_UNITS_PER_METER));
 	g_tabletopTransform.yawRadians = 0.0f;
@@ -348,14 +357,6 @@ Vector3 controllerPosition(const QuestXRControllerState &controller)
 	return Vector3(controller.position[0], controller.position[1], controller.position[2]);
 }
 
-Vector3 rotateLocalYaw(const Vector3 &value, Real yaw)
-{
-	const Real cosine = std::cos(yaw);
-	const Real sine = std::sin(yaw);
-	return Vector3(cosine * value.X + sine * value.Z, value.Y,
-		-sine * value.X + cosine * value.Z);
-}
-
 Real horizontalLength(const Vector3 &value)
 {
 	return std::sqrt(value.X * value.X + value.Z * value.Z);
@@ -428,6 +429,48 @@ Bool updateTabletopGrab(const QuestXRControllerState &leftController,
 		g_tabletopTransformDirty = TRUE;
 	}
 	return TRUE;
+}
+
+// GeneralsX @feature Codex 16/10/2026 Deliberate two-grip stick gestures tilt only presentation.
+Bool updateComfortTilt(const QuestXRControllerState &left, const QuestXRControllerState &right, Bool allowed)
+{
+	const Bool enabled = allowed && g_viewMode == QUEST_VR_VIEW_TABLETOP
+		&& left.connected && right.connected && left.poseValid && right.poseValid
+		&& (left.buttons & QUEST_XR_BUTTON_GRIP) && (right.buttons & QUEST_XR_BUTTON_GRIP);
+	const int step = g_comfortTiltGesture.Step(right.stick[0], right.stick[1], enabled);
+	const Real next = step == 2 ? 0.0f : QuestComfort::ClampDegrees(g_comfortDegrees + step * 15.0f);
+	if (step && next != g_comfortDegrees) {
+		QuestVRWorldTransform previous{};
+		QuestVRInput_GetWorldTransform(&previous);
+		QuestXREyeView eyes[2]{};
+		if (QuestXR_GetEyeView(0, &eyes[0]) && QuestXR_GetEyeView(1, &eyes[1])) {
+			float center[3]{};
+			bool valid = true;
+			for (unsigned axis = 0; axis < 3; ++axis) {
+				center[axis] = (eyes[0].position[axis] + eyes[1].position[axis]) * 0.5f;
+				valid = valid && std::isfinite(center[axis]);
+			}
+			if (valid) {
+				// Preserve the current world-space head center even after room movement.
+				const QuestXRFloat3 head{center[0], center[1], center[2]};
+				const auto before = QuestComfort::Point(head, previous.worldUnitsPerMeter, previous.yawRadians,
+					previous.comfortPitchRadians, previous.comfortPivotMeters, previous.offset);
+				const auto after = QuestComfort::Point(head, previous.worldUnitsPerMeter, previous.yawRadians,
+					0.0f, center, previous.offset);
+				g_worldTransform.offset[0] += before.x - after.x;
+				g_worldTransform.offset[1] += before.y - after.y;
+				g_worldTransform.offset[2] += before.z - after.z;
+				for (unsigned axis = 0; axis < 3; ++axis) g_comfortPivot[axis] = center[axis];
+				g_comfortSpaceGeneration = QuestXR_GetComfortSpaceGeneration();
+				g_comfortPivotValid = TRUE;
+				g_comfortDegrees = next;
+				g_tabletopTransform = g_worldTransform;
+				saveViewPreferences();
+				__android_log_print(ANDROID_LOG_INFO, "GeneralsXR", "Quest comfort: tilt changed to %.0f degrees", next);
+			}
+		}
+	}
+	return g_comfortTiltGesture.active;
 }
 
 void ensurePointerScene()
@@ -513,13 +556,12 @@ Bool computeHandRay(const QuestXRControllerState &controller,
 	right.Normalize();
 	const Vector3 backward = -forward;
 
-	const Real worldUnitsPerMeter = g_worldTransform.worldUnitsPerMeter;
-	const Vector3 localPosition = rotateLocalYaw(Vector3(
-		controller.position[0] * worldUnitsPerMeter,
-		controller.position[1] * worldUnitsPerMeter,
-		controller.position[2] * worldUnitsPerMeter), g_worldTransform.yawRadians)
-		+ Vector3(g_worldTransform.offset[0], g_worldTransform.offset[1],
-			g_worldTransform.offset[2]);
+	QuestVRWorldTransform comfort{};
+	QuestVRInput_GetWorldTransform(&comfort);
+	const auto point = QuestComfort::Point({controller.position[0], controller.position[1], controller.position[2]},
+		comfort.worldUnitsPerMeter, comfort.yawRadians, comfort.comfortPitchRadians,
+		comfort.comfortPivotMeters, comfort.offset);
+	const Vector3 localPosition(point.x, point.y, point.z);
 	outOrigin = camera->Get_Position()
 		+ right * localPosition.X
 		+ worldUp * localPosition.Y
@@ -531,8 +573,8 @@ Bool computeHandRay(const QuestXRControllerState &controller,
 	const Real w = controller.orientation[3];
 	// OpenXR aim poses point along local -Z.
 	const QuestXRFloat3 aim = QuestXRRotateAim(x, y, z, w);
-	const Vector3 localDirection = rotateLocalYaw(Vector3(aim.x, aim.y, aim.z),
-		g_worldTransform.yawRadians);
+	const auto direction = QuestComfort::Rotate(aim, comfort.yawRadians, comfort.comfortPitchRadians);
+	const Vector3 localDirection(direction.x, direction.y, direction.z);
 	outDirection = right * localDirection.X
 		+ worldUp * localDirection.Y
 		+ backward * localDirection.Z;
@@ -572,8 +614,10 @@ Bool getHeadHorizontalBasis(Vector3 &outRight, Vector3 &outForward)
 	}
 	const QuestXRFloat3 aim = QuestXRRotateAim(head.orientation[0], head.orientation[1],
 		head.orientation[2], head.orientation[3]);
-	const Vector3 local = rotateLocalYaw(Vector3(aim.x, aim.y, aim.z),
-		g_worldTransform.yawRadians);
+	QuestVRWorldTransform comfort{};
+	QuestVRInput_GetWorldTransform(&comfort);
+	const auto direction = QuestComfort::Rotate(aim, comfort.yawRadians, comfort.comfortPitchRadians);
+	const Vector3 local(direction.x, direction.y, direction.z);
 	Vector3 gaze = cameraRight * local.X + up * local.Y - cameraForward * local.Z;
 	gaze.Z = 0.0f;
 	if (gaze.Length2() < 0.0001f) {
@@ -1602,6 +1646,7 @@ extern "C" void QuestVRInput_Update()
 			g_viewMode = QUEST_VR_VIEW_TABLETOP;
 			g_worldTransform = g_tabletopTransform;
 			g_wasInGame = FALSE;
+			g_comfortPivotValid = FALSE;
 			g_followActive = FALSE;
 			g_hudVisible = TRUE;
 			g_cameraStickAxis = QUEST_VR_CAMERA_STICK_NONE;
@@ -1618,6 +1663,7 @@ extern "C" void QuestVRInput_Update()
 	}
 	// GeneralsX @bugfix Codex 09/10/2026 Text entry consumes controls without pausing simulation.
 	if (QuestVRKeyboard::InputBlocked() || QuestCampaign::IsFlatSequence()) {
+		g_comfortTiltGesture = {};
 		g_tabletopGrab = {};
 		hidePointerVisuals();
 		return;
@@ -1663,8 +1709,10 @@ extern "C" void QuestVRInput_Update()
 	if (placementActive || recenterHeld) {
 		g_tabletopGrab = {};
 	}
-	const Bool tabletopGrabbed = !placementActive && !recenterHeld
-		&& updateTabletopGrab(leftController, rightController);
+	const Bool tilting = updateComfortTilt(leftController, rightController, !placementActive && !recenterHeld);
+	if (tilting) g_tabletopGrab = {};
+	const Bool tabletopGrabbed = tilting || (!placementActive && !recenterHeld
+		&& updateTabletopGrab(leftController, rightController));
 	if (!tabletopGrabbed) {
 		updateCamera(leftController, rightController);
 	}
@@ -1982,6 +2030,26 @@ void QuestVRInput_GetWorldTransform(QuestVRWorldTransform *transform)
 {
 	if (transform != nullptr) {
 		*transform = g_worldTransform;
+		transform->comfortPitchRadians = 0.0f;
+		if (g_viewMode != QUEST_VR_VIEW_TABLETOP || g_comfortDegrees == 0.0f) {
+			g_comfortPivotValid = FALSE;
+			return;
+		}
+		const auto generation = QuestXR_GetComfortSpaceGeneration();
+		if (!g_comfortPivotValid || generation != g_comfortSpaceGeneration) {
+			QuestXREyeView left{}, right{};
+			if (!QuestXR_GetEyeView(0, &left) || !QuestXR_GetEyeView(1, &right)) return;
+			for (unsigned axis = 0; axis < 3; ++axis) {
+				g_comfortPivot[axis] = (left.position[axis] + right.position[axis]) * 0.5f;
+				if (!std::isfinite(g_comfortPivot[axis])) return;
+			}
+			g_comfortSpaceGeneration = generation;
+			g_comfortPivotValid = TRUE;
+			__android_log_print(ANDROID_LOG_INFO, "GeneralsXR", "Quest comfort: tilt=%.0f degrees; shared stereo/ray pivot; origin=%llu",
+				g_comfortDegrees, static_cast<unsigned long long>(generation));
+		}
+		transform->comfortPitchRadians = -g_comfortDegrees * 0.017453292519943295f;
+		for (unsigned axis = 0; axis < 3; ++axis) transform->comfortPivotMeters[axis] = g_comfortPivot[axis];
 	}
 }
 

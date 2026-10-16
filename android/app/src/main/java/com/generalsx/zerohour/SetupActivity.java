@@ -168,26 +168,26 @@ public class SetupActivity extends Activity {
     // GeneralsX @performance Codex 05/10/2026 Independent default-off A/B options, local to this launcher.
     // GeneralsX @performance Codex 12/10/2026 Independent default-off track-buffer trial.
     static boolean getQuestTrackStreaming(android.content.Context ctx) {
-        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getBoolean("quest_track_streaming", false);
+        // Accepted Quest path; native format/mode/lifetime fallbacks remain active.
+        return BuildConfig.QUEST_VR;
     }
     // GeneralsX @performance Codex 13/10/2026 Compact HUD transfer trial defaults off.
     static boolean getQuestHudTransfer(android.content.Context ctx) {
-        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getBoolean("quest_hud_transfer", false);
+        // Accepted Quest path; native format/mode/lifetime fallbacks remain active.
+        return BuildConfig.QUEST_VR;
     }
     static boolean getQuestNeutralShroud(android.content.Context ctx) {
-        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getBoolean("quest_neutral_shroud", false);
+        // Accepted Quest path; native format/mode/lifetime fallbacks remain active.
+        return BuildConfig.QUEST_VR;
     }
     // GeneralsX @performance Codex 14/10/2026 Independent completed-eye depth lifetime trial.
     static boolean getQuestDepthDiscard(android.content.Context ctx) {
-        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getBoolean("quest_depth_discard", false);
+        // Accepted Quest path; native format/mode/lifetime fallbacks remain active.
+        return BuildConfig.QUEST_VR;
     }
     static boolean getQuestDirectColorCopy(android.content.Context ctx) {
-        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getBoolean("quest_direct_color_copy", false);
+        // Accepted Quest path; native format/mode/lifetime fallbacks remain active.
+        return BuildConfig.QUEST_VR;
     }
     // GeneralsX @performance Codex 15/10/2026 Independent local render trials.
     // GeneralsX @feature Codex 16/10/2026 Migrate the old On choice to Full, with Off on fresh installs.
@@ -203,21 +203,22 @@ public class SetupActivity extends Activity {
     }
     // GeneralsX @performance Codex 16/10/2026 One default-off Lite transfer bundle with the original path retained.
     static boolean getQuestVisibilityMask(android.content.Context ctx) {
-        return ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("quest_visibility_mask", false);
+        return false; // Retired: runtime supplied no usable mask in the device trial.
     }
     static boolean getQuestGpuBundle(android.content.Context ctx) {
-        return ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("quest_gpu_bundle", false);
+        // Accepted Quest path; native format/mode/lifetime fallbacks remain active.
+        return BuildConfig.QUEST_VR;
     }
     static boolean getQuestTaaFastTransfers(android.content.Context ctx) {
-        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getBoolean("quest_taa_fast_transfers", false);
+        // Accepted Quest path; native format/mode/lifetime fallbacks remain active.
+        return BuildConfig.QUEST_VR;
     }
     static boolean getQuestTransferBatch(android.content.Context ctx) {
         return false; // Retired after the hardware comparison.
     }
     static boolean getQuestShadowCoverage(android.content.Context ctx) {
-        return BuildConfig.QUEST_VR && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getBoolean("quest_shadow_coverage", false);
+        // Accepted Quest path; native format/mode/lifetime fallbacks remain active.
+        return BuildConfig.QUEST_VR;
     }
     static final String[] QUEST_PERF_KEYS = {"quest_perf_audio", "quest_perf_tracks", "quest_perf_terrain",
         "quest_perf_trees", "quest_perf_shadows", "quest_perf_smaa", "quest_perf_metrics", "quest_terrain_batching"};
@@ -227,8 +228,9 @@ public class SetupActivity extends Activity {
         // GeneralsX @performance Codex 09/10/2026 Accepted batching defaults On; metrics remain default Off.
         if (!BuildConfig.QUEST_VR) return false;
         if (index == 1 || index == 3) return true;
-        return (index == 6 || index == 7) && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getBoolean(QUEST_PERF_KEYS[index], index == 7);
+        if (index == 7) return true;
+        return index == 6 && ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean(QUEST_PERF_KEYS[index], false);
     }
     static int getQuestTextureFilter(android.content.Context ctx) {
         // GeneralsX @tweak Codex 09/10/2026 Accepted defaults ignore retired preferences.
@@ -601,6 +603,11 @@ public class SetupActivity extends Activity {
                 }
                 break;
             case TAB_INTERFACE:
+                if (BuildConfig.QUEST_VR) {
+                    LinearLayout comfort = UiKit.card(page);
+                    UiKit.sectionHeader(comfort, R.drawable.ic_gzh_sliders, getString(R.string.quest_tabletop_tilt), false);
+                    UiKit.supporting(comfort, getString(R.string.quest_tabletop_tilt_desc));
+                }
                 buildLanguageSection(page);
                 buildUiScaleSection(page);
                 buildInterfaceScaleSection(page);
@@ -1815,36 +1822,6 @@ public class SetupActivity extends Activity {
             passthrough.setChecked(getQuestFrontendPassthrough(this));
             passthrough.setOnCheckedChangeListener((button, checked) -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .edit().putBoolean("quest_frontend_passthrough", checked).apply());
-            LinearLayout trackStreaming = UiKit.card(root);
-            UiKit.sectionHeader(trackStreaming, R.drawable.ic_gzh_display, getString(R.string.quest_track_streaming), false);
-            UiKit.segmented(trackStreaming, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
-                getQuestTrackStreaming(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit().putBoolean("quest_track_streaming", index == 1).apply());
-            UiKit.supporting(trackStreaming, getString(R.string.quest_track_streaming_desc));
-            LinearLayout hudTransfer = UiKit.card(root);
-            UiKit.sectionHeader(hudTransfer, R.drawable.ic_gzh_display, getString(R.string.quest_hud_transfer), false);
-            UiKit.segmented(hudTransfer, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
-                getQuestHudTransfer(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit().putBoolean("quest_hud_transfer", index == 1).apply());
-            UiKit.supporting(hudTransfer, getString(R.string.quest_hud_transfer_desc));
-            LinearLayout neutralShroud = UiKit.card(root);
-            UiKit.sectionHeader(neutralShroud, R.drawable.ic_gzh_display, getString(R.string.quest_neutral_shroud), false);
-            UiKit.segmented(neutralShroud, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
-                getQuestNeutralShroud(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit().putBoolean("quest_neutral_shroud", index == 1).apply());
-            UiKit.supporting(neutralShroud, getString(R.string.quest_neutral_shroud_desc));
-            LinearLayout depthDiscard = UiKit.card(root);
-            UiKit.sectionHeader(depthDiscard, R.drawable.ic_gzh_display, getString(R.string.quest_depth_discard), false);
-            UiKit.segmented(depthDiscard, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
-                getQuestDepthDiscard(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit().putBoolean("quest_depth_discard", index == 1).apply());
-            UiKit.supporting(depthDiscard, getString(R.string.quest_depth_discard_desc));
-            LinearLayout directColor = UiKit.card(root);
-            UiKit.sectionHeader(directColor, R.drawable.ic_gzh_display, getString(R.string.quest_direct_color_copy), false);
-            UiKit.segmented(directColor, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
-                getQuestDirectColorCopy(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit().putBoolean("quest_direct_color_copy", index == 1).apply());
-            UiKit.supporting(directColor, getString(R.string.quest_direct_color_copy_desc));
             LinearLayout taaLite = UiKit.card(root);
             UiKit.sectionHeader(taaLite, R.drawable.ic_gzh_display, getString(R.string.quest_taa_lite), false);
             // GeneralsX @feature Codex 16/10/2026 Preserve stored IDs while placing the new Lite before Medium.
@@ -1857,36 +1834,12 @@ public class SetupActivity extends Activity {
                 index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .putInt("quest_taa_mode", taaModes[index]).putBoolean("quest_taa_lite", index != 0).apply());
             UiKit.supporting(taaLite, getString(R.string.quest_taa_lite_desc));
-            LinearLayout taaTransfers = UiKit.card(root);
-            UiKit.sectionHeader(taaTransfers, R.drawable.ic_gzh_display, getString(R.string.quest_taa_fast_transfers), false);
-            UiKit.segmented(taaTransfers, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
-                getQuestTaaFastTransfers(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit().putBoolean("quest_taa_fast_transfers", index == 1).apply());
-            UiKit.supporting(taaTransfers, getString(R.string.quest_taa_fast_transfers_desc));
-            LinearLayout gpuBundle = UiKit.card(root);
-            UiKit.sectionHeader(gpuBundle, R.drawable.ic_gzh_display, getString(R.string.quest_gpu_bundle), false);
-            UiKit.segmented(gpuBundle, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
-                getQuestGpuBundle(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit().putBoolean("quest_gpu_bundle", index == 1).apply());
-            UiKit.supporting(gpuBundle, getString(R.string.quest_gpu_bundle_desc));
-            LinearLayout hiddenArea = UiKit.card(root);
-            UiKit.sectionHeader(hiddenArea, R.drawable.ic_gzh_display, getString(R.string.quest_visibility_mask), false);
-            UiKit.segmented(hiddenArea, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
-                getQuestVisibilityMask(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit().putBoolean("quest_visibility_mask", index == 1).apply());
-            UiKit.supporting(hiddenArea, getString(R.string.quest_visibility_mask_desc));
-            LinearLayout shadowCoverage = UiKit.card(root);
-            UiKit.sectionHeader(shadowCoverage, R.drawable.ic_gzh_display, getString(R.string.quest_shadow_coverage), false);
-            UiKit.segmented(shadowCoverage, new String[]{getString(R.string.quest_perf_off), getString(R.string.quest_perf_on)},
-                getQuestShadowCoverage(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit().putBoolean("quest_shadow_coverage", index == 1).apply());
-            UiKit.supporting(shadowCoverage, getString(R.string.quest_shadow_coverage_desc));
             int[] titles = {R.string.quest_perf_audio, R.string.quest_perf_tracks, R.string.quest_perf_terrain,
                 R.string.quest_perf_trees, R.string.quest_perf_shadows, R.string.quest_perf_smaa, R.string.quest_perf_metrics, R.string.quest_terrain_batching};
             int[] descriptions = {R.string.quest_perf_audio_desc, R.string.quest_perf_tracks_desc, R.string.quest_perf_terrain_desc,
                 R.string.quest_perf_trees_desc, R.string.quest_perf_shadows_desc, R.string.quest_perf_smaa_desc, R.string.quest_perf_metrics_desc, R.string.quest_terrain_batching_desc};
             for (int i = 0; i < QUEST_PERF_KEYS.length; ++i) {
-                if (i != 6 && i != 7) continue; // Preserve legacy indices; batching remains independently selectable.
+                if (i != 6) continue; // Keep metrics selectable; accepted batching is automatic.
                 final int option = i;
                 LinearLayout trial = UiKit.card(root);
                 UiKit.sectionHeader(trial, R.drawable.ic_gzh_display, getString(titles[i]), false);

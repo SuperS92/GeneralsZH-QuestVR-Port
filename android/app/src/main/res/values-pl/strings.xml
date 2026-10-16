@@ -455,4 +455,6 @@
     <string name="quest_gpu_bundle_desc">Zmniejsza historię Lite, dostosowuje zależności GPU i ogranicza czyszczenie oraz kopiowanie HUD. Mała historia wymaga transferów Lite. Po zmianie uruchom grę i launcher ponownie.</string>
     <string name="quest_visibility_mask">Maska ukrytego obszaru (eksperymentalne)</string>
     <string name="quest_visibility_mask_desc">Pomija część pikseli świata ukrytych przez optykę gogli. Obsługuje czasowe AA wyłączone lub Lite. Bez odpowiedniej maski zachowuje zwykły obraz. Po zmianach uruchom grę i launcher ponownie.</string>
+    <string name="quest_tabletop_tilt">Nachylenie planszy</string>
+    <string name="quest_tabletop_tilt_desc">Przytrzymaj oba przyciski chwytu i wychyl prawy drążek w górę lub w dół, aby pochylić pole o 15°. Wychylenie w lewo resetuje kąt. Między krokami wróć drążkiem do środka. Kąt jest zapisywany. Tylko w trybie stołowym.</string>
 </resources>

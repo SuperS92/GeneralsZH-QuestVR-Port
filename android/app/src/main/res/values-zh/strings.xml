@@ -455,4 +455,6 @@
     <string name="quest_gpu_bundle_desc">减少 Lite 历史存储，调整 GPU 依赖并限制 HUD 清除和复制工作。紧凑历史还需要 Lite 传输。更改后请完全重启游戏和启动器。</string>
     <string name="quest_visibility_mask">隐藏区域遮罩（实验性）</string>
     <string name="quest_visibility_mask_desc">跳过头显光学系统遮挡的部分场景像素。支持时间抗锯齿关闭或 Lite。没有合适的遮罩时保留正常渲染。更改后请完全重启游戏和启动器。</string>
+    <string name="quest_tabletop_tilt">棋盘倾斜</string>
+    <string name="quest_tabletop_tilt_desc">按住两侧握持键，将右摇杆向上或向下拨动，每次倾斜战场15°。向左拨动可重置。每次操作后将摇杆回中。角度会保存。仅适用于桌面模式。</string>
 </resources>

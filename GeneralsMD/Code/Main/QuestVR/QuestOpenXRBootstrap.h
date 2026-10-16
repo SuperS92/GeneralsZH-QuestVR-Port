@@ -62,6 +62,7 @@ public:
 	void detachGraphics();
 	void shutdown();
 	bool getEyeView(uint32_t eye, ::QuestXREyeView &view) const;
+	uint64_t comfortSpaceGeneration() const { return m_comfortSpaceGeneration; }
 	void recordDiagnosticCamera(uint32_t eye, const QuestXRDiagnosticCamera &camera) {
 		if (eye < m_diagnosticCameras.size()) m_diagnosticCameras[eye] = camera;
 	}
@@ -122,6 +123,9 @@ private:
 	XrInstance m_instance = XR_NULL_HANDLE;
 	XrSystemId m_systemId = XR_NULL_SYSTEM_ID;
 	XrSession m_session = XR_NULL_HANDLE;
+	// GeneralsX @feature Codex 16/10/2026 Re-anchor comfort only when tracking coordinates actually change.
+	uint64_t m_comfortSpaceGeneration = 1;
+	std::vector<XrTime> m_comfortSpaceChanges;
 	XrSpace m_localSpace = XR_NULL_HANDLE;
 	XrSpace m_gameSpace = XR_NULL_HANDLE;
 	XrSpace m_viewSpace = XR_NULL_HANDLE;

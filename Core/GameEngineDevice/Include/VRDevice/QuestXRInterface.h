@@ -81,6 +81,8 @@ extern "C" bool QuestXR_IsFrameActive();
 extern "C" bool QuestXR_ShouldRenderFrame();
 extern "C" IDirect3DSurface8 *QuestXR_GetMenuDepthSurface(IDirect3DDevice8 *device);
 extern "C" bool QuestXR_GetEyeView(std::uint32_t eye, QuestXREyeView *view);
+// Presentation-space epoch, including delayed runtime origin changes.
+extern "C" uint64_t QuestXR_GetComfortSpaceGeneration();
 extern "C" IDirect3DSurface8 *QuestXR_GetEyeSurface(std::uint32_t eye);
 extern "C" bool QuestXR_ApplyVisibilityMask(IDirect3DDevice8 *device,std::uint32_t eye);
 extern "C" bool QuestXR_VisibilityMaskRequested();

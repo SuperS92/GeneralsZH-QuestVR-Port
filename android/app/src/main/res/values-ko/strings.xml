@@ -455,4 +455,6 @@
     <string name="quest_gpu_bundle_desc">Lite 기록 저장 공간과 HUD 지우기/복사를 줄이고 GPU 의존성을 조정합니다. 작은 기록은 Lite 전송도 필요합니다. 변경 후 게임과 런처를 완전히 다시 시작하세요.</string>
     <string name="quest_visibility_mask">숨겨진 영역 마스크 (실험적)</string>
     <string name="quest_visibility_mask_desc">헤드셋 렌즈에 가려진 일부 월드 픽셀을 건너뜁니다. 시간적 AA 끄기 또는 Lite를 지원합니다. 마스크가 지원되지 않으면 일반 렌더링을 유지합니다. 변경 후 게임과 런처를 다시 시작하세요.</string>
+    <string name="quest_tabletop_tilt">게임판 기울이기</string>
+    <string name="quest_tabletop_tilt_desc">양쪽 그립 버튼을 누른 채 오른쪽 스틱을 위아래로 움직이면 전장을 15°씩 기울입니다. 왼쪽으로 움직이면 초기화됩니다. 단계 사이에는 스틱을 중앙으로 되돌리세요. 각도는 저장됩니다. 테이블탑 모드에서만 사용할 수 있습니다.</string>
 </resources>
