@@ -90,6 +90,7 @@ See [third-party credits](CREDITS.md) for libraries and licenses. The engine's [
 ## Optional support
 
 If you'd like to support my work buy me a coffee.
+
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/M6X528HASO)
 
 ## Development
