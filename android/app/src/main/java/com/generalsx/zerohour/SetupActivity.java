@@ -1789,13 +1789,6 @@ public class SetupActivity extends Activity {
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                         .putInt(PREF_QUEST_RENDER_SCALE, index == 1 ? 1250 : index == 2 ? 1500 : 1000).apply());
             UiKit.supporting(resolution, getString(R.string.quest_render_scale_desc));
-            // GeneralsX @feature Codex 07/10/2026 One integrated tree-only contour test; retire ineffective earlier switches.
-            LinearLayout treeContours = UiKit.card(root);
-            UiKit.sectionHeader(treeContours, R.drawable.ic_gzh_display, getString(R.string.quest_tree_contours), false);
-            UiKit.segmented(treeContours, new String[]{getString(R.string.quest_terrain_original), getString(R.string.quest_tree_contours_on)},
-                getQuestTreeContours(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putBoolean(PREF_QUEST_TREE_CONTOURS, index == 1).apply());
-            UiKit.supporting(treeContours, getString(R.string.quest_tree_contours_desc));
             // GeneralsX @feature Codex 09/10/2026 Shadow drawing independent of static game detail level.
             LinearLayout shadows = UiKit.card(root);
             UiKit.sectionHeader(shadows, R.drawable.ic_gzh_display, getString(R.string.quest_shadows), false);
@@ -1839,6 +1832,13 @@ public class SetupActivity extends Activity {
                 index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .putInt("quest_taa_mode", taaModes[index]).putBoolean("quest_taa_lite", index != 0).apply());
             UiKit.supporting(taaLite, getString(R.string.quest_taa_lite_desc));
+            // GeneralsX @tweak Codex 17/10/2026 Keep tree contours immediately before performance metrics.
+            LinearLayout treeContours = UiKit.card(root);
+            UiKit.sectionHeader(treeContours, R.drawable.ic_gzh_display, getString(R.string.quest_tree_contours), false);
+            UiKit.segmented(treeContours, new String[]{getString(R.string.quest_terrain_original), getString(R.string.quest_tree_contours_on)},
+                getQuestTreeContours(this) ? 1 : 0, index -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_QUEST_TREE_CONTOURS, index == 1).apply());
+            UiKit.supporting(treeContours, getString(R.string.quest_tree_contours_desc));
             int[] titles = {R.string.quest_perf_audio, R.string.quest_perf_tracks, R.string.quest_perf_terrain,
                 R.string.quest_perf_trees, R.string.quest_perf_shadows, R.string.quest_perf_smaa, R.string.quest_perf_metrics, R.string.quest_terrain_batching};
             int[] descriptions = {R.string.quest_perf_audio_desc, R.string.quest_perf_tracks_desc, R.string.quest_perf_terrain_desc,

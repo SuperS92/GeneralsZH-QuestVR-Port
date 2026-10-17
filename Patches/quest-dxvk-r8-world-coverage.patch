@@ -22,12 +22,13 @@
      if(m_device->m_specInfo.set<SpecQuestCoverage>(0))m_device->m_flags.set(D3D9DeviceFlag::DirtySpecializationEntries);
 --- a/src/d3d9/d3d9_device.cpp
 +++ b/src/d3d9/d3d9_device.cpp
-@@ -6934,7 +6934,7 @@
+@@ -6934,7 +6934,8 @@
            mode.colorSrcFactor=mode.alphaSrcFactor=VK_BLEND_FACTOR_ONE;
            mode.colorDstFactor=mode.alphaDstFactor=VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
            mode.colorBlendOp=mode.alphaBlendOp=VK_BLEND_OP_ADD;
 -          mode.writeMask=VK_COLOR_COMPONENT_R_BIT|VK_COLOR_COMPONENT_G_BIT|VK_COLOR_COMPONENT_B_BIT|VK_COLOR_COMPONENT_A_BIT;
-+          mode.writeMask=VK_COLOR_COMPONENT_R_BIT;
++          // GeneralsX @bugfix Codex 17/10/2026 DXVK maps logical A8 alpha writes to physical R8 red.
++          mode.writeMask=VK_COLOR_COMPONENT_A_BIT;
          } else if(i==3 && cQuestActive) mode.writeMask=0;
  #endif
          ctx->setBlendMode(i, mode);
