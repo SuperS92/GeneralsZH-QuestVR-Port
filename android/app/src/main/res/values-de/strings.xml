@@ -378,7 +378,8 @@
     <string name="quest_flat_intro">3D-Intro auf flachem Bildschirm</string>
     <string name="quest_flat_intro_desc">Zeigt die Hauptmenüszene und ihr 3D-Intro mit der ursprünglichen Spielkamera auf dem flachen Bildschirm. Matches bleiben in Stereo-VR. Nach Änderungen Spiel und Launcher vollständig schließen.</string>
     <string name="nav_tab_online">Online</string>
-    <string name="quest_frontend_passthrough">Passthrough hinter flachen Bildschirmen</string>
+    <string name="quest_passthrough_title">Passthrough</string>
+    <string name="quest_frontend_passthrough">Hinter flachen Bildschirmen</string>
     <string name="quest_frontend_passthrough_desc">Zeigt deine Umgebung hinter flachen Intro- und Menübildschirmen. Mit Flache Bildschirme verwenden. Der Hintergrund im Spiel bleibt unverändert. Standardmäßig Aus; vollständiger Neustart nötig.</string>
     <string name="quest_track_streaming">Fahrzeugspur-Puffer (experimentell)</string>
     <string name="quest_track_streaming_desc">Versucht, Wartezeiten beim Aktualisieren der Spur-Puffer zu vermeiden. Spuren bleiben sichtbar. Standardmäßig Aus. Spiel und Launcher vollständig neu starten.</string>
@@ -457,6 +458,6 @@
     <string name="quest_visibility_mask_desc">Spart einen Teil der Welt-Pixel, die durch die Headset-Optik unsichtbar sind. Unterstützt temporale Kantenglättung Aus oder Lite. Ohne geeignete Maske bleibt die normale Darstellung aktiv. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
     <string name="quest_tabletop_tilt">Spielfeld kippen</string>
     <string name="quest_tabletop_tilt_desc">Beide Grip-Tasten halten und den rechten Stick nach oben oder unten bewegen, um das Spielfeld in 15°-Schritten zu kippen. Nach links setzt den Winkel zurück. Den Stick zwischen den Schritten zentrieren. Der Winkel wird gespeichert. Nur im Tabletop-Modus.</string>
-    <string name="quest_gameplay_passthrough">Passthrough hinter dem Spielfeld</string>
+    <string name="quest_gameplay_passthrough">Hinter dem Spielfeld (experimentell)</string>
     <string name="quest_gameplay_passthrough_desc">Zeigt dein Zimmer rund um das Spielfeld. Benötigt zusätzliche Grafikleistung. Nach Änderungen Spiel und Launcher vollständig neu starten.</string>
 </resources>

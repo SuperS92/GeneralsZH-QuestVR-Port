@@ -652,8 +652,17 @@ elseif(ANDROID)
     execute_process(COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply --reverse --check
       "${CMAKE_SOURCE_DIR}/Patches/quest-dxvk-world-coverage.patch"
       RESULT_VARIABLE QUEST_COVERAGE_LAYER_PRESENT ERROR_QUIET)
-    foreach(QUEST_DXVK_PATCH quest-v044-dxvk-interop.patch quest-dxvk-d3d8-bridge-exposure.patch quest-dxvk-completed-eye-depth.patch quest-dxvk-rgba-eye-targets.patch quest-dxvk-world-coverage.patch)
+    execute_process(COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply --reverse --check
+      "${CMAKE_SOURCE_DIR}/Patches/quest-dxvk-r8-world-coverage.patch"
+      RESULT_VARIABLE QUEST_R8_LAYER_PRESENT ERROR_QUIET)
+    if(QUEST_R8_LAYER_PRESENT EQUAL 0)
+      set(QUEST_COVERAGE_LAYER_PRESENT 0)
+    endif()
+    foreach(QUEST_DXVK_PATCH quest-v044-dxvk-interop.patch quest-dxvk-d3d8-bridge-exposure.patch quest-dxvk-completed-eye-depth.patch quest-dxvk-rgba-eye-targets.patch quest-dxvk-world-coverage.patch quest-dxvk-r8-world-coverage.patch)
       if(QUEST_DXVK_PATCH STREQUAL "quest-dxvk-completed-eye-depth.patch" AND QUEST_COVERAGE_LAYER_PRESENT EQUAL 0)
+        continue()
+      endif()
+      if(QUEST_DXVK_PATCH STREQUAL "quest-dxvk-world-coverage.patch" AND QUEST_R8_LAYER_PRESENT EQUAL 0)
         continue()
       endif()
       set(QUEST_PATCH_WHITESPACE_ARGS)

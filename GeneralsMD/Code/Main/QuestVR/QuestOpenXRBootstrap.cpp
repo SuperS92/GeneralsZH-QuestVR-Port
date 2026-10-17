@@ -1689,6 +1689,7 @@ uint32_t Bootstrap::getHudClearTop(bool hud,uint32_t width,uint32_t height) cons
 bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 	uint32_t menuImageIndex, bool copyMenu, const HudTransferPlan &hudPlan)
 {
+    m_worldCompositeApplied=false;
     const auto &menuImages = hudPlan.compact ? m_compactMenuImages : m_menuSwapchainImages;
 	if (imageIndex >= m_swapchainImages.size()
 		|| (copyMenu && menuImageIndex >= menuImages.size())) {
@@ -1726,6 +1727,32 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 		menuImage, menuLayout)) {
 		return false;
 	}
+    // GeneralsX @performance Codex 17/10/2026 Merge coverage into the existing XR handoff, never touch world material alpha.
+    std::array<CompositeImage,2> compositeColors{},compositeMasks{};
+    bool compositeWorld=false;
+    if(copyEyeTargets&&m_viewCount==2&&gameplayPassthroughEnabled()&&m_worldCoverage.stereoReady()) {
+        bool valid=true;
+        for(unsigned e=0;e<2;++e) {
+            compositeColors[e]={eyeImages[e],eyeLayouts[e],eyeFormats[e],m_recommendedEyeWidth,m_recommendedEyeHeight,eyeUsage[e]};
+            auto *source=m_worldCoverage.maskTexture(e);DxvkVulkanInteropTexture *texture=nullptr;
+            VkImageCreateInfo info{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+            auto &mask=compositeMasks[e];
+            const bool queried=source&&SUCCEEDED(source->QueryInterface(kD3D9VkInteropTextureId,reinterpret_cast<void**>(&texture)))&&texture;
+            valid=queried&&valid;
+            if(queried) {valid=SUCCEEDED(texture->GetVulkanImageInfo(&mask.image,&mask.layout,&info))&&valid;texture->Release();
+                mask.format=info.format;mask.width=info.extent.width;mask.height=info.extent.height;mask.usage=info.usage;}
+        }
+        if(valid&&!m_worldCompositeAttempted) {
+            m_worldCompositeAttempted=true;
+            valid=m_worldComposite.initialize(m_vkPhysicalDevice,m_vkDevice,m_recommendedEyeWidth,m_recommendedEyeHeight,
+                static_cast<VkFormat>(m_colorFormat),compositeColors,compositeMasks,m_swapchainImages);
+        }
+        compositeWorld=valid&&m_worldComposite.matches(compositeColors,compositeMasks);
+        if(!compositeWorld) {
+            m_worldCoverage.reject();
+            __android_log_print(ANDROID_LOG_WARN,kLogTag,"Quest world composite unavailable; opaque fallback until graphics reattachment");
+        }
+    }
 	// GeneralsX @tweak Codex 16/10/2026 TAA is the sole Quest AA path.
 	// GeneralsX @feature Codex 01/10/2026 Manually requested bounded raw-eye capture.
 	EyeCapture::Frame captureFrame;
@@ -1782,7 +1809,7 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
     // GeneralsX @performance Codex 15/10/2026 Keep the original filtered/capture/front-end path.
     bool batchedTransfer = false;
     if (PerformanceRequested(PerfOption::TransferBatch) && copyEyeTargets && m_viewCount==2
-        && !captureEyes) {
+        && !captureEyes && !compositeWorld) {
         ColorTransferBatch batch;
         batch.eyes=eyeImages; batch.layouts=eyeLayouts;
         batch.eyeDestination=m_swapchainImages[imageIndex];
@@ -1809,6 +1836,26 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
         }
     }
     if (!batchedTransfer) {
+    if(compositeWorld) {
+        // Preserve the optional raw-eye diagnostic before the native composite.
+        if(captureEyes)for(unsigned e=0;e<2;++e) {
+            VkImageMemoryBarrier source{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+            source.image=eyeImages[e];source.subresourceRange={VK_IMAGE_ASPECT_COLOR_BIT,0,1,0,1};
+            source.srcQueueFamilyIndex=source.dstQueueFamilyIndex=VK_QUEUE_FAMILY_IGNORED;
+            source.oldLayout=eyeLayouts[e];source.newLayout=VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            source.srcAccessMask=VK_ACCESS_MEMORY_WRITE_BIT;source.dstAccessMask=VK_ACCESS_TRANSFER_READ_BIT;
+            vkCmdPipelineBarrier(commandBuffer,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,VK_PIPELINE_STAGE_TRANSFER_BIT,0,0,nullptr,0,nullptr,1,&source);
+            m_eyeCapture.copy(commandBuffer,e,false,eyeImages[e],VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,false);
+            source.oldLayout=VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;source.newLayout=eyeLayouts[e];
+            source.srcAccessMask=VK_ACCESS_TRANSFER_READ_BIT;source.dstAccessMask=VK_ACCESS_MEMORY_READ_BIT|VK_ACCESS_MEMORY_WRITE_BIT;
+            vkCmdPipelineBarrier(commandBuffer,VK_PIPELINE_STAGE_TRANSFER_BIT,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,0,0,nullptr,0,nullptr,1,&source);
+        }
+        m_worldCompositeApplied=m_worldComposite.record(commandBuffer,imageIndex,compositeColors,compositeMasks);
+        if(!m_worldCompositeApplied) {if(captureEyes)m_eyeCapture.abort("FAILED_WORLD_COMPOSITE");return false;}
+        static unsigned compositeReports=0;
+        if(compositeReports++%120==0)__android_log_print(ANDROID_LOG_INFO,kLogTag,
+            "Quest world composite: active=1 masks=r8 final_alpha_draws=0 copy_and_alpha=one_handoff full_resolution=1");
+    } else {
 	VkImageSubresourceRange allLayers{};
 	allLayers.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	allLayers.levelCount = 1;
@@ -1888,6 +1935,7 @@ bool Bootstrap::renderCompositorImages(uint32_t imageIndex, bool copyEyeTargets,
 	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &toCompositor);
 
+    }
 	if (copyMenu) {
 		VkImageSubresourceRange menuRange{};
 		menuRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -2196,7 +2244,7 @@ bool Bootstrap::endFrame()
     const bool wantsWorld=gameplayPassthroughEnabled()&&m_eyeRenderingComplete&&m_worldCoverage.stereoReady();
     const bool passthroughActive=updateFrontendPassthrough(m_shouldRender&&m_viewsValid&&(wantsFrontend||wantsWorld));
     const bool frontendPassthrough=passthroughActive&&wantsFrontend;
-    const bool worldPassthrough=passthroughActive&&wantsWorld;
+    bool worldPassthrough=passthroughActive&&wantsWorld;
 	XrCompositionLayerPassthroughFB passthroughLayer{XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB};
 	passthroughLayer.layerHandle = m_passthroughLayer;
 	passthroughLayer.flags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
@@ -2276,6 +2324,7 @@ bool Bootstrap::endFrame()
 			}
 		}
 
+        worldPassthrough=worldPassthrough&&m_worldCompositeApplied;
 		if (rendered && released) {
 			for (uint32_t eye = 0; eye < m_viewCount; ++eye) {
 				projectionViews[eye].pose = m_views[eye].pose;
@@ -2556,6 +2605,8 @@ void Bootstrap::detachGraphics()
 		vkQueueWaitIdle(m_vkQueue);
 		interop->ReleaseSubmissionQueue();
 	}
+    m_worldComposite.destroy();
+    m_worldCompositeAttempted=m_worldCompositeApplied=false;
     m_worldCoverage.destroy();
 	m_eyeCapture.destroy(); // Queue completed above; drain the file writer before teardown.
     m_temporalAA.destroy();

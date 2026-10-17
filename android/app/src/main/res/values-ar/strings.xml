@@ -373,7 +373,8 @@
     <string name="quest_flat_intro">Show 3D intro on a flat screen</string>
     <string name="quest_flat_intro_desc">Shows the main-menu scene and its 3D intro with the original game camera on the flat screen. Matches remain stereo VR. Fully close the game and launcher after changing.</string>
     <string name="nav_tab_online">Online</string>
-    <string name="quest_frontend_passthrough">Passthrough behind flat screens</string>
+    <string name="quest_passthrough_title">Passthrough</string>
+    <string name="quest_frontend_passthrough">خلف الشاشات المسطحة</string>
     <string name="quest_frontend_passthrough_desc">Shows your surroundings behind flat intro and menu screens. Use with Flat screens. The gameplay background stays unchanged. Default off; full restart required.</string>
     <string name="quest_track_streaming">Vehicle track streaming (experimental)</string>
     <string name="quest_track_streaming_desc">Tries to avoid waits when updating vehicle track buffers. Keeps tracks visible. Default off. Fully restart the game and launcher.</string>
@@ -457,6 +458,6 @@
     <string name="quest_visibility_mask_desc">يتخطى بعض بكسلات العالم المخفية بعدسات النظارة. يدعم AA الزمني إيقاف أو Lite. عند عدم دعم القناع يستمر العرض العادي. أعد تشغيل اللعبة والمشغل بعد التغيير.</string>
     <string name="quest_tabletop_tilt">إمالة ساحة اللعب</string>
     <string name="quest_tabletop_tilt_desc">اضغط زري الإمساك معًا وحرّك العصا اليمنى لأعلى أو لأسفل لإمالة الساحة بخطوات 15°. حرّكها لليسار لإعادة الضبط. أعد العصا للوسط بين الخطوات. تُحفظ الزاوية. في وضع الطاولة فقط.</string>
-    <string name="quest_gameplay_passthrough">العبور حول ساحة المعركة</string>
+    <string name="quest_gameplay_passthrough">حول ساحة المعركة (تجريبي)</string>
     <string name="quest_gameplay_passthrough_desc">اعرض غرفتك حول ساحة المعركة. يتطلب معالجة رسومية إضافية. أعد تشغيل اللعبة والمشغّل بالكامل بعد التغيير.</string>
 </resources>

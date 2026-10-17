@@ -373,7 +373,8 @@
     <string name="quest_flat_intro">Show 3D intro on a flat screen</string>
     <string name="quest_flat_intro_desc">Shows the main-menu scene and its 3D intro with the original game camera on the flat screen. Matches remain stereo VR. Fully close the game and launcher after changing.</string>
     <string name="nav_tab_online">Online</string>
-    <string name="quest_frontend_passthrough">Passthrough behind flat screens</string>
+    <string name="quest_passthrough_title">Passthrough</string>
+    <string name="quest_frontend_passthrough">پشت صفحه‌های تخت</string>
     <string name="quest_frontend_passthrough_desc">Shows your surroundings behind flat intro and menu screens. Use with Flat screens. The gameplay background stays unchanged. Default off; full restart required.</string>
     <string name="quest_track_streaming">Vehicle track streaming (experimental)</string>
     <string name="quest_track_streaming_desc">Tries to avoid waits when updating vehicle track buffers. Keeps tracks visible. Default off. Fully restart the game and launcher.</string>
@@ -457,6 +458,6 @@
     <string name="quest_visibility_mask_desc">بعضی پیکسل‌های جهان پنهان پشت لنزها را رد می‌کند. با AA زمانی خاموش یا Lite کار می‌کند. بدون ماسک مناسب رندر عادی حفظ می‌شود. پس از تغییر بازی و لانچر را دوباره اجرا کنید.</string>
     <string name="quest_tabletop_tilt">کج کردن صفحهٔ بازی</string>
     <string name="quest_tabletop_tilt_desc">هر دو دکمهٔ گرفتن را نگه دارید و دستهٔ راست را بالا یا پایین ببرید تا میدان با گام‌های 15° کج شود. حرکت به چپ زاویه را بازنشانی می‌کند. بین گام‌ها دسته را به مرکز برگردانید. زاویه ذخیره می‌شود. فقط در حالت رومیزی.</string>
-    <string name="quest_gameplay_passthrough">نمای محیط اطراف میدان نبرد</string>
+    <string name="quest_gameplay_passthrough">اطراف میدان نبرد (آزمایشی)</string>
     <string name="quest_gameplay_passthrough_desc">اتاق شما را پیرامون میدان نبرد نشان می‌دهد. به پردازش گرافیکی بیشتری نیاز دارد. پس از تغییر، بازی و راه‌انداز را کامل دوباره اجرا کنید.</string>
 </resources>

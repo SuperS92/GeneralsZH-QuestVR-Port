@@ -373,7 +373,8 @@
     <string name="quest_flat_intro">Show 3D intro on a flat screen</string>
     <string name="quest_flat_intro_desc">Shows the main-menu scene and its 3D intro with the original game camera on the flat screen. Matches remain stereo VR. Fully close the game and launcher after changing.</string>
     <string name="nav_tab_online">Online</string>
-    <string name="quest_frontend_passthrough">Passthrough behind flat screens</string>
+    <string name="quest_passthrough_title">Passthrough</string>
+    <string name="quest_frontend_passthrough">平面屏幕后方</string>
     <string name="quest_frontend_passthrough_desc">Shows your surroundings behind flat intro and menu screens. Use with Flat screens. The gameplay background stays unchanged. Default off; full restart required.</string>
     <string name="quest_track_streaming">Vehicle track streaming (experimental)</string>
     <string name="quest_track_streaming_desc">Tries to avoid waits when updating vehicle track buffers. Keeps tracks visible. Default off. Fully restart the game and launcher.</string>
@@ -457,6 +458,6 @@
     <string name="quest_visibility_mask_desc">跳过头显光学系统遮挡的部分场景像素。支持时间抗锯齿关闭或 Lite。没有合适的遮罩时保留正常渲染。更改后请完全重启游戏和启动器。</string>
     <string name="quest_tabletop_tilt">棋盘倾斜</string>
     <string name="quest_tabletop_tilt_desc">按住两侧握持键，将右摇杆向上或向下拨动，每次倾斜战场15°。向左拨动可重置。每次操作后将摇杆回中。角度会保存。仅适用于桌面模式。</string>
-    <string name="quest_gameplay_passthrough">战场周围透视</string>
+    <string name="quest_gameplay_passthrough">战场周围 (实验性)</string>
     <string name="quest_gameplay_passthrough_desc">在战场周围显示真实房间。需要额外的图形处理。更改后请完全重启游戏和启动器。</string>
 </resources>

@@ -1,6 +1,7 @@
 # Gameplay passthrough
 
-The independent graphics switch defaults to Off. Restart game and launcher after
+Both independent room-background controls share the Passthrough card. The new
+Behind the battlefield control is marked experimental and defaults to Off. Restart game and launcher after
 changing it. Passthrough behind flat screens remains a separate setting. Keep the
 Android version and existing APK updater unchanged during local trials.
 
@@ -25,11 +26,23 @@ write solid coverage; ordinary transparency writes material alpha. Colorless
 shadow volumes, multiplicative shadow fills and additive-only light do not add
 opaque coverage. Original stencil/depth tests still govern fragment survival.
 
-Use one persistent, eye-sized RGBA8 target shared sequentially between eyes.
-Clear it once per eye, append it only while the owned eye target is bound, detach
-before the final alpha-only copy, and retain original RGB/depth/stencil and D3D
-state. No geometry traversal, draw replay, render-target switching per transparent
-object, or per-object ALL-state capture occurs. Off does not query this bridge or
+Use two persistent R8 targets, one for each eye. Each mask writes one byte per
+pixel. Together they occupy half the bytes of the former shared RGBA8 target;
+per-fragment mask output is one quarter of its former size. These are byte counts,
+not FPS predictions. Clear once per eye and append only to the owned world target.
+
+Do not overwrite the original eye's material alpha after rendering. The native
+WorldComposite handoff reads original RGB plus the corresponding R8 coverage and
+writes the acquired OpenXR image layer in one full-resolution draw. It replaces
+the old copy/blit plus alpha-only full-eye pass. It supports the existing UNORM
+RGBA/BGRA formats without applying gamma conversion or changing UV orientation.
+The original Off copy/blit path remains intact. Read source images only after the
+DXVK command-stream flush; restore their declared layouts. Use the existing XR
+image fence before reusing destinations, without a new per-frame queue-idle wait.
+Drain the shared queue before releasing views, framebuffers, descriptors or masks.
+
+No geometry traversal, draw replay, per-object target switching, ALL-state capture
+or final D3D alpha-only draw occurs. Off does not query this bridge or
 allocate a mask. Unsupported blend contracts latch opaque fallback until graphics
 reattachment. Paired-eye completion is required before showing the room.
 
@@ -44,6 +57,10 @@ both native profiles from one source and bind the exact dependency patch hashes.
 Then measure real game memory over minutes and GPU/frame cost, including water,
 particles, cutout trees, TAA edges, HUD/pointer, both eyes, tilt and transitions.
 Passthrough has additional compositor/bandwidth cost; no FPS gain is promised.
+The Test20 trial exited normally with no reported crash, but the maintainer
+confirmed that its active passthrough path substantially reduced FPS and that Off
+restored prior performance. That observation is not a controlled timing benchmark.
+The R8/native-handoff revision still needs Quest quality, memory and FPS checks.
 A later completed PC match remains a runtime gate before public promotion.
 
 Reference: the reviewed GLES XR implementation generates eye coverage in its

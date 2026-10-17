@@ -100,8 +100,8 @@ struct Device:StubDirect3DDevice8 {
         state=blocks.at(token);for(unsigned i=0;i<4;++i)state.rs[206+i]=separate[i];return S_OK;}
     HRESULT STDMETHODCALLTYPE DeleteStateBlock(DWORD token)override{assert(blocks.erase(token)==1);return S_OK;}
     HRESULT STDMETHODCALLTYPE CreateTexture(UINT w,UINT h,UINT levels,DWORD usage,D3DFORMAT format,D3DPOOL pool,IDirect3DTexture8 **p)override{
-        assert(w==width&&h==height&&levels==1&&usage==D3DUSAGE_RENDERTARGET&&format==D3DFMT_A8R8G8B8&&pool==D3DPOOL_DEFAULT);
-        if(failTexture)return E_FAIL;textures.emplace_back(new Texture);*p=textures.back().get();return S_OK;}
+        assert(w==width&&h==height&&levels==1&&usage==D3DUSAGE_RENDERTARGET&&format==D3DFMT_A8&&pool==D3DPOOL_DEFAULT);
+        if(failTexture)return E_FAIL;textures.emplace_back(new Texture);textures.back()->surface.desc.Format=format;*p=textures.back().get();return S_OK;}
     HRESULT STDMETHODCALLTYPE Clear(DWORD,const D3DRECT *,DWORD flags,D3DCOLOR color,float,DWORD)override{
         assert(flags==D3DCLEAR_TARGET&&color==0&&target!=&eyes[0]&&target!=&eyes[1]);
         for(auto &p:target->rgba)p={0,0,0,0};return S_OK;}
@@ -148,15 +148,15 @@ int main(){
      if(depth[i]>=.5f){d.interop.fragment(i,mode,alpha);if(mode)expected[i]=q((mode==1?1:alpha)+expected[i]*(1-(mode==1?1:alpha)));}
     }
     QuestXR::FinishWorldCoverage(&d,false);assert(d.state==state&&d.target==&d.eyes[eye]);
-    rgbSame(d.target->rgba,original);for(unsigned i=0;i<pixels;++i)assert(std::fabs(d.target->rgba[i][3]-expected[i])<1e-6);
-    assert(d.depths==depth&&d.stencil==stencil&&d.blocks.empty()&&d.indexed==0);
+    assert(d.target->rgba==original);auto *mask=static_cast<Texture*>(coverage.maskTexture(eye));assert(mask&&mask->surface.desc.Format==D3DFMT_A8);for(unsigned i=0;i<pixels;++i)assert(std::fabs(mask->surface.rgba[i][3]-expected[i])<1e-6);
+    assert(d.depths==depth&&d.stencil==stencil&&d.blocks.empty()&&d.indexed==0&&d.quads==0);
     assert(coverage.stereoReady()==(eye==1));++cases;
    }
-   assert(d.textures.size()==1&&d.interop.begins==d.interop.ends);++cases;
+   assert(d.textures.size()==2&&d.interop.begins==d.interop.ends);++cases;
   }
-  coverage.destroy();assert(d.interop.refs==1&&d.textures[0]->refs==0&&d.eyes[0].refs==1&&d.depth.refs==1);++cases;
+  coverage.destroy();assert(d.interop.refs==1&&d.textures[0]->refs==0&&d.textures[1]->refs==0&&d.eyes[0].refs==1&&d.depth.refs==1);++cases;
  }
- for(unsigned failure=0;failure<7;++failure){
+ for(unsigned failure=0;failure<5;++failure){
   Device d,other;QuestXR::WorldCoverage c;
   if(failure==0)d.failTexture=true;
   if(failure==1)d.interop.reject=true;
@@ -165,9 +165,7 @@ int main(){
   if(failure<2)assert(!began);else{
    assert(began);
    if(failure==2)d.interop.failed=true;
-   if(failure==3)d.failBlock=true;
-   if(failure==4)d.failQuad=true;
-   QuestXR::FinishWorldCoverage(failure==6?&other:&d,failure==5);
+   QuestXR::FinishWorldCoverage(failure==4?&other:&d,failure==3);
   }
   assert(!c.available()&&!c.stereoReady()&&d.state==state);rgbSame(d.target->rgba,original);
   c.resetFrame();assert(!c.begin(&d,d.target,&d.depth,0));c.destroy();assert(c.available()&&d.interop.refs==1);++cases;

@@ -1,0 +1,33 @@
+--- a/src/d3d9/d3d9_interop.cpp
++++ b/src/d3d9/d3d9_interop.cpp
+@@ -257,7 +257,7 @@
+     auto e=static_cast<D3D9VkInteropTexture*>(eye)->GetCommonTexture();
+     auto m=static_cast<D3D9VkInteropTexture*>(mask)->GetCommonTexture();
+     if(e!=m_device->m_state.renderTargets[0]->GetCommonTexture()||e==m
+-        ||m->Desc()->Format!=D3D9Format::A8R8G8B8||m->Desc()->Width!=e->Desc()->Width||m->Desc()->Height!=e->Desc()->Height
++        ||m->Desc()->Format!=D3D9Format::A8||m->Desc()->Width!=e->Desc()->Width||m->Desc()->Height!=e->Desc()->Height
+         ||m->Desc()->MultiSample!=D3DMULTISAMPLE_NONE||e->Desc()->MultiSample!=D3DMULTISAMPLE_NONE
+         ||m->Desc()->MipLevels!=1||m->Desc()->ArraySize!=1||!(m->Desc()->Usage&D3DUSAGE_RENDERTARGET))return D3DERR_INVALIDCALL;
+     m_device->m_questCoverageEye=e->GetImage();
+@@ -268,7 +268,9 @@
+   }
+   HRESULT STDMETHODCALLTYPE D3D9VkInteropDevice::EndWorldCoverage() {
+     D3D9DeviceLock lock=m_device->LockDevice();
+-    const bool ok=m_device->m_questCoverageView&&!m_device->m_questCoverageFailed;
++    const bool ok=m_device->m_questCoverageView&&!m_device->m_questCoverageFailed
++      &&m_device->m_state.renderTargets[0]!=nullptr
++      &&m_device->m_state.renderTargets[0]->GetCommonTexture()->GetImage()==m_device->m_questCoverageEye;
+     m_device->m_questCoverageView=nullptr;m_device->m_questCoverageEye=nullptr;m_device->m_questCoverageMode=0;
+     m_device->m_flags.set(D3D9DeviceFlag::DirtyFramebuffer,D3D9DeviceFlag::DirtyBlendState);
+     if(m_device->m_specInfo.set<SpecQuestCoverage>(0))m_device->m_flags.set(D3D9DeviceFlag::DirtySpecializationEntries);
+--- a/src/d3d9/d3d9_device.cpp
++++ b/src/d3d9/d3d9_device.cpp
+@@ -6934,7 +6934,7 @@
+           mode.colorSrcFactor=mode.alphaSrcFactor=VK_BLEND_FACTOR_ONE;
+           mode.colorDstFactor=mode.alphaDstFactor=VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+           mode.colorBlendOp=mode.alphaBlendOp=VK_BLEND_OP_ADD;
+-          mode.writeMask=VK_COLOR_COMPONENT_R_BIT|VK_COLOR_COMPONENT_G_BIT|VK_COLOR_COMPONENT_B_BIT|VK_COLOR_COMPONENT_A_BIT;
++          mode.writeMask=VK_COLOR_COMPONENT_R_BIT;
+         } else if(i==3 && cQuestActive) mode.writeMask=0;
+ #endif
+         ctx->setBlendMode(i, mode);

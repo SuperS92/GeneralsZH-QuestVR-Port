@@ -36,11 +36,13 @@ public:
     void destroy();
     bool stereoReady() const {return m_ready[0]&&m_ready[1];}
     bool available() const {return !m_failed;}
+    IDirect3DTexture8 *maskTexture(unsigned eye) const {return eye<2&&m_ready[eye]?m_texture[eye]:nullptr;}
+    void reject() {m_failed=true;m_ready[0]=m_ready[1]=false;}
 private:
     IUnknown *m_interop=nullptr;
     IDirect3DDevice8 *m_device=nullptr;
-    IDirect3DTexture8 *m_texture=nullptr;
-    IDirect3DSurface8 *m_mask=nullptr,*m_eye=nullptr,*m_depth=nullptr;
+    IDirect3DTexture8 *m_texture[2]{};
+    IDirect3DSurface8 *m_mask[2]{},*m_eye=nullptr,*m_depth=nullptr;
     uint32_t m_width=0,m_height=0,m_eyeIndex=2,m_frames=0;
     bool m_ready[2]{},m_valid=false,m_failed=false;
 };

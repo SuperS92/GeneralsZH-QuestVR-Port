@@ -373,7 +373,8 @@
     <string name="quest_flat_intro">Show 3D intro on a flat screen</string>
     <string name="quest_flat_intro_desc">Shows the main-menu scene and its 3D intro with the original game camera on the flat screen. Matches remain stereo VR. Fully close the game and launcher after changing.</string>
     <string name="nav_tab_online">Online</string>
-    <string name="quest_frontend_passthrough">Passthrough behind flat screens</string>
+    <string name="quest_passthrough_title">Passthrough</string>
+    <string name="quest_frontend_passthrough">Za płaskimi ekranami</string>
     <string name="quest_frontend_passthrough_desc">Shows your surroundings behind flat intro and menu screens. Use with Flat screens. The gameplay background stays unchanged. Default off; full restart required.</string>
     <string name="quest_track_streaming">Vehicle track streaming (experimental)</string>
     <string name="quest_track_streaming_desc">Tries to avoid waits when updating vehicle track buffers. Keeps tracks visible. Default off. Fully restart the game and launcher.</string>
@@ -457,6 +458,6 @@
     <string name="quest_visibility_mask_desc">Pomija część pikseli świata ukrytych przez optykę gogli. Obsługuje czasowe AA wyłączone lub Lite. Bez odpowiedniej maski zachowuje zwykły obraz. Po zmianach uruchom grę i launcher ponownie.</string>
     <string name="quest_tabletop_tilt">Nachylenie planszy</string>
     <string name="quest_tabletop_tilt_desc">Przytrzymaj oba przyciski chwytu i wychyl prawy drążek w górę lub w dół, aby pochylić pole o 15°. Wychylenie w lewo resetuje kąt. Między krokami wróć drążkiem do środka. Kąt jest zapisywany. Tylko w trybie stołowym.</string>
-    <string name="quest_gameplay_passthrough">Passthrough wokół pola bitwy</string>
+    <string name="quest_gameplay_passthrough">Wokół pola bitwy (eksperymentalne)</string>
     <string name="quest_gameplay_passthrough_desc">Pokazuje pokój wokół pola bitwy. Wymaga dodatkowej pracy układu graficznego. Po zmianach całkowicie uruchom ponownie grę i launcher.</string>
 </resources>

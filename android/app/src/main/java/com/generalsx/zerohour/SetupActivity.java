@@ -1813,13 +1813,16 @@ public class SetupActivity extends Activity {
             fixedScreen.setOnCheckedChangeListener((button, checked) ->
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .putBoolean(PREF_QUEST_FLAT_SCREENS, checked).apply());
-            SwitchCompat passthrough = UiKit.switchRow(screens, getString(R.string.quest_frontend_passthrough),
+            // GeneralsX @tweak Codex 17/10/2026 Keep the two independent room-background settings together.
+            LinearLayout passthroughCard = UiKit.card(root);
+            UiKit.sectionHeader(passthroughCard, R.drawable.ic_gzh_display,
+                getString(R.string.quest_passthrough_title), false);
+            SwitchCompat passthrough = UiKit.switchRow(passthroughCard, getString(R.string.quest_frontend_passthrough),
                 getString(R.string.quest_frontend_passthrough_desc));
             passthrough.setChecked(getQuestFrontendPassthrough(this));
             passthrough.setOnCheckedChangeListener((button, checked) -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .edit().putBoolean("quest_frontend_passthrough", checked).apply());
-            LinearLayout worldBackground = UiKit.card(root);
-            SwitchCompat worldPassthrough = UiKit.switchRow(worldBackground, getString(R.string.quest_gameplay_passthrough),
+            SwitchCompat worldPassthrough = UiKit.switchRow(passthroughCard, getString(R.string.quest_gameplay_passthrough),
                 getString(R.string.quest_gameplay_passthrough_desc));
             worldPassthrough.setChecked(getQuestGameplayPassthrough(this));
             worldPassthrough.setOnCheckedChangeListener((button, checked) -> getSharedPreferences(PREFS_NAME, MODE_PRIVATE)

@@ -373,7 +373,8 @@
     <string name="quest_flat_intro">Show 3D intro on a flat screen</string>
     <string name="quest_flat_intro_desc">Shows the main-menu scene and its 3D intro with the original game camera on the flat screen. Matches remain stereo VR. Fully close the game and launcher after changing.</string>
     <string name="nav_tab_online">Online</string>
-    <string name="quest_frontend_passthrough">Passthrough behind flat screens</string>
+    <string name="quest_passthrough_title">Passthrough</string>
+    <string name="quest_frontend_passthrough">Detrás de las pantallas planas</string>
     <string name="quest_frontend_passthrough_desc">Shows your surroundings behind flat intro and menu screens. Use with Flat screens. The gameplay background stays unchanged. Default off; full restart required.</string>
     <string name="quest_track_streaming">Vehicle track streaming (experimental)</string>
     <string name="quest_track_streaming_desc">Tries to avoid waits when updating vehicle track buffers. Keeps tracks visible. Default off. Fully restart the game and launcher.</string>
@@ -457,6 +458,6 @@
     <string name="quest_visibility_mask_desc">Omite algunos píxeles ocultos por la óptica del visor. Admite AA temporal desactivado o Lite. Si la máscara no es compatible, mantiene el renderizado normal. Reinicia el juego y el lanzador tras los cambios.</string>
     <string name="quest_tabletop_tilt">Inclinación del tablero</string>
     <string name="quest_tabletop_tilt_desc">Mantén ambos botones de agarre y mueve el stick derecho arriba o abajo para inclinar el campo en pasos de 15°. A la izquierda restablece el ángulo. Centra el stick entre pasos. El ángulo se guarda. Solo en modo tablero.</string>
-    <string name="quest_gameplay_passthrough">Passthrough detrás del campo de batalla</string>
+    <string name="quest_gameplay_passthrough">Detrás del campo de batalla (experimental)</string>
     <string name="quest_gameplay_passthrough_desc">Muestra tu habitación alrededor del campo de batalla. Requiere trabajo gráfico adicional. Reinicia por completo el juego y el lanzador tras los cambios.</string>
 </resources>

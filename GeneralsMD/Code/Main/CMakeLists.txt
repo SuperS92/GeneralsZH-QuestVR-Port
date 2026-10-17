@@ -200,6 +200,6 @@ if(ANDROID)
 endif()
 
 if(SAGE_USE_OPENXR)
-    target_sources(z_generals PRIVATE QuestVR/QuestWorldCoverage.cpp QuestVR/QuestOpenXRBootstrap.cpp QuestVR/QuestHudTransfer.cpp QuestVR/QuestTerrainCulling.cpp QuestVR/QuestShroudPass.cpp QuestVR/QuestDepthDiscard.cpp QuestVR/QuestColorCopy.cpp QuestVR/QuestTransferBatch.cpp QuestVR/QuestShadowCoverage.cpp QuestVR/QuestTemporalAA.cpp QuestVR/QuestEyeCapture.cpp QuestVR/QuestDrawCapture.cpp QuestVR/QuestTerrainDetailTest.cpp QuestVR/QuestTerrainMipFilter.cpp QuestVR/QuestGraphicsChoices.cpp QuestVR/QuestCutoutMips.cpp QuestVR/QuestSoftCutouts.cpp QuestVR/QuestPerformance.cpp QuestVR/QuestTreeWind.cpp QuestVR/QuestTreeContours.cpp QuestVR/QuestTerrainFarMips.cpp QuestVR/QuestFenceContours.cpp)
+    target_sources(z_generals PRIVATE QuestVR/QuestWorldCoverage.cpp QuestVR/QuestWorldComposite.cpp QuestVR/QuestOpenXRBootstrap.cpp QuestVR/QuestHudTransfer.cpp QuestVR/QuestTerrainCulling.cpp QuestVR/QuestShroudPass.cpp QuestVR/QuestDepthDiscard.cpp QuestVR/QuestColorCopy.cpp QuestVR/QuestTransferBatch.cpp QuestVR/QuestShadowCoverage.cpp QuestVR/QuestTemporalAA.cpp QuestVR/QuestEyeCapture.cpp QuestVR/QuestDrawCapture.cpp QuestVR/QuestTerrainDetailTest.cpp QuestVR/QuestTerrainMipFilter.cpp QuestVR/QuestGraphicsChoices.cpp QuestVR/QuestCutoutMips.cpp QuestVR/QuestSoftCutouts.cpp QuestVR/QuestPerformance.cpp QuestVR/QuestTreeWind.cpp QuestVR/QuestTreeContours.cpp QuestVR/QuestTerrainFarMips.cpp QuestVR/QuestFenceContours.cpp)
     target_link_libraries(z_generals PRIVATE OpenXR::openxr_loader vulkan)
 endif()

@@ -16,6 +16,7 @@
 #include "QuestTemporalAA.h"
 #include "VRDevice/QuestHudTransfer.h"
 #include "QuestEyeCapture.h"
+#include "QuestWorldComposite.h"
 #include "VRDevice/QuestWorldCoverage.h"
 #include "VRDevice/QuestVisibilityMask.h"
 
@@ -168,6 +169,8 @@ private:
     bool m_frontendPassthroughRequested = false,m_gameplayPassthroughRequested = false;
     bool m_worldLayerSupported=false;
     WorldCoverage m_worldCoverage;
+    WorldComposite m_worldComposite;
+    bool m_worldCompositeAttempted=false,m_worldCompositeApplied=false;
 	bool m_passthroughFailed = false, m_passthroughRunning = false;
 	XrPassthroughFB m_passthrough = XR_NULL_HANDLE;
 	XrPassthroughLayerFB m_passthroughLayer = XR_NULL_HANDLE;
