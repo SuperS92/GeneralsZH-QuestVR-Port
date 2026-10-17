@@ -131,6 +131,7 @@ struct BoxSelectionState
 {
 	Bool armed = FALSE;
 	Bool boxing = FALSE;
+	Bool additive = FALSE;
 	Coord3D start{};
 	Coord3D end{};
 	std::chrono::steady_clock::time_point pressedAt{};
@@ -882,13 +883,50 @@ void updatePointerVisuals()
 	updateSelectionMarkers();
 }
 
-void selectUnderRay(const Vector3 &origin, const Vector3 &direction)
+// GeneralsX @feature Codex 17/10/2026 Left grip extends selection; both grips remain reserved for world gestures.
+Bool additiveSelectionHeld(const QuestXRControllerState &left, const QuestXRControllerState &right, Bool haveLeft)
+{
+	return haveLeft && left.connected != 0 && (left.buttons & QUEST_XR_BUTTON_GRIP) != 0
+		&& (right.buttons & QUEST_XR_BUTTON_GRIP) == 0;
+}
+
+Bool canExtendUnitSelection()
+{
+	const DrawableList *selected = TheInGameUI->getAllSelectedDrawables();
+	if (selected == nullptr) return TRUE;
+	for (DrawableList::const_iterator it = selected->begin(); it != selected->end(); ++it) {
+		Object *object = *it != nullptr ? (*it)->getObject() : nullptr;
+		if (object == nullptr || !object->isLocallyControlled() || object->isKindOf(KINDOF_STRUCTURE)) return FALSE;
+	}
+	return TRUE;
+}
+
+Int selectionLimit()
+{
+	const Int configured = TheInGameUI->getMaxSelectCount();
+	return configured > 0 ? MIN(256, configured) : 256;
+}
+
+void selectUnderRay(const Vector3 &origin, const Vector3 &direction, Bool additive = FALSE)
 {
 	if (TheInGameUI == nullptr || TheMessageStream == nullptr) {
 		return;
 	}
 
 	Drawable *drawable = pickDrawable(origin, direction);
+	if (additive) {
+		Object *object = drawable != nullptr ? drawable->getObject() : nullptr;
+		g_lastSingleSelection = INVALID_ID;
+		if (object == nullptr || !drawable->isSelectable() || drawable->isSelected()
+			|| !object->isLocallyControlled() || object->isKindOf(KINDOF_STRUCTURE)
+			|| object->getContainedBy() != nullptr || !canExtendUnitSelection()
+			|| TheInGameUI->getSelectCount() >= selectionLimit()) return;
+		TheInGameUI->selectDrawable(drawable);
+		GameMessage *message = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP);
+		message->appendBooleanArgument(FALSE);
+		message->appendObjectIDArgument(object->getID());
+		return;
+	}
 	const auto now = std::chrono::steady_clock::now();
 	const Bool doubleSelect = drawable != nullptr && drawable->getObject() != nullptr
 		&& drawable->getObject()->getID() == g_lastSingleSelection
@@ -1206,6 +1244,8 @@ struct BoxSelectionContext
 {
 	GameMessage *message;
 	Int count;
+	Int limit;
+	Bool additive;
 	Vector3 origin;
 	Vector3 right;
 	Vector3 forward;
@@ -1218,13 +1258,13 @@ struct BoxSelectionContext
 void addDrawableToBoxSelection(Drawable *drawable, void *userData)
 {
 	BoxSelectionContext *context = static_cast<BoxSelectionContext *>(userData);
-	if (drawable == nullptr || context == nullptr || context->count >= 256
-		|| !drawable->isSelectable()) {
+	if (drawable == nullptr || context == nullptr || context->count >= context->limit
+		|| !drawable->isSelectable() || drawable->isSelected()) {
 		return;
 	}
 	Object *object = drawable->getObject();
 	if (object == nullptr || !object->isLocallyControlled()
-		|| object->isKindOf(KINDOF_STRUCTURE)) {
+		|| object->isKindOf(KINDOF_STRUCTURE) || object->getContainedBy() != nullptr) {
 		return;
 	}
 	const Coord3D *position = drawable->getPosition();
@@ -1240,15 +1280,20 @@ void addDrawableToBoxSelection(Drawable *drawable, void *userData)
 		return;
 	}
 	TheInGameUI->selectDrawable(drawable);
+	if (context->message == nullptr) {
+		context->message = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP);
+		context->message->appendBooleanArgument(!context->additive);
+	}
 	context->message->appendObjectIDArgument(object->getID());
 	++context->count;
 }
 
-void selectBox(const Coord3D &start, const Coord3D &end)
+void selectBox(const Coord3D &start, const Coord3D &end, Bool additive)
 {
 	if (TheGameClient == nullptr || TheInGameUI == nullptr || TheMessageStream == nullptr) {
 		return;
 	}
+	if (additive && !canExtendUnitSelection()) return;
 	const Vector3 origin(start.x, start.y, 0.0f);
 	const Vector3 span(end.x - start.x, end.y - start.y, 0.0f);
 	const Real acrossExtent = Vector3::Dot_Product(span, g_boxRight);
@@ -1264,10 +1309,11 @@ void selectBox(const Coord3D &start, const Coord3D &end)
 	region.lo.z = (start.z < end.z ? start.z : end.z) - 500.0f;
 	region.hi.z = (start.z > end.z ? start.z : end.z) + 2000.0f;
 
-	TheInGameUI->deselectAllDrawables();
+	if (!additive) TheInGameUI->deselectAllDrawables();
 	BoxSelectionContext context{};
-	context.message = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP);
-	context.message->appendBooleanArgument(TRUE);
+	context.additive = additive;
+	context.count = TheInGameUI->getSelectCount();
+	context.limit = selectionLimit();
 	context.origin = origin;
 	context.right = g_boxRight;
 	context.forward = g_boxForward;
@@ -1276,16 +1322,21 @@ void selectBox(const Coord3D &start, const Coord3D &end)
 	context.awayLo = MIN(0.0f, awayExtent);
 	context.awayHi = MAX(0.0f, awayExtent);
 	TheGameClient->iterateDrawablesInRegion(&region, addDrawableToBoxSelection, &context);
+	// An empty replacement needs the existing destroy message, not a zero-object create.
+	if (!additive && context.count == 0) {
+		TheMessageStream->appendMessage(GameMessage::MSG_DESTROY_SELECTED_GROUP);
+	}
 }
 
 Bool updateBoxSelection(const QuestXRControllerState &rightController,
-	const Vector3 &origin, const Vector3 &direction)
+	const Vector3 &origin, const Vector3 &direction, Bool additive)
 {
 	Coord3D ground;
 	const Bool onGround = traceTerrain(origin, direction, ground);
 	if ((rightController.pressed & QUEST_XR_BUTTON_TRIGGER) != 0 && onGround) {
 		g_boxSelection.armed = TRUE;
 		g_boxSelection.boxing = FALSE;
+		g_boxSelection.additive = additive;
 		g_boxSelection.start = ground;
 		g_boxSelection.end = ground;
 		g_boxSelection.pressedAt = std::chrono::steady_clock::now();
@@ -1318,7 +1369,7 @@ Bool updateBoxSelection(const QuestXRControllerState &rightController,
 		__android_log_print(ANDROID_LOG_INFO, "GeneralsXR",
 			"XR visuals: trigger released, box=%d", wasBoxing ? 1 : 0);
 		if (wasBoxing) {
-			selectBox(g_boxSelection.start, g_boxSelection.end);
+			selectBox(g_boxSelection.start, g_boxSelection.end, g_boxSelection.additive);
 		}
 		g_boxSelection = {};
 		return wasBoxing;
@@ -1440,9 +1491,13 @@ void targetPendingCommand(const Vector3 &origin, const Vector3 &direction)
 }
 
 void smartTriggerUnderRay(const Vector3 &origin, const Vector3 &direction,
-	Bool forceAttack)
+	Bool forceAttack, Bool additive)
 {
 	if (TheInGameUI == nullptr || TheGameClient == nullptr) {
+		return;
+	}
+	if (additive) {
+		selectUnderRay(origin, direction, TRUE);
 		return;
 	}
 	Drawable *target = pickDrawable(origin, direction);
@@ -1639,6 +1694,7 @@ void updateCamera(const QuestXRControllerState &leftController,
 extern "C" void QuestVRInput_Update()
 {
 	if (TheGameLogic == nullptr || !TheGameLogic->isInGame()) {
+		g_boxSelection = {};
 		// GeneralsX @bugfix Codex 16/09/2026 A deliberately selected
 		// Battlefield view is match-local. Returning to the shell restores the
 		// saved Tabletop transform so the next match cannot inherit ground view.
@@ -1663,6 +1719,7 @@ extern "C" void QuestVRInput_Update()
 	}
 	// GeneralsX @bugfix Codex 09/10/2026 Text entry consumes controls without pausing simulation.
 	if (QuestVRKeyboard::InputBlocked() || QuestCampaign::IsFlatSequence()) {
+		g_boxSelection = {};
 		g_comfortTiltGesture = {};
 		g_tabletopGrab = {};
 		hidePointerVisuals();
@@ -1684,6 +1741,7 @@ extern "C" void QuestVRInput_Update()
 	if (TheGameLogic->isGamePaused()
 		|| TheInGameUI == nullptr || !TheInGameUI->getInputEnabled()
 		|| TheInGameUI->isQuitMenuVisible()) {
+		g_boxSelection = {};
 		g_tabletopGrab = {};
 		hidePointerVisuals();
 		return;
@@ -1757,6 +1815,10 @@ extern "C" void QuestVRInput_Update()
 		g_boxSelection = {};
 		return;
 	}
+	if (tabletopGrabbed) {
+		g_boxSelection = {};
+		return;
+	}
 	Vector3 origin;
 	Vector3 direction;
 	if (!computeHandRay(rightController, origin, direction)) {
@@ -1767,11 +1829,14 @@ extern "C" void QuestVRInput_Update()
 	}
 
 	const Bool pendingTarget = TheInGameUI->getGUICommand() != nullptr;
+	// GeneralsX @feature Codex 17/10/2026 Capture the modifier at trigger-down; explicit orders keep ownership.
+	const Bool additive = additiveSelectionHeld(leftController, rightController, haveLeft);
+	const Bool additiveClick = g_boxSelection.armed ? g_boxSelection.additive : additive;
 	Bool boxConsumedRelease = FALSE;
 	if (pendingTarget || g_armedOrder != 0) {
 		g_boxSelection = {};
 	} else {
-		boxConsumedRelease = updateBoxSelection(rightController, origin, direction);
+		boxConsumedRelease = updateBoxSelection(rightController, origin, direction, additive);
 	}
 	if ((rightController.released & QUEST_XR_BUTTON_TRIGGER) != 0 && !boxConsumedRelease) {
 		const Bool forceAttack = haveLeft
@@ -1781,7 +1846,7 @@ extern "C" void QuestVRInput_Update()
 		} else if (pendingTarget) {
 			targetPendingCommand(origin, direction);
 		} else {
-			smartTriggerUnderRay(origin, direction, forceAttack);
+			smartTriggerUnderRay(origin, direction, forceAttack, additiveClick);
 		}
 	}
 	if ((rightController.pressed & QUEST_XR_BUTTON_PRIMARY) != 0) {

@@ -35,3 +35,35 @@ adb shell am force-stop com.generalsx.questvr
 Start with the defaults. Lower render resolution from 1.5× to 1.0× if you need more FPS. Simulation rate and render FPS are different; retain 60 Hz simulation for PC crossplay. Some thin edges and distant textures still shimmer.
 
 The launcher uses German on German systems and English otherwise. Campaign story videos and scripted camera scenes use a flat screen, then return to stereo gameplay.
+
+## Updating on the headset
+
+In the launcher, open **Start**, then the Updates card. Check for a new
+version, download it and choose Install. Confirm Android's installation prompt;
+it may first ask you to allow installations from this app. A normal update keeps
+your saves, settings and imported game data. Do not uninstall before updating.
+
+The updater offers the latest published stable release. Drafts and prereleases
+are not offered. Installing from Unknown Sources is needed only for the initial
+APK; later updates can be downloaded directly on the Quest.
+
+## Invisible pointer or unit indicators
+
+If the laser pointer or unit indicators become invisible or shrink to small
+green dots, a clean reinstall may help. This recovered the indicators in headset
+testing, but the underlying cause has not been established.
+
+1. Back up your saves to a computer or another location outside this app's
+   storage before uninstalling. Verify that the backup is readable. The saves
+   are in the app's private `files/UserData/ZeroHour/Save` directory; accessing
+   them requires an authorised ADB connection and a build that permits `run-as`.
+   Do not uninstall if you cannot first retrieve saves you want to keep.
+2. Keep your original Generals and Zero Hour folders available for import.
+3. Uninstall the Quest app, then install the current release APK again.
+4. Import both game folders and test the pointer before restoring saves.
+5. Restore only the backed-up saves initially. Avoid copying old settings and
+   caches back as part of this troubleshooting step.
+
+**Uninstalling removes app data, settings, local account state and imported game
+files.** Ordinary APK updates preserve them; try a clean reinstall only when
+needed. Never post saves, game files, account data or full backups publicly.

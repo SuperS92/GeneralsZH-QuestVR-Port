@@ -419,7 +419,7 @@
     <string name="quest_perf_smaa">Performance: SMAA scratch (experimental)</string>
     <string name="quest_perf_smaa_desc">Shares one edge buffer between sequential eyes of the same frame slot. Same SMAA quality; lower intermediate memory, FPS gain unknown. Only effective with SMAA. Full restart required.</string>
     <string name="quest_perf_metrics">Performance measurements</string>
-    <string name="quest_perf_metrics_desc">Logs frame-interval percentiles and stage times every 120 stereo frames. Keep enabled in both comparison runs. Full restart required.</string>
+    <string name="quest_perf_metrics_desc">Logs frame-interval percentiles and stage times every 120 stereo frames. Full restart required.</string>
     <string name="quest_tree_wind_pair">Stereo tree wind (experimental)</string>
     <string name="quest_tree_wind_pair_desc">Uses the same wind movement in both eyes. Trees still sway. Full restart required.</string>
     <string name="quest_tree_contours">Tree contours</string>

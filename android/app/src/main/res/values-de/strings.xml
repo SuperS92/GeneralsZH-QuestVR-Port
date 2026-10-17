@@ -424,7 +424,7 @@
     <string name="quest_perf_smaa">Performance: SMAA-Puffer (experimentell)</string>
     <string name="quest_perf_smaa_desc">Teilt einen Kantenpuffer zwischen den nacheinander gezeichneten Augen desselben Frame-Slots. Gleiche SMAA-Qualität; weniger Zwischenspeicher, FPS-Gewinn offen. Wirkt nur mit SMAA. Vollständiger Neustart nötig.</string>
     <string name="quest_perf_metrics">Performance-Messwerte</string>
-    <string name="quest_perf_metrics_desc">Protokolliert Frame-Zeiten und Renderabschnitte alle 120 Stereo-Bilder. Für beide Vergleichsläufe eingeschaltet lassen. Vollständiger Neustart nötig.</string>
+    <string name="quest_perf_metrics_desc">Protokolliert Frame-Zeiten und Renderabschnitte alle 120 Stereo-Bilder. Vollständiger Neustart nötig.</string>
     <string name="quest_tree_wind_pair">Stereo-Baumwind (experimentell)</string>
     <string name="quest_tree_wind_pair_desc">Gleiche Windbewegung in beiden Augen. Die Bäume bewegen sich weiter. Vollständiger Neustart nötig.</string>
     <string name="quest_tree_contours">Baumkonturen</string>

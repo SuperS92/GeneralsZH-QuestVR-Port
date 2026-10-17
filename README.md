@@ -39,21 +39,23 @@ You need a Quest 3, Touch controllers, and your own **Generals and Zero Hour** g
 
 The launcher copies the files into this app's private storage. You only need to import once; normal APK updates keep your data. See [installation and PC crossplay](docs/HOWTO/QUEST_SETUP.md) for details.
 
+If the laser pointer or unit indicators become invisible, a clean reinstall may help. **Back up your saves before uninstalling:** uninstalling removes app data and imported game files. You will need to import both game folders again. See the [reinstall guide](docs/HOWTO/QUEST_SETUP.md#invisible-pointer-or-unit-indicators).
+
 ## Controls and graphics
 
-Use the right laser and trigger for menus, selection and orders. Hold the trigger and sweep across the ground to select a group. The left stick moves around the map; the right stick turns and changes height. The HUD sits on your left wrist.
+Use the right laser and trigger for menus, selection and orders. Hold the trigger and sweep across the ground to select a group. The left stick moves around the map; the right stick turns and changes height. The HUD sits on your left wrist. Hold the left grip while clicking or drawing a selection box to add units. Hold both grips and move the right stick up or down to tilt the battlefield in 15° steps.
 
 See the [controller guide](docs/HOWTO/QUEST_CONTROLS.md) for building rotation, scaling, groups and the command wheel. The controls take inspiration from Gonzorro's GeneralsVR, with a few Quest-specific choices.
 
-Defaults: 60 Hz simulation, 1.5× render resolution, AA off, gentle tree contours, shadows and terrain batching on. Terrain and road filtering improvements are always enabled. Try 1.0× resolution for more performance. Detailed performance logging is off by default.
+Defaults: 60 Hz simulation, 1.5× render resolution, TAA Lite, gentle tree contours, shadows and terrain batching on. Terrain and road filtering improvements are always enabled. Try 1.0× resolution for more performance. Detailed performance logging is off by default.
 
-Campaign story videos and scripted camera sequences play on a flat screen. Normal gameplay returns to stereo VR automatically.
+Campaign story videos and scripted camera sequences play on a flat screen. Normal gameplay returns to stereo VR automatically. Optional passthrough can show your room behind flat screens or the battlefield. Gameplay passthrough is experimental and reduces performance.
 
 ## Online play
 
 Use the same current GeneralsOnline data on both devices, leave **Play with PC players** enabled, and use **60 Hz simulation** on the Quest. The PC must run **without Easy Anti-Cheat**. The built-in **GeneralsOnline AntiCheat may stay enabled**.
 
-The launcher can update the online game data. That is separate from updating this Quest APK.
+The launcher can update the online game data. That is separate from updating this Quest APK. Quick Match can start a search, but finding an opponent has not been verified on Quest; use Custom Match for tested PC crossplay.
 
 ## Feedback
 
