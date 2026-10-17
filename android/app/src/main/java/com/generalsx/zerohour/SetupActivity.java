@@ -195,12 +195,12 @@ public class SetupActivity extends Activity {
         return BuildConfig.QUEST_VR;
     }
     // GeneralsX @performance Codex 15/10/2026 Independent local render trials.
-    // GeneralsX @feature Codex 16/10/2026 Migrate the old On choice to Full, with Off on fresh installs.
+    // GeneralsX @tweak Codex 17/10/2026 Default new TAA choices to Lite; retain explicit current and legacy choices.
     static int getQuestTaaMode(android.content.Context ctx) {
         if (!BuildConfig.QUEST_VR) return 0;
         android.content.SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         int mode = prefs.contains("quest_taa_mode") ? prefs.getInt("quest_taa_mode", 0)
-            : prefs.getBoolean("quest_taa_lite", false) ? 2 : 0;
+            : prefs.contains("quest_taa_lite") ? (prefs.getBoolean("quest_taa_lite", false) ? 2 : 0) : 3;
         return mode >= 0 && mode <= 3 ? mode : 0;
     }
     static boolean getQuestTaaLite(android.content.Context ctx) {
