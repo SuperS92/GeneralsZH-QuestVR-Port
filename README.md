@@ -2,12 +2,11 @@
 
 A standalone Meta Quest port of **Command & Conquer: Generals – Zero Hour**. The game runs on the headset with OpenXR and Touch controllers.
 
-Play above the battlefield, point to select units and give orders, build your base, and change your scale to get closer to the action. No gaming PC or Quest Link is needed to run it.
+Play above the battlefield, point to select units and give orders, build your base, and change your scale to get closer to the action. Tilt the battlefield for a more comfortable viewing angle. No gaming PC or Quest Link is needed to run it.
 
-**Early release.** I was working on this for myself for quite some time, quite a few attempts and code optimizations were needed to get it to this playable state where it is now. 
-Until now it has only ever been tested on my own Quest 3 device. Also the main focus for me was skirmish and online play against PC players through [GeneralsOnline](https://www.playgenerals.online/).
+Thanks to the amazing Flat2VR Discord community for all the testing and feedback! So far, no major issues have been reported. During development, my main focus was skirmish and online play against PC players through [GeneralsOnline](https://www.playgenerals.online/). Campaign missions have also worked well in testing.
 
-If you like what I came up with and want to support me feel free to buy me a Coffee [Ko-Fi](https://ko-fi.com/supers92). 
+☕ If you like what I came up with and want to support me feel free to buy me a Coffee [Ko-Fi](https://ko-fi.com/supers92). 
 
 
 ## Gameplay
@@ -21,12 +20,14 @@ Gameplay video by [NotAGameAddict](https://www.youtube.com/@NotAGameAddict). Cli
 
 | Mode | Current experience |
 | --- | --- |
-| Skirmish | Works well in my tests |
+| Skirmish | Works very well |
 | Multiplayer Quest ↔ PC | Multiple completed matches through GeneralsOnline, hosting from either side |
-| Campaign | USA and China briefly tested; videos, scripted camera sequences and the transition to VR gameplay work |
-| Multiplayer Quest ↔ Android / Quest ↔ Quest | Not tested yet |
+| Campaign | Works well in the missions tested so far, including videos, scripted camera sequences and the transition to VR gameplay |
+| Multiplayer Quest ↔ Android / Quest ↔ Quest | Not tested yet. Testers are welcome! |
 
-Full campaigns and every multiplayer setup have not been tested. Large battles and missions can have frame drops. I am still testing ways to get the Framerate up. For now it is possible to turn down the resolution to 1x in the settings to get better FPS.
+Full campaigns and every multiplayer setup have not been tested. Large battles and demanding missions can still cause frame drops, but performance has improved significantly since the first release.
+
+For better FPS, try lowering the render resolution to 1.0× or disabling shadows in the graphics settings. Framerate is currently capped at 60 FPS. The goal is to support 72 FPS in a future update while keeping PC crossplay compatible.
 
 ## Install
 
@@ -38,6 +39,14 @@ You need a Quest 3, Touch controllers, and your own **Generals and Zero Hour** g
 4. Start the game and try a skirmish.
 
 The launcher copies the files into this app's private storage. You only need to import once; normal APK updates keep your data. See [installation and PC crossplay](docs/HOWTO/QUEST_SETUP.md) for details.
+
+### Updates
+
+From version **1.4.0.9** onward, you can download and install new releases directly on your Quest. Open **Start → Updates** in the launcher, check for updates and follow the download and installation prompts. No PC connection is needed.
+
+You can also sideload a newer APK over your existing installation. **Do not uninstall first:** normal updates preserve your saves, settings and imported game files.
+
+### Invisible pointer or unit indicators
 
 If the laser pointer or unit indicators become invisible, a clean reinstall may help. **Back up your saves before uninstalling:** uninstalling removes app data and imported game files. You will need to import both game folders again. See the [reinstall guide](docs/HOWTO/QUEST_SETUP.md#invisible-pointer-or-unit-indicators).
 
