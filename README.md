@@ -6,7 +6,8 @@ Play above the battlefield, point to select units and give orders, build your ba
 
 Thanks to the amazing Flat2VR Discord community for all the testing and feedback! So far, no major issues have been reported. During development, my main focus was skirmish and online play against PC players through [GeneralsOnline](https://www.playgenerals.online/). Campaign missions have also worked well in testing.
 
-If you like what I came up with and want to support me feel free to buy me a Coffee [Ko-Fi](https://ko-fi.com/supers92) ☕ 
+If you like what I came up with and want to support me feel free to buy me a Coffee. 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/M6X528HASO)
 
 
 ## Gameplay
@@ -88,7 +89,8 @@ See [third-party credits](CREDITS.md) for libraries and licenses. The engine's [
 
 ## Optional support
 
-If you'd like to support my work buy me a coffee [Ko-Fi](https://ko-fi.com/supers92). 
+If you'd like to support my work buy me a coffee.
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/M6X528HASO)
 
 ## Development
 
